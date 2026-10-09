@@ -48,6 +48,14 @@ document.addEventListener('DOMContentLoaded', async function() {
         e.target.tagName, String(e.target.src || e.target.href || ''));
       return;
     }
+    // Errors from scripts that aren't this page's (browser extensions, in-app
+    // browsers) arrive as a bare "Script error." with no file, or with an
+    // extension URL — warn only, never show visitors the banner for them.
+    var src = String(e.filename || '');
+    if ((e.message === 'Script error.' && !src) || /-extension:\/\//.test(src)) {
+      console.warn('[bundle] ignored error from an external script:', e.message, src);
+      return;
+    }
     var p = document.body || document.documentElement;
     var d = document.getElementById('__bundler_err') || p.appendChild(document.createElement('div'));
     d.id = '__bundler_err';
