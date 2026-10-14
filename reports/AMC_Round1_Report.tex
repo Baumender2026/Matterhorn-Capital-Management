@@ -1,0 +1,141 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage[a4paper,margin=2cm]{geometry}
+\usepackage{amsmath}
+\usepackage{booktabs,tabularx}
+\usepackage{enumitem}
+\usepackage[dvipsnames]{xcolor}
+\setlist{nosep,leftmargin=*}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.4em}
+\pagestyle{plain}
+
+\newcommand{\todo}[1]{\textcolor{BrickRed}{[#1]}}
+
+\begin{document}
+
+% ===================== PAGE 1: INVESTMENT POLICY (1 page) =====================
+\begin{center}
+{\Large\bfseries \ Matterhorn Capital Management\\[0.2em]
+{\small AMC 2026, Round 1 \textbullet{} \ Group 3: Arauz, Di Pietro, Musi, Rocco, Rotondò, Selmi}
+\end{center}
+
+\section*{Investment policy}
+
+\subsection*{1. Universe}
+Long-only ETFs on broad asset classes; no leverage; few positions; cash earns no interest.
+\todo{List of the ETFs the allocation may hold, with one-word role each. i.e. VT (global equity), GOVT (Treasuries), STIP (inflation protection), GLD (gold), BCI (commodities), BIL (cash substitute).}
+
+\subsection*{2. Objective and risk budget}
+\begin{itemize}
+  \item Objective: maximize the Sharpe Ratio with an allocation that performs acceptably
+      in every macro regime 
+  \item Volatility target: 8\% p.a.\ (range 7--9\%)
+  \item Ex ante volatility of our allocation: \textbf{\todo{x.x}\%}
+  \item One-month 5\% VaR: \textbf{\todo{x.x}\% = USD \todo{x.x} million}
+  \item Maximum acceptable drawdown: \textbf{\todo{$-$xx}\%}
+\end{itemize}
+
+\subsection*{3. Constraints, with reasons}
+\begin{tabularx}{\textwidth}{@{}p{0.32\textwidth}X@{}}
+\toprule
+Constraint & Reason (today's model errors) \\
+\midrule
+Concentration: \todo{e.g.\ max xx\% per ETF} & \todo{reason} \\
+Regions: \todo{e.g.\ \ldots}                 & \todo{reason} \\
+Liquidity: \todo{e.g.\ \ldots}               & \todo{reason} \\
+\bottomrule
+\end{tabularx}
+
+\subsection*{4. Risk contributions}
+\begin{center}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+ETF & Capital weight & Risk contribution \\
+\midrule
+\todo{Ticker} & \todo{xx.x}\% & \todo{xx.x}\% \\
+\todo{Ticker} & \todo{xx.x}\% & \todo{xx.x}\% \\
+\todo{Ticker} & \todo{xx.x}\% & \todo{xx.x}\% \\
+\todo{Ticker} & \todo{xx.x}\% & \todo{xx.x}\% \\
+\todo{Ticker} & \todo{xx.x}\% & \todo{xx.x}\% \\
+\todo{Ticker} & \todo{xx.x}\% & \todo{xx.x}\% \\
+\todo{Ticker} & \todo{xx.x}\% & \todo{xx.x}\% \\
+Cash          & \todo{x.x}\%  & 0.0\%         \\
+\midrule
+Total & 100.0\% & 100.0\% \\
+\bottomrule
+\end{tabular}
+\end{center}
+Position above half of the risk: \todo{none / ETF -- intended because \ldots}
+
+\newpage
+% ============ COMPARISON WITH THE ROBUST APPROACHES (1/2 page) ============
+\section*{Our allocation vs.\ the robust approaches}
+
+Equal weight: $w_i = 1/N$. Risk parity: $w_i \propto 1/\sigma_i$, volatilities from our own data (\todo{period}).
+
+\begin{center}
+\small
+\begin{tabular}{@{}lrrrrrr@{}}
+\toprule
+ & \multicolumn{2}{c}{Our SAA} & \multicolumn{2}{c}{Equal weight} & \multicolumn{2}{c}{Risk parity} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}
+ETF & Weight & Risk contr. & Weight & Risk contr. & Weight & Risk contr. \\
+\midrule
+\todo{Ticker} & & & & & & \\
+\todo{Ticker} & & & & & & \\
+\todo{Ticker} & & & & & & \\
+\todo{Ticker} & & & & & & \\
+\todo{Ticker} & & & & & & \\
+\todo{Ticker} & & & & & & \\
+\todo{Ticker} & & & & & & \\
+\midrule
+Volatility & \multicolumn{2}{c}{\todo{x.x}\%} & \multicolumn{2}{c}{\todo{x.x}\%} & \multicolumn{2}{c}{\todo{x.x}\%} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\todo{One paragraph: where the rules disagree with our weights, and what justifies our weights.}
+
+\vspace{1.5em}
+% ======================= BACKTEST PROTOCOL =======================
+\section*{Backtest protocol}
+
+\subsection*{1. Design}
+\begin{itemize}
+  \item Universe: \todo{ETFs (and proxies used for the missing months)}.
+  \item Rule that determines the weights: \todo{method; estimation window, e.g.\ rolling 60 months}.
+  \item Rebalancing: monthly, to the SAA weights.
+  \item Sample period: \todo{start -- end}; data: \todo{Bloomberg, monthly total returns in USD}.
+\end{itemize}
+
+\subsection*{2. Validation}
+\begin{itemize}
+  \item Data used for tuning: \todo{start -- end}.
+  \item Data held out for validation: \todo{start -- end}, evaluated once, after the choice.
+  \item Number of variations tried: \textbf{\todo{N}} \todo{(methods, universes, constraints, parameters)}.
+\end{itemize}
+
+\subsection*{3. Risk}
+\begin{center}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+ & Tuning sample & Hold-out sample \\
+\midrule
+Mean return, annualised (t-statistic) & \todo{x.x}\% (\todo{x.x}) & \todo{x.x}\% (\todo{x.x}) \\
+Volatility, annualised                & \todo{x.x}\% & \todo{x.x}\% \\
+Maximum drawdown                      & \todo{$-$xx.x}\% & \todo{$-$xx.x}\% \\
+One-month 5\% VaR                     & \todo{x.x}\% & \todo{x.x}\% \\
+Sharpe Ratio                          & \todo{x.xx} & \todo{x.xx} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection*{4. The discount}
+Backtested Sharpe Ratio: \textbf{\todo{x.xx}}. Discounted value we consider realistic: \textbf{\todo{x.xx}}.\\
+Justification: \todo{rule of thumb of Class 4 (divide by 2), larger discount for more tunable parameters / variations tried;
+comparison with the hold-out Sharpe Ratio.}
+
+\end{document}
