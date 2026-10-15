@@ -1,0 +1,30 @@
+{
+  "rounds": [
+    {
+      "id": "Round 1",
+      "start_date": "2026-10-16",
+      "starting_nav": 100000000,
+      "cash": 0,
+      "holdings": [
+        { "ticker": "VT",        "name": "Vanguard Total World Stock ETF", "asset_class": "Equity",       "shares": 0, "target_weight": 0.0 },
+        { "ticker": "BND",       "name": "Vanguard Total Bond Market ETF", "asset_class": "Fixed income", "shares": 0, "target_weight": 0.0 },
+        { "ticker": "GLD",       "name": "SPDR Gold Shares",               "asset_class": "Real assets",  "shares": 0, "target_weight": 0.0 },
+        { "ticker": "COMMODITY", "name": "",                               "asset_class": "Real assets",  "shares": 0, "target_weight": 0.0 }
+      ]
+    },
+    {
+      "id": "Round 2",
+      "start_date": null,
+      "starting_nav": 100000000,
+      "cash": 0,
+      "holdings": []
+    },
+    {
+      "id": "Round 3",
+      "start_date": null,
+      "starting_nav": 100000000,
+      "cash": 0,
+      "holdings": []
+    }
+  ]
+}

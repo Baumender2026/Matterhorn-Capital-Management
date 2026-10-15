@@ -1,0 +1,60 @@
+# Daily NAV / risk update: rebuilds data/portfolio.json after the US close
+name: Update portfolio data
+
+on:
+  schedule:
+    # 22:30 UTC, Monday–Friday (after the 16:00 New York close, summer and winter time)
+    - cron: "30 22 * * 1-5"
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+permissions:
+  contents: write   # commit data/portfolio.json
+  actions: write    # trigger the Pages deploy
+
+concurrency:
+  group: "update-portfolio"
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: scripts/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r scripts/requirements.txt
+
+      - name: Build data/portfolio.json
+        run: python scripts/update_portfolio.py
+
+      - name: Commit if changed
+        id: commit
+        run: |
+          if [ -z "$(git status --porcelain -- data/portfolio.json)" ]; then
+            echo "No change in data/portfolio.json"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/portfolio.json
+          git commit -m "Update portfolio data ($(date -u +%Y-%m-%d))"
+          git push
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      # Pushes made with GITHUB_TOKEN do not trigger other workflows,
+      # so start the Pages deploy explicitly.
+      - name: Redeploy site
+        if: steps.commit.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run static.yml --ref main
