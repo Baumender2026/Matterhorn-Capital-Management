@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<template id="__bundler_thumbnail"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#f3efeb"/><circle cx="50" cy="50" r="22" fill="#111111"/><path d="M36 60 L50 36 L64 60 Z" fill="#ffffff"/></svg></template>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="./doc-page.js"></script>
+<style>
+doc-page:not(:defined){visibility:hidden}
+body{margin:0;color:#111111;font-family:'Geist',ui-sans-serif,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#111111;text-decoration:underline}
+a:hover{color:#615e5b}
+*{box-sizing:border-box}
+</style>
+</helmet>
+
+<doc-page size="a4">
+
+<section class="page" data-screen-label="01 Cover">
+  <div style="height:100%;display:flex;flex-direction:column;background:#ffffff;padding:56px;position:relative;overflow:hidden;">
+    <svg viewBox="0 60 800 640" preserveAspectRatio="xMidYMax meet" style="position:absolute;left:0;right:0;bottom:0;width:100%;height:auto;aspect-ratio:800/640;display:block;">
+      <circle cx="610" cy="150" r="46" fill="none" stroke="rgba(17,17,17,0.22)" stroke-width="1"></circle>
+      <circle cx="610" cy="150" r="60" fill="none" stroke="rgba(17,17,17,0.08)" stroke-width="1"></circle>
+      <circle cx="610" cy="150" r="74" fill="none" stroke="rgba(17,17,17,0.04)" stroke-width="1"></circle>
+      <sc-for list="{{ ridges }}" as="r" hint-placeholder-count="5">
+        <g>
+          <path d="{{ r.fillD }}" fill="{{ r.fill }}"></path>
+          <path d="{{ r.lineD }}" fill="none" stroke="{{ r.stroke }}" stroke-width="{{ r.sw }}"></path>
+          <sc-for list="{{ r.contours }}" as="c" hint-placeholder-count="0">
+            <path d="{{ c }}" fill="none" stroke="rgba(17,17,17,0.06)" stroke-width="1"></path>
+          </sc-for>
+        </g>
+      </sc-for>
+    </svg>
+    <div style="position:relative;display:flex;justify-content:space-between;align-items:center;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="width:36px;height:36px;border-radius:50%;background:#111111;display:flex;align-items:flex-end;justify-content:center;overflow:hidden;flex:none;"><div style="width:0;height:0;border-left:12px solid transparent;border-right:12px solid transparent;border-bottom:18px solid #ffffff;margin-bottom:5px;"></div></div>
+        <span style="font-size:18px;font-weight:500;letter-spacing:-0.3px;">Matterhorn Capital Management</span>
+      </div>
+      <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:0.33px;text-transform:uppercase;color:#615e5b;">For the jury</span>
+    </div>
+    <div style="position:relative;margin-top:88px;display:flex;flex-direction:column;gap:24px;">
+      <span style="font-family:'Geist Mono',monospace;font-size:13px;letter-spacing:0.39px;text-transform:uppercase;color:#615e5b;">USI Asset Management Challenge</span>
+      <h1 style="margin:0;font-size:64px;line-height:1.02;font-weight:500;letter-spacing:-2px;">Challenge Report<br>Round X</h1>
+      <p style="margin:0;max-width:440px;font-size:17px;line-height:1.5;color:#615e5b;">[One-line summary of this round: objective, period, key result.]</p>
+    </div>
+    <div style="position:relative;margin-top:auto;border-top:1px solid #111111;padding-top:24px;display:grid;grid-template-columns:repeat(3,1fr);gap:24px;">
+      <div style="display:flex;flex-direction:column;gap:6px;"><span style="font-size:11px;font-weight:500;letter-spacing:0.33px;text-transform:uppercase;color:#615e5b;">NAV</span><span style="font-family:'Geist Mono',monospace;font-size:28px;font-weight:500;">—</span></div>
+      <div style="display:flex;flex-direction:column;gap:6px;"><span style="font-size:11px;font-weight:500;letter-spacing:0.33px;text-transform:uppercase;color:#615e5b;">Since inception</span><span style="font-family:'Geist Mono',monospace;font-size:28px;font-weight:500;">—</span></div>
+      <div style="display:flex;flex-direction:column;gap:6px;"><span style="font-size:11px;font-weight:500;letter-spacing:0.33px;text-transform:uppercase;color:#615e5b;">Date</span><span style="font-family:'Geist Mono',monospace;font-size:28px;font-weight:500;">—</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="page" data-screen-label="02 Summary">
+  <div style="height:100%;display:flex;flex-direction:column;padding:56px;gap:28px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #e9eaeb;padding-bottom:16px;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:0.33px;text-transform:uppercase;color:#615e5b;"><span>01 — Letter to the jury</span><span>Round X</span></div>
+    <h2 style="margin:0;font-size:36px;line-height:1.1;font-weight:500;letter-spacing:-1.08px;">[Headline for this round]</h2>
+    <div style="column-count:2;column-gap:32px;font-size:13.5px;line-height:1.62;color:#615e5b;">
+      <p style="margin:0 0 12px;color:#111111;">Dear members of the jury,</p>
+      <p style="margin:0 0 12px;">[Result of the round: return, risk taken and how it compares with the target or tracking-error budget.]</p>
+      <p style="margin:0 0 12px;">[Main decisions taken during the round and why.]</p>
+      <p style="margin:0 0 12px;">[What worked: largest contributors.]</p>
+      <p style="margin:0 0 12px;">[What did not work: largest detractors and lessons learned.]</p>
+      <p style="margin:0 0 12px;">[Outlook and plan for the next round.]</p>
+      <p style="margin:0;color:#111111;">Respectfully,<br>[Name], Analyst</p>
+    </div>
+    <div style="margin-top:auto;background:#f3efeb;border-radius:24px;padding:28px;display:grid;grid-template-columns:repeat(4,1fr);gap:20px;">
+      <div style="display:flex;flex-direction:column;gap:6px;"><span style="font-size:11px;font-weight:500;letter-spacing:0.33px;text-transform:uppercase;color:#615e5b;">Round return</span><span style="font-family:'Geist Mono',monospace;font-size:26px;font-weight:500;">—</span></div>
+      <div style="display:flex;flex-direction:column;gap:6px;"><span style="font-size:11px;font-weight:500;letter-spacing:0.33px;text-transform:uppercase;color:#615e5b;">Volatility</span><span style="font-family:'Geist Mono',monospace;font-size:26px;font-weight:500;">—</span></div>
+      <div style="display:flex;flex-direction:column;gap:6px;"><span style="font-size:11px;font-weight:500;letter-spacing:0.33px;text-transform:uppercase;color:#615e5b;">Sharpe</span><span style="font-family:'Geist Mono',monospace;font-size:26px;font-weight:500;">—</span></div>
+      <div style="display:flex;flex-direction:column;gap:6px;"><span style="font-size:11px;font-weight:500;letter-spacing:0.33px;text-transform:uppercase;color:#615e5b;">Max DD</span><span style="font-family:'Geist Mono',monospace;font-size:26px;font-weight:500;">—</span></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#615e5b;"><div style="display:flex;align-items:center;gap:8px;"><div style="width:16px;height:16px;border-radius:50%;background:#111111;display:flex;align-items:flex-end;justify-content:center;overflow:hidden;flex:none;"><div style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:8px solid #ffffff;margin-bottom:2px;"></div></div><span>Matterhorn Capital Management · Challenge Report Round X</span></div><span style="font-family:'Geist Mono',monospace;">02 / 06</span></div>
+  </div>
+</section>
+
+<section class="page" data-screen-label="03 Performance">
+  <div style="height:100%;display:flex;flex-direction:column;padding:56px;gap:24px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #e9eaeb;padding-bottom:16px;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:0.33px;text-transform:uppercase;color:#615e5b;"><span>02 — Performance</span><span>Round X</span></div>
+    <h2 style="margin:0;font-size:36px;line-height:1.1;font-weight:500;letter-spacing:-1.08px;">[Performance headline]</h2>
+    <div style="background:#f3efeb;border-radius:24px;padding:28px;display:flex;flex-direction:column;gap:16px;">
+      <div style="display:flex;justify-content:space-between;font-size:12px;color:#615e5b;"><span>NAV, rebased to 100</span><span style="display:flex;gap:16px;"><span style="display:flex;align-items:center;gap:6px;"><span style="width:16px;height:2px;background:#111111;"></span>Fund</span><span style="display:flex;align-items:center;gap:6px;"><span style="width:16px;border-top:2px dashed #888888;"></span>SAA (from Round 2)</span></span></div>
+      <svg viewBox="0 0 600 220" style="width:100%;height:auto;display:block;overflow:visible;">
+        <line x1="0" y1="55" x2="600" y2="55" stroke="#d8d3cc"></line><line x1="0" y1="110" x2="600" y2="110" stroke="#d8d3cc"></line><line x1="0" y1="165" x2="600" y2="165" stroke="#d8d3cc"></line>
+        
+        <text x="300" y="118" text-anchor="middle" font-family="Geist Mono" font-size="11" letter-spacing="0.4" fill="#615e5b">[INSERT PERFORMANCE CHART]</text>
+      </svg>
+      <div style="display:flex;justify-content:space-between;font-family:'Geist Mono',monospace;font-size:10px;color:#615e5b;"><span>Start</span><span>Round 1</span><span>Round 2</span><span>Round X</span></div>
+    </div>
+    <span style="font-size:11px;color:#615e5b;margin-top:-12px;">Figure 1 — Cumulative performance. Round 1 has no benchmark; from Round 2 the reference is the team’s own SAA.</span>
+    <table style="width:100%;border-collapse:collapse;font-size:12px;">
+      <thead><tr style="border-bottom:1px solid #111111;text-align:left;font-size:10px;font-weight:500;letter-spacing:0.3px;text-transform:uppercase;color:#615e5b;"><th style="padding:8px 0;font-weight:500;">Period</th><th style="padding:8px 0;font-weight:500;text-align:right;">Fund</th><th style="padding:8px 0;font-weight:500;text-align:right;">SAA</th><th style="padding:8px 0;font-weight:500;text-align:right;">Active</th><th style="padding:8px 0;font-weight:500;text-align:right;">Volatility</th></tr></thead>
+      <tbody style="font-family:'Geist Mono',monospace;">
+        <tr style="border-bottom:1px solid #e9eaeb;"><td style="padding:9px 0;font-family:'Geist',sans-serif;">Round 3</td><td style="text-align:right;">—</td><td style="text-align:right;">—</td><td style="text-align:right;">—</td><td style="text-align:right;">—</td></tr>
+        <tr style="border-bottom:1px solid #e9eaeb;"><td style="padding:9px 0;font-family:'Geist',sans-serif;">Round 2</td><td style="text-align:right;">—</td><td style="text-align:right;">—</td><td style="text-align:right;">—</td><td style="text-align:right;">—</td></tr>
+        <tr style="border-bottom:1px solid #e9eaeb;"><td style="padding:9px 0;font-family:'Geist',sans-serif;">Round 1</td><td style="text-align:right;">—</td><td style="text-align:right;">—</td><td style="text-align:right;">—</td><td style="text-align:right;">—</td></tr>
+        <tr style="border-bottom:1px solid #111111;"><td style="padding:9px 0;font-family:'Geist',sans-serif;font-weight:500;">Since inception</td><td style="text-align:right;font-weight:500;">—</td><td style="text-align:right;">—</td><td style="text-align:right;font-weight:500;">—</td><td style="text-align:right;">—</td></tr>
+      </tbody>
+    </table>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;font-size:13px;line-height:1.55;">
+      <div style="display:flex;flex-direction:column;gap:8px;"><span style="font-size:11px;font-weight:500;letter-spacing:0.33px;text-transform:uppercase;">Top contributors</span><span style="color:#615e5b;">[Position] · [Position] · [Position]</span></div>
+      <div style="display:flex;flex-direction:column;gap:8px;"><span style="font-size:11px;font-weight:500;letter-spacing:0.33px;text-transform:uppercase;">Top detractors</span><span style="color:#615e5b;">[Position] · [Position] · [Position]</span></div>
+    </div>
+    <div style="margin-top:auto;display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#615e5b;"><div style="display:flex;align-items:center;gap:8px;"><div style="width:16px;height:16px;border-radius:50%;background:#111111;display:flex;align-items:flex-end;justify-content:center;overflow:hidden;flex:none;"><div style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:8px solid #ffffff;margin-bottom:2px;"></div></div><span>Matterhorn Capital Management · Challenge Report Round X</span></div><span style="font-family:'Geist Mono',monospace;">03 / 06</span></div>
+  </div>
+</section>
+
+<section class="page" data-screen-label="04 Portfolio">
+  <div style="height:100%;display:flex;flex-direction:column;padding:56px;gap:24px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #e9eaeb;padding-bottom:16px;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:0.33px;text-transform:uppercase;color:#615e5b;"><span>03 — Portfolio</span><span>End of Round X</span></div>
+    <h2 style="margin:0;font-size:36px;line-height:1.1;font-weight:500;letter-spacing:-1.08px;">Positioning</h2>
+    <div style="display:grid;grid-template-columns:1fr 1.5fr;gap:28px;align-items:start;">
+      <div style="background:#f3efeb;border-radius:24px;padding:24px;display:flex;flex-direction:column;gap:12px;font-size:12px;">
+        <span style="font-size:11px;font-weight:500;letter-spacing:0.33px;text-transform:uppercase;">Asset allocation</span>
+        <div style="display:flex;flex-direction:column;gap:4px;"><div style="display:flex;justify-content:space-between;"><span>Swiss equities</span><span style="font-family:'Geist Mono',monospace;">—</span></div><div style="height:4px;border-radius:9999px;background:#d8d3cc;"><div style="height:100%;width:0%;border-radius:9999px;background:#111111;"></div></div></div>
+        <div style="display:flex;flex-direction:column;gap:4px;"><div style="display:flex;justify-content:space-between;"><span>Global equities</span><span style="font-family:'Geist Mono',monospace;">—</span></div><div style="height:4px;border-radius:9999px;background:#d8d3cc;"><div style="height:100%;width:0%;border-radius:9999px;background:#111111;"></div></div></div>
+        <div style="display:flex;flex-direction:column;gap:4px;"><div style="display:flex;justify-content:space-between;"><span>Emerging equities</span><span style="font-family:'Geist Mono',monospace;">—</span></div><div style="height:4px;border-radius:9999px;background:#d8d3cc;"><div style="height:100%;width:0%;border-radius:9999px;background:#111111;"></div></div></div>
+        <div style="display:flex;flex-direction:column;gap:4px;"><div style="display:flex;justify-content:space-between;"><span>CHF bonds</span><span style="font-family:'Geist Mono',monospace;">—</span></div><div style="height:4px;border-radius:9999px;background:#d8d3cc;"><div style="height:100%;width:0%;border-radius:9999px;background:#111111;"></div></div></div>
+        <div style="display:flex;flex-direction:column;gap:4px;"><div style="display:flex;justify-content:space-between;"><span>Global bonds</span><span style="font-family:'Geist Mono',monospace;">—</span></div><div style="height:4px;border-radius:9999px;background:#d8d3cc;"><div style="height:100%;width:0%;border-radius:9999px;background:#111111;"></div></div></div>
+        <div style="display:flex;flex-direction:column;gap:4px;"><div style="display:flex;justify-content:space-between;"><span>Real estate</span><span style="font-family:'Geist Mono',monospace;">—</span></div><div style="height:4px;border-radius:9999px;background:#d8d3cc;"><div style="height:100%;width:0%;border-radius:9999px;background:#111111;"></div></div></div>
+        <div style="display:flex;flex-direction:column;gap:4px;"><div style="display:flex;justify-content:space-between;"><span>Gold</span><span style="font-family:'Geist Mono',monospace;">—</span></div><div style="height:4px;border-radius:9999px;background:#d8d3cc;"><div style="height:100%;width:0%;border-radius:9999px;background:#111111;"></div></div></div>
+        <div style="display:flex;flex-direction:column;gap:4px;"><div style="display:flex;justify-content:space-between;"><span>Cash</span><span style="font-family:'Geist Mono',monospace;">—</span></div><div style="height:4px;border-radius:9999px;background:#d8d3cc;"><div style="height:100%;width:0%;border-radius:9999px;background:#111111;"></div></div></div>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:11.5px;">
+        <thead><tr style="border-bottom:1px solid #111111;text-align:left;font-size:10px;letter-spacing:0.3px;text-transform:uppercase;color:#615e5b;"><th style="padding:6px 0;font-weight:500;">Ticker</th><th style="padding:6px 0;font-weight:500;">Name</th><th style="padding:6px 0;font-weight:500;text-align:right;">Weight</th><th style="padding:6px 0;font-weight:500;text-align:right;">Return</th></tr></thead>
+        <tbody>
+          <tr style="border-bottom:1px solid #e9eaeb;"><td style="padding:7px 0;font-family:'Geist Mono',monospace;font-weight:500;">[TICKER]</td><td>[Name]</td><td style="text-align:right;font-family:'Geist Mono',monospace;">—</td><td style="text-align:right;font-family:'Geist Mono',monospace;">—</td></tr>
+          <tr style="border-bottom:1px solid #e9eaeb;"><td style="padding:7px 0;font-family:'Geist Mono',monospace;font-weight:500;">[TICKER]</td><td>[Name]</td><td style="text-align:right;font-family:'Geist Mono',monospace;">—</td><td style="text-align:right;font-family:'Geist Mono',monospace;color:#615e5b;">—</td></tr>
+          <tr style="border-bottom:1px solid #e9eaeb;"><td style="padding:7px 0;font-family:'Geist Mono',monospace;font-weight:500;">[TICKER]</td><td>[Name]</td><td style="text-align:right;font-family:'Geist Mono',monospace;">—</td><td style="text-align:right;font-family:'Geist Mono',monospace;">—</td></tr>
+          <tr style="border-bottom:1px solid #e9eaeb;"><td style="padding:7px 0;font-family:'Geist Mono',monospace;font-weight:500;">[TICKER]</td><td>[Name]</td><td style="text-align:right;font-family:'Geist Mono',monospace;">—</td><td style="text-align:right;font-family:'Geist Mono',monospace;">—</td></tr>
+          <tr style="border-bottom:1px solid #e9eaeb;"><td style="padding:7px 0;font-family:'Geist Mono',monospace;font-weight:500;">[TICKER]</td><td>[Name]</td><td style="text-align:right;font-family:'Geist Mono',monospace;">—</td><td style="text-align:right;font-family:'Geist Mono',monospace;">—</td></tr>
+          <tr style="border-bottom:1px solid #e9eaeb;"><td style="padding:7px 0;font-family:'Geist Mono',monospace;font-weight:500;">[TICKER]</td><td>[Name]</td><td style="text-align:right;font-family:'Geist Mono',monospace;">—</td><td style="text-align:right;font-family:'Geist Mono',monospace;">—</td></tr>
+          <tr style="border-bottom:1px solid #e9eaeb;"><td style="padding:7px 0;font-family:'Geist Mono',monospace;font-weight:500;">[TICKER]</td><td>[Name]</td><td style="text-align:right;font-family:'Geist Mono',monospace;">—</td><td style="text-align:right;font-family:'Geist Mono',monospace;">—</td></tr>
+          <tr style="border-bottom:1px solid #e9eaeb;"><td style="padding:7px 0;font-family:'Geist Mono',monospace;font-weight:500;">[TICKER]</td><td>[Name]</td><td style="text-align:right;font-family:'Geist Mono',monospace;">—</td><td style="text-align:right;font-family:'Geist Mono',monospace;">—</td></tr>
+          <tr style="border-bottom:1px solid #e9eaeb;"><td style="padding:7px 0;font-family:'Geist Mono',monospace;font-weight:500;">[TICKER]</td><td>[Name]</td><td style="text-align:right;font-family:'Geist Mono',monospace;">—</td><td style="text-align:right;font-family:'Geist Mono',monospace;">—</td></tr>
+          <tr style="border-bottom:1px solid #e9eaeb;"><td style="padding:7px 0;font-family:'Geist Mono',monospace;font-weight:500;">[TICKER]</td><td>[Name]</td><td style="text-align:right;font-family:'Geist Mono',monospace;">—</td><td style="text-align:right;font-family:'Geist Mono',monospace;">—</td></tr>
+          <tr style="border-bottom:1px solid #111111;"><td style="padding:7px 0;color:#615e5b;" colspan="2">+ further positions and cash</td><td style="text-align:right;font-family:'Geist Mono',monospace;">—</td><td></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <span style="font-size:11px;font-weight:500;letter-spacing:0.33px;text-transform:uppercase;">Changes this round</span>
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <tbody>
+          <tr style="border-top:1px solid #e9eaeb;"><td style="padding:8px 0;width:64px;font-family:'Geist Mono',monospace;color:#615e5b;">—</td><td style="width:60px;font-family:'Geist Mono',monospace;font-size:10px;">SIDE</td><td style="width:60px;font-family:'Geist Mono',monospace;font-weight:500;">—</td><td style="color:#615e5b;">[Trade rationale]</td></tr>
+          <tr style="border-top:1px solid #e9eaeb;"><td style="padding:8px 0;font-family:'Geist Mono',monospace;color:#615e5b;">—</td><td style="font-family:'Geist Mono',monospace;font-size:10px;">SIDE</td><td style="font-family:'Geist Mono',monospace;font-weight:500;">—</td><td style="color:#615e5b;">[Trade rationale]</td></tr>
+          <tr style="border-top:1px solid #e9eaeb;"><td style="padding:8px 0;font-family:'Geist Mono',monospace;color:#615e5b;">—</td><td style="font-family:'Geist Mono',monospace;font-size:10px;">SIDE</td><td style="font-family:'Geist Mono',monospace;font-weight:500;">—</td><td style="color:#615e5b;">[Trade rationale]</td></tr>
+          <tr style="border-top:1px solid #e9eaeb;border-bottom:1px solid #e9eaeb;"><td style="padding:8px 0;font-family:'Geist Mono',monospace;color:#615e5b;">—</td><td style="font-family:'Geist Mono',monospace;font-size:10px;">SIDE</td><td style="font-family:'Geist Mono',monospace;font-weight:500;">—</td><td style="color:#615e5b;">[Trade rationale]</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="margin-top:auto;display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#615e5b;"><div style="display:flex;align-items:center;gap:8px;"><div style="width:16px;height:16px;border-radius:50%;background:#111111;display:flex;align-items:flex-end;justify-content:center;overflow:hidden;flex:none;"><div style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:8px solid #ffffff;margin-bottom:2px;"></div></div><span>Matterhorn Capital Management · Challenge Report Round X</span></div><span style="font-family:'Geist Mono',monospace;">04 / 06</span></div>
+  </div>
+</section>
+
+<section class="page" data-screen-label="05 Risk & Outlook">
+  <div style="height:100%;display:flex;flex-direction:column;padding:56px;gap:24px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #e9eaeb;padding-bottom:16px;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:0.33px;text-transform:uppercase;color:#615e5b;"><span>04 — Risk &amp; outlook</span><span>Round X</span></div>
+    <h2 style="margin:0;font-size:36px;line-height:1.1;font-weight:500;letter-spacing:-1.08px;">[Risk headline]</h2>
+    <table style="width:100%;border-collapse:collapse;font-size:12px;">
+      <thead><tr style="border-bottom:1px solid #111111;text-align:left;font-size:10px;letter-spacing:0.3px;text-transform:uppercase;color:#615e5b;"><th style="padding:8px 0;font-weight:500;">Risk measure</th><th style="padding:8px 0;font-weight:500;text-align:right;">Limit</th><th style="padding:8px 0;font-weight:500;text-align:right;">Current</th><th style="padding:8px 0;font-weight:500;text-align:right;">Status</th></tr></thead>
+      <tbody style="font-family:'Geist Mono',monospace;">
+        <tr style="border-bottom:1px solid #e9eaeb;"><td style="padding:9px 0;font-family:'Geist',sans-serif;">Realised volatility</td><td style="text-align:right;">—</td><td style="text-align:right;">—</td><td style="text-align:right;">—</td></tr>
+        <tr style="border-bottom:1px solid #e9eaeb;"><td style="padding:9px 0;font-family:'Geist',sans-serif;">Volatility target / TE budget</td><td style="text-align:right;">—</td><td style="text-align:right;">—</td><td style="text-align:right;">—</td></tr>
+        <tr style="border-bottom:1px solid #e9eaeb;"><td style="padding:9px 0;font-family:'Geist',sans-serif;">Tracking error vs SAA</td><td style="text-align:right;">—</td><td style="text-align:right;">—</td><td style="text-align:right;">—</td></tr>
+        <tr style="border-bottom:1px solid #e9eaeb;"><td style="padding:9px 0;font-family:'Geist',sans-serif;">Max drawdown</td><td style="text-align:right;">—</td><td style="text-align:right;">—</td><td style="text-align:right;">—</td></tr>
+        <tr style="border-bottom:1px solid #111111;"><td style="padding:9px 0;font-family:'Geist',sans-serif;">Largest position</td><td style="text-align:right;">—</td><td style="text-align:right;">—</td><td style="text-align:right;">—</td></tr>
+      </tbody>
+    </table>
+    <h3 style="margin:8px 0 0;font-size:22px;font-weight:500;letter-spacing:-0.4px;">Outlook for the next round</h3>
+    <div style="column-count:2;column-gap:32px;font-size:13.5px;line-height:1.62;">
+      <p style="margin:0 0 12px;"><strong style="font-weight:500;">Macro.</strong> [Macro view.]</p>
+      <p style="margin:0 0 12px;"><strong style="font-weight:500;">Positioning.</strong> [Planned positioning.]</p>
+      <p style="margin:0 0 12px;"><strong style="font-weight:500;">Key risks.</strong> [Main risks and stress tests.]</p>
+      <p style="margin:0;"><strong style="font-weight:500;">Watchlist.</strong> [Ideas under review.]</p>
+    </div>
+    <div style="margin-top:auto;background:#f3efeb;border-radius:24px;padding:28px;display:flex;flex-direction:column;gap:8px;">
+      <span style="font-size:11px;font-weight:500;letter-spacing:0.33px;text-transform:uppercase;">Key takeaway</span>
+      <span style="font-size:18px;line-height:1.4;font-weight:500;letter-spacing:-0.2px;">[One-sentence takeaway for the jury.]</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#615e5b;"><div style="display:flex;align-items:center;gap:8px;"><div style="width:16px;height:16px;border-radius:50%;background:#111111;display:flex;align-items:flex-end;justify-content:center;overflow:hidden;flex:none;"><div style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:8px solid #ffffff;margin-bottom:2px;"></div></div><span>Matterhorn Capital Management · Challenge Report Round X</span></div><span style="font-family:'Geist Mono',monospace;">05 / 06</span></div>
+  </div>
+</section>
+
+<section class="page" data-screen-label="06 Team & Disclosures">
+  <div style="height:100%;display:flex;flex-direction:column;background:#1e1e1d;color:#ffffff;padding:56px;gap:28px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,0.16);padding-bottom:16px;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:0.33px;text-transform:uppercase;color:rgba(255,255,255,0.6);"><span>05 — Team &amp; disclosures</span><span>Round X</span></div>
+    <h2 style="margin:0;font-size:36px;line-height:1.1;font-weight:500;letter-spacing:-1.08px;">The team</h2>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 32px;font-size:13px;">
+      <div style="display:flex;justify-content:space-between;padding:12px 0;border-top:1px solid rgba(255,255,255,0.16);"><span>Luca Di Pietro</span><span style="color:rgba(255,255,255,0.6);">Analyst</span></div>
+      <div style="display:flex;justify-content:space-between;padding:12px 0;border-top:1px solid rgba(255,255,255,0.16);"><span>Tommaso Rotondò</span><span style="color:rgba(255,255,255,0.6);">Analyst</span></div>
+      <div style="display:flex;justify-content:space-between;padding:12px 0;border-top:1px solid rgba(255,255,255,0.16);"><span>Filippo Selmi</span><span style="color:rgba(255,255,255,0.6);">Analyst</span></div>
+      <div style="display:flex;justify-content:space-between;padding:12px 0;border-top:1px solid rgba(255,255,255,0.16);"><span>Giulia Musi</span><span style="color:rgba(255,255,255,0.6);">Analyst</span></div>
+      <div style="display:flex;justify-content:space-between;padding:12px 0;border-top:1px solid rgba(255,255,255,0.16);border-bottom:1px solid rgba(255,255,255,0.16);"><span>Elena Rocco</span><span style="color:rgba(255,255,255,0.6);">Analyst</span></div>
+      <div style="display:flex;justify-content:space-between;padding:12px 0;border-top:1px solid rgba(255,255,255,0.16);border-bottom:1px solid rgba(255,255,255,0.16);"><span>Aaron Arauz</span><span style="color:rgba(255,255,255,0.6);">Analyst</span></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;font-size:13px;line-height:1.6;">
+      <span style="font-size:11px;font-weight:500;letter-spacing:0.33px;text-transform:uppercase;color:rgba(255,255,255,0.6);">Methodology</span>
+      <span style="color:rgba(255,255,255,0.85);">Returns are time-weighted, in CHF, net of transaction costs. Round 1 is measured against its volatility target; there is no common benchmark. From Round 2, active return and tracking error are measured against the team’s own SAA.</span>
+    </div>
+    <div style="margin-top:auto;display:flex;flex-direction:column;gap:24px;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="width:36px;height:36px;border-radius:50%;background:#ffffff;display:flex;align-items:flex-end;justify-content:center;overflow:hidden;flex:none;"><div style="width:0;height:0;border-left:12px solid transparent;border-right:12px solid transparent;border-bottom:18px solid #1e1e1d;margin-bottom:5px;"></div></div>
+        <div style="display:flex;flex-direction:column;gap:2px;"><span style="font-size:18px;font-weight:500;letter-spacing:-0.3px;">Matterhorn Capital Management</span><span style="font-size:12px;color:rgba(255,255,255,0.6);">Università della Svizzera italiana · Via Giuseppe Buffi 13, Lugano · team@matterhorn.capital</span></div>
+      </div>
+      <p style="margin:0;font-size:10px;line-height:1.6;letter-spacing:0.3px;color:rgba(255,255,255,0.6);">Matterhorn Capital Management is a simulated portfolio managed by students for the USI Asset Management Challenge. All figures are based on virtual capital and are presented for educational purposes only. Past performance is not indicative of future results. Nothing in this report constitutes investment advice or an offer to buy or sell any security.</p>
+    </div>
+  </div>
+</section>
+
+</doc-page>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+function rngf(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+class Component extends DCLogic {
+  ridges=(()=>{
+    const R=rngf(11),W=800,H=700,P=2600,F=[1,2,3,5,8,13,21],A=[1,.55,.32,.2,.11,.06,.03];
+    const fills=['#f6f3f0','#ece7e1','#e1dbd3','#d8d3cc','#ffffff'],sa=[0.10,0.16,0.24,0.34,0.7];
+    return [0,1,2,3,4].map(i=>{
+      const ph=[...Array(7)].map(()=>R()*6.2832),pk=R();
+      const ridge=x=>{const t=x/P*6.2832;let h=0;for(let k=0;k<7;k++)h+=A[k]*Math.sin(t*F[k]+ph[k]);const u=((x/P*2+pk)%1+1)%1;h+=Math.pow(1-Math.abs(u*2-1),7)*(i===1?3.2:i===2?2.2:1.6);return h;};
+      const base=H*(0.28+i*0.12),amp=H*(0.15-i*0.02),off=180+i*90;
+      const pts=[];for(let x=0;x<=W;x+=4)pts.push([x,base-ridge(x+off)*amp*0.5]);
+      const line=dy=>pts.map(([x,y],j)=>(j?'L':'M')+x+' '+(y+dy).toFixed(1)).join(' ');
+      const lineD=line(0);
+      return {fillD:lineD+` L${W} ${H} L0 ${H} Z`,lineD,fill:fills[i],stroke:`rgba(17,17,17,${sa[i]})`,sw:i===4?1.2:1,
+        contours:i<=2?[1,2,3,4].map(c=>line(c*amp*0.12)):[]};
+    });
+  })();
+  renderVals(){return {ridges:this.ridges};}
+}
+</script>
+</body>
+</html>
