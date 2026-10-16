@@ -4,12 +4,17 @@
       "id": "Round 1",
       "start_date": "2026-10-16",
       "starting_nav": 100000000,
-      "cash": 0,
+      "cash": 617.29,
       "holdings": [
-        { "ticker": "VT",        "name": "Vanguard Total World Stock ETF", "asset_class": "Equity",       "shares": 0, "target_weight": 0.0 },
-        { "ticker": "BND",       "name": "Vanguard Total Bond Market ETF", "asset_class": "Fixed income", "shares": 0, "target_weight": 0.0 },
-        { "ticker": "GLD",       "name": "SPDR Gold Shares",               "asset_class": "Real assets",  "shares": 0, "target_weight": 0.0 },
-        { "ticker": "COMMODITY", "name": "",                               "asset_class": "Real assets",  "shares": 0, "target_weight": 0.0 }
+        { "ticker": "VTI",  "name": "Vanguard Total Stock Market ETF",                     "asset_class": "Equity",       "shares": 33032, "target_weight": 0.125 },
+        { "ticker": "VEA",  "name": "Vanguard FTSE Developed Markets ETF",                 "asset_class": "Equity",       "shares": 179442, "target_weight": 0.125 },
+        { "ticker": "IEMG", "name": "iShares Core MSCI Emerging Markets ETF",              "asset_class": "Equity",       "shares": 160071, "target_weight": 0.125 },
+        { "ticker": "BND",  "name": "Vanguard Total Bond Market ETF",                      "asset_class": "Fixed income", "shares": 176528, "target_weight": 0.125 },
+        { "ticker": "BNDX", "name": "Vanguard Total International Bond ETF",               "asset_class": "Fixed income", "shares": 264774, "target_weight": 0.125 },
+        { "ticker": "TIP",  "name": "iShares TIPS Bond ETF",                               "asset_class": "Fixed income", "shares": 118719, "target_weight": 0.125 },
+        { "ticker": "GLD",  "name": "SPDR Gold Trust",                                     "asset_class": "Real assets",  "shares": 32661, "target_weight": 0.125 },
+        { "ticker": "BCI",  "name": "abrdn Bloomberg All Commodity Strategy K-1 Free ETF", "asset_class": "Real assets",  "shares": 476009, "target_weight": 0.125 },
+        { "ticker": "BIL",  "name": "State Street SPDR Bloomberg 1-3 Month T-Bill ETF",    "asset_class": "Liquidity",    "shares": 0, "target_weight": 0.0 }
       ]
     },
     {
