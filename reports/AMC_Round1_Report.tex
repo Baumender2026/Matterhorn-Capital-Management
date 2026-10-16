@@ -7,6 +7,8 @@
 \usepackage{booktabs,tabularx}
 \usepackage{enumitem}
 \usepackage[dvipsnames]{xcolor}
+\usepackage{graphicx}
+\usepackage{xurl}
 \setlist{nosep,leftmargin=*}
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{0.4em}
@@ -18,10 +20,14 @@
 
 % ===================== PAGE 1: INVESTMENT POLICY (1 page) =====================
 \begin{center}
-{\Large\bfseries \ Matterhorn Capital Management\\[0.2em]
+{\Large\bfseries \ Matterhorn Capital Management}\\[0.2em]
 {\small AMC 2026, Round 1 \textbullet{} \ Group 3: Arauz, Di Pietro, Musi, Rocco, Rotondò, Selmi}
 \end{center}
 
+% ================ MARKET OUTLOOK AND INVESTMENT UNIVERSE ================
+\input{sections/outlook_universe}
+
+\newpage
 \section*{Investment policy}
 
 \subsection*{1. Universe}
@@ -137,5 +143,55 @@ Sharpe Ratio                          & \todo{x.xx} & \todo{x.xx} \\
 Backtested Sharpe Ratio: \textbf{\todo{x.xx}}. Discounted value we consider realistic: \textbf{\todo{x.xx}}.\\
 Justification: \todo{rule of thumb of Class 4 (divide by 2), larger discount for more tunable parameters / variations tried;
 comparison with the hold-out Sharpe Ratio.}
+
+% ================================ SOURCES ================================
+\renewcommand{\refname}{Sources}
+\begin{thebibliography}{11}
+
+\bibitem{ecfc} Bloomberg ECFC, consensus economic forecasts (US,
+developed economies, EU, emerging economies)
+
+\bibitem{wirp} Bloomberg WIRP, fed funds futures implied rates, priced
+12 Oct 2026.
+
+\bibitem{ustreasury} U.S. Department of the Treasury, Daily Treasury Par
+Yield Curve Rates, 9 Oct 2026 and 9 Oct 2025.
+\url{https://home.treasury.gov/resource-center/data-chart-center/interest-rates}
+
+\bibitem{fred} Federal Reserve Bank of St. Louis, FRED: T5YIE, T10YIE,
+DFII10, BAMLC0A0CM, BAMLH0A0HYM2 (ICE BofA), VIXCLS, DTWEXBGS, retrieved
+12 Oct 2026. \url{https://fred.stlouisfed.org}
+
+\bibitem{vanguardvti} Vanguard, Total Stock Market ETF fact sheet, 30 Jun
+2026. \url{https://workplace.vanguard.com/iippdf/pdfs/FS970R.pdf}
+
+\bibitem{msciacwi} MSCI, MSCI ACWI Index (USD) factsheet, 30 Sep 2026
+(United States 64.21\%).
+\url{https://www.msci.com/documents/10199/255599/msci-acwi-net.pdf}
+
+\bibitem{ftsekorea} FTSE Group, Country Classification Update 2008 (South
+Korea promoted to Developed, effective Sep 2009).
+\url{https://www.lseg.com/content/dam/ftse-russell/en_us/documents/country-classification/ftse-country-classification-update-2008.pdf}
+
+\bibitem{koreatimes} The Korea Times, ``Seoul to continue push for MSCI
+developed market status after remaining in emerging category'', 24 Jun
+2026.
+\url{https://www.koreatimes.co.kr/economy/20260624/seoul-to-continue-push-for-msci-developed-market-status-bid-after-remaining-in-emerging-category}
+
+\bibitem{wgc} World Gold Council, Gold Demand Trends Q1 2026
+(central-bank purchases by quarter; Q1 2026 revised from 244t to 57t;
+LBMA average USD 4,873/oz).
+\url{https://www.gold.org/goldhub/research/gold-demand-trends/gold-demand-trends-q1-2026}
+
+\bibitem{teamresearch} Team research, ETF\_List\_full.xlsx and
+ETF\_Macro\_Research\_2026.xlsx (inception dates, index descriptions,
+DBC energy share and TER); issuer fact sheets; to be verified on
+Bloomberg DES.
+
+\bibitem{bcom} Bloomberg, Bloomberg Commodity Index Methodology, Feb
+2026 (diversification limits).
+\url{https://assets.bbhub.io/professional/sites/27/BCOM-Methodology-FEB-2026.pdf}
+
+\end{thebibliography}
 
 \end{document}
