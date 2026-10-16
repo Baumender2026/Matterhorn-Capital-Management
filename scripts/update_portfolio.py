@@ -68,7 +68,7 @@ def placeholder_problems(r):
         t = str(h.get("ticker", "")).strip()
         if t.upper() in PLACEHOLDER_TICKERS:
             out.append(f"{r['id']}: placeholder ticker '{t}'")
-        if not h.get("shares"):
+        if not h.get("shares") and float(h.get("target_weight") or 0) > 0:
             out.append(f"{r['id']}: {t or '?'} has 0 shares")
     return out
 
