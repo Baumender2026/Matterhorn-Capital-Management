@@ -5,7 +5,19 @@ These prompts apply the corrections in `06_Report_draft_corrections.docx` to the
 > **Status, 17 October:**
 > - Prompt 1 is done. §9 has a third step: the USD 144.20 left after the equity step buys 2 more shares of VEA, which leaves USD 5.22 in cash.
 > - The portfolio description in the report (item 1 of Prompt 4) is already filled from §9.
-> - Continue with Prompt 2.
+> - Prompts 2–10 are done. The report no longer mentions the walk-forward anywhere. All 719 checked numbers match `code/report_figures.json`, Table 4's colours included.
+>   - VTI top 10: 36.1% of net assets, from the 30 Sep 2026 fact sheet, now the only one cited as [5]. The 3.1 header uses its figures (Morningstar US Total Market Index, 3,519 stocks).
+>   - Circular financing: cited to Fortune, 28 Sep 2025, as [17].
+>   - Gold in BCOM: cited to Bloomberg's press release of 30 Oct 2025, as [18] (the PR Newswire copy: bloomberg.com blocks automated access).
+>   - Liquidity of the seven ETFs other than BCI: checked on Bloomberg by the team on 17 October, all pass. §10 records them as "ok (team check)", without figures.
+>   - Open for the team: the fact sheet names VTI "Vanguard Morningstar Total Stock Market ETF". The report and the notebook still say "Vanguard Total Stock Market ETF". Decide whether to rename it (`NAMES`, the CSV, the 3.1 title and the portfolio description).
+> - Prompt 8 removed page "09 Real assets and risk tool": sections 02–03 now fill the lower half of page 05 and pages 06–08.
+> - Prompt 9 moved Checkpoints 2–3 before the code and renumbered the 19 pages: Checkpoint 1 on page 2, sections 01–07 on pages 3–14, Checkpoints 2–3 on pages 15–16, code and portfolio on page 17, Sources on 18, Team on 19. Each checkpoint page has a black "CHECKPOINT N" pill above its headline.
+>   - The cover now says "Published 18.10.26". The team confirms the date.
+>   - The Table 4 legend uses nine colour swatches instead of a gradient (README: no gradients).
+>   - Also open for the team: the portfolio table on page 17 names BCI "abrdn Bloomberg All Commodity Strategy K-1 Free ETF", while section 03 omits "abrdn".
+> - Prompt 10: the notebook runs clean, `reports/round-1/round-1.pdf` is exported (19 A4 pages), and the report passes every check. The body text is now in Geist: `doc-page.js` set a system font on `<doc-page>`, which the report's `<style>` now overrides.
+> - Left for the team: confirm the date 18.10.26; decide the VTI and BCI names; sources [10] and [12] still say "to be verified on Bloomberg"; Checkpoint 2 takes a full page, while the guidelines ask for half a page.
 
 ## How to use
 
@@ -102,12 +114,15 @@ Follow `reports/README.md`:
 Serve the repo with `python3 -m http.server 8765` from the repo root, running in the background. Open `http://localhost:8765/reports/round-1/Round%201%20Report.dc.html` with Playwright, wait for the fonts to load, then evaluate:
 
 ```js
-[...document.querySelectorAll('section.page')]
-  .map(s => [s.dataset.screenLabel, s.firstElementChild.scrollHeight - s.firstElementChild.clientHeight])
-  .filter(([, d]) => d > 1)
+[...document.querySelectorAll('section.page')].map(s => {
+  const d = s.firstElementChild, footer = d.lastElementChild;
+  // px by which the content pushes the footer into the bottom padding of the page (or past the page)
+  return [s.dataset.screenLabel, Math.round(parseFloat(getComputedStyle(d).paddingBottom)
+          - (s.getBoundingClientRect().bottom - footer.getBoundingClientRect().bottom))];
+}).filter(([, x]) => x > 0)
 ```
 
-It must return `[]`. Take a screenshot of every page you changed and look at it. Fix overflow by tightening the text, never by shrinking fonts below the README sizes.
+It must return `[]`. Do not use `scrollHeight - clientHeight`: it misses content that fills the bottom padding. Take a screenshot of every page you changed and look at it. Fix overflow by tightening the text, never by shrinking fonts below the README sizes.
 
 **Dependency sweep** (at the end of every prompt)
 
@@ -669,10 +684,12 @@ Task: the Part 2 corrections for sections 02–04, plus TO-DO 6 and 7. Section 0
    - Cut repetitions of the outlook.
    - Keep every fact that another section or checkpoint refers to, and every citation still needed.
    - Remove a page only if the content fits on the others. Prompt 9 renumbers the pages.
-   - Page "05 Indicators and universe" already overflows by 16 px in the draft (found on 17 October). Fix it by shortening the section 02 part of that page ("How we built the universe"). The section 01 part is frozen.
+   - Page "05 Indicators and universe" already overflows into its bottom margin by 56 px in the draft, measured with the check of the shared context. Fix it by shortening the section 02 part of that page ("How we built the universe"). The section 01 part is frozen.
 
 2. 3.1 Equity, VTI (A4)
-   Say that holding three regional ETFs weighted by risk, not by market capitalisation, hedges out the concentration a market-cap allocation would have. That concentration is in the US (64% US in the MSCI ACWI [6]) and in a handful of AI-linked mega caps (the top-10 holdings are [VTI_TOP10]% of VTI [5], as in Checkpoint 1).
+   - Say that holding three regional ETFs weighted by risk, not by market capitalisation, hedges out the concentration a market-cap allocation would have. That concentration is in the US (64% US in the MSCI ACWI [6]) and in a handful of AI-linked mega caps (the top-10 holdings are 36.1% of VTI [5], as in Checkpoint 1).
+   - Found on 17 October: the 30 Sep 2026 fact sheet [5] names the fund "Vanguard Morningstar Total Stock Market ETF", tracking the Morningstar US Total Market Index (3,519 stocks; TER 0.03%). The 3.1 header still says "CRSP US Total Market Index · 3,531 holdings (30 Jun 2026)". Update it to the 30 Sep 2026 figures.
+   - Ask the team before changing the security name in the notebook (`NAMES`), the CSV and the portfolio description. PRTU uses the ticker, so the name there does not matter.
 
 3. 3.2 Fixed income, TIP
    - TIP sits in the bond basket because its risk is mostly real-rate duration: its correlation with BND is 0.90 (Table 4). It also partially hedges the inflation regime.
@@ -739,6 +756,7 @@ Task: the "General (structure)" corrections. The three checkpoints must stand ou
    - Change "Published 16.10.26" to "18.10.26", the delivery date. The team confirms this.
 
 4. Numbering and references
+   - Prompt 8 removed page "09 Real assets and risk tool". The report now has 19 pages, but the footers still read "NN / 20" and jump from 08 to 10.
    - Renumber every footer "NN / TT" and the data-screen-label prefixes to follow the new order.
    - Fix every cross-reference in the text: pages, "section 0N", "Table N", "Figure N", "Checkpoint N".
    - Tables and figures must be numbered in reading order.
