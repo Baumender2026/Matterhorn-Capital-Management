@@ -1,0 +1,9 @@
+Name,Bloomberg ticker,Currency,Shares,Close price,Price date,Weight
+Vanguard Total Stock Market ETF,VTI US Equity,USD,29149,374.07,16 Oct 2026,0.109038
+Vanguard FTSE Developed Markets ETF,VEA US Equity,USD,147369,69.49,16 Oct 2026,0.102407
+iShares Core MSCI Emerging Markets ETF,IEMG US Equity,USD,133320,76.79,16 Oct 2026,0.102376
+Vanguard Total Bond Market ETF,BND US Equity,USD,188225,70.82,16 Oct 2026,0.133301
+Vanguard Total International Bond ETF,BNDX US Equity,USD,349731,47.13,16 Oct 2026,0.164828
+iShares TIPS Bond ETF,TIP US Equity,USD,144602,105.54,16 Oct 2026,0.152613
+SPDR Gold Shares,GLD US Equity,USD,29177,382.01,16 Oct 2026,0.111459
+abrdn Bloomberg All Commodity Strategy K-1 Free ETF,BCI US Equity,USD,469258,26.42,16 Oct 2026,0.123978
