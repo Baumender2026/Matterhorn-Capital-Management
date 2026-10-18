@@ -1534,11 +1534,10 @@
   "validation": {
    "tuning": "Oct 2021 – Sep 2026 (60 months)",
    "hold_out": "Jul 2013 – Sep 2021 (99 months)",
-   "variations": "37",
+   "variations": "33",
    "allocations": "11",
    "designs": "3",
-   "ex_ante": "23",
-   "changes": "3",
+   "universes": "3",
    "candidates": [
     "Basket 33/33/33",
     "Basket 50/25/25",
