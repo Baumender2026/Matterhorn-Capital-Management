@@ -4,17 +4,17 @@
       "id": "Round 1",
       "start_date": "2026-10-16",
       "starting_nav": 100000000,
-      "cash": 617.29,
+      "cash": 5.22,
       "holdings": [
-        { "ticker": "VTI",  "name": "Vanguard Total Stock Market ETF",                     "asset_class": "Equity",       "shares": 33032, "target_weight": 0.125 },
-        { "ticker": "VEA",  "name": "Vanguard FTSE Developed Markets ETF",                 "asset_class": "Equity",       "shares": 179442, "target_weight": 0.125 },
-        { "ticker": "IEMG", "name": "iShares Core MSCI Emerging Markets ETF",              "asset_class": "Equity",       "shares": 160071, "target_weight": 0.125 },
-        { "ticker": "BND",  "name": "Vanguard Total Bond Market ETF",                      "asset_class": "Fixed income", "shares": 176528, "target_weight": 0.125 },
-        { "ticker": "BNDX", "name": "Vanguard Total International Bond ETF",               "asset_class": "Fixed income", "shares": 264774, "target_weight": 0.125 },
-        { "ticker": "TIP",  "name": "iShares TIPS Bond ETF",                               "asset_class": "Fixed income", "shares": 118719, "target_weight": 0.125 },
-        { "ticker": "GLD",  "name": "SPDR Gold Trust",                                     "asset_class": "Real assets",  "shares": 32661, "target_weight": 0.125 },
-        { "ticker": "BCI",  "name": "abrdn Bloomberg All Commodity Strategy K-1 Free ETF", "asset_class": "Real assets",  "shares": 476009, "target_weight": 0.125 },
-        { "ticker": "BIL",  "name": "State Street SPDR Bloomberg 1-3 Month T-Bill ETF",    "asset_class": "Liquidity",    "shares": 0, "target_weight": 0.0 }
+        { "ticker": "VTI",  "name": "Vanguard Total Stock Market ETF",                     "asset_class": "Equity",      "shares": 29149,  "target_weight": 0.1090, "target_risk_contribution": 0.1521 },
+        { "ticker": "VEA",  "name": "Vanguard FTSE Developed Markets ETF",                 "asset_class": "Equity",      "shares": 147369, "target_weight": 0.1024, "target_risk_contribution": 0.1742 },
+        { "ticker": "IEMG", "name": "iShares Core MSCI Emerging Markets ETF",              "asset_class": "Equity",      "shares": 133320, "target_weight": 0.1023, "target_risk_contribution": 0.1736 },
+        { "ticker": "BND",  "name": "Vanguard Total Bond Market ETF",                      "asset_class": "Bonds",       "shares": 188225, "target_weight": 0.1333, "target_risk_contribution": 0.0834 },
+        { "ticker": "BNDX", "name": "Vanguard Total International Bond ETF",               "asset_class": "Bonds",       "shares": 349731, "target_weight": 0.1648, "target_risk_contribution": 0.0783 },
+        { "ticker": "TIP",  "name": "iShares TIPS Bond ETF",                               "asset_class": "Bonds",       "shares": 144602, "target_weight": 0.1526, "target_risk_contribution": 0.0884 },
+        { "ticker": "GLD",  "name": "SPDR Gold Shares",                                    "asset_class": "Real assets", "shares": 29177,  "target_weight": 0.1115, "target_risk_contribution": 0.1549 },
+        { "ticker": "BCI",  "name": "abrdn Bloomberg All Commodity Strategy K-1 Free ETF", "asset_class": "Real assets", "shares": 469258, "target_weight": 0.1240, "target_risk_contribution": 0.0951 },
+        { "ticker": "BIL",  "name": "SPDR Bloomberg 1-3 Month T-Bill ETF",                 "asset_class": "Cash leg",    "shares": 0,      "target_weight": 0.0,    "target_risk_contribution": 0.0 }
       ]
     },
     {

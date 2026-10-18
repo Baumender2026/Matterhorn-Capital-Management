@@ -12,8 +12,12 @@ Rules (AMC):
     ex-date; cash earns 0%.
   * Each round restarts at its own starting NAV (USD 100M). Daily returns are
     chain-linked across rounds into an index (base 100) for the inception figures.
+  * Realised volatility and the Sharpe ratio are left empty until there are
+    MIN_STATS_DAYS daily returns.
 
-On any data error the previous JSON is left untouched and the script exits 1.
+On any price-data error the previous JSON is left untouched and the script exits 1.
+The risk-free rate is only needed for the Sharpe ratio: if every source fails, the
+Sharpe ratio is left empty instead.
 """
 
 import argparse
@@ -32,11 +36,15 @@ import pandas as pd
 import yfinance as yf
 
 FRED_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=DGS1MO"
+TREASURY_URL = ("https://home.treasury.gov/resource-center/data-chart-center/interest-rates/"
+                "daily-treasury-rates.csv/{y}/all?type=daily_treasury_yield_curve&field_tdr_date_value={y}&page&_format=csv")
+RF_CACHE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "code data", "DGS1MO.csv")
 PLACEHOLDER_TICKERS = {"", "COMMODITY"}
 RISK_MONTHS = 60
 RISK_YEARS = 6          # history downloaded for the monthly risk model
 Z_95 = 1.645
 TRADING_DAYS = 252
+MIN_STATS_DAYS = 20     # daily returns needed before realised vol and Sharpe are reported
 
 
 class DataError(Exception):
@@ -101,25 +109,49 @@ def download_prices(tickers, start, end):
     return pd.DataFrame(close), pd.DataFrame(adj), pd.DataFrame(div).fillna(0.0)
 
 
-def download_rf():
-    """1-month T-bill, annualised % (FRED DGS1MO), indexed by date."""
-    last = None
-    for attempt in range(3):
+def fetch_csv(url, timeout):
+    req = urllib.request.Request(url, headers={"User-Agent": "matterhorn-portfolio/1.0"})
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        return pd.read_csv(io.StringIO(resp.read().decode("utf-8")))
+
+
+def rate_series(dates, values):
+    s = pd.Series(pd.to_numeric(values, errors="coerce").values, index=pd.to_datetime(dates)).dropna().sort_index()
+    if s.empty:
+        raise DataError("no observations")
+    return s
+
+
+def download_rf(years):
+    """1-month T-bill, annualised %, indexed by date, and its source.
+
+    FRED DGS1MO first. It often times out from GitHub-hosted runners, so fall back to
+    the same rate published by the US Treasury, then to the copy kept in the repo.
+    Returns (None, None) if every source fails.
+    """
+    errors = []
+    for attempt in range(2):
         try:
-            req = urllib.request.Request(FRED_URL, headers={"User-Agent": "matterhorn-portfolio/1.0"})
-            with urllib.request.urlopen(req, timeout=30) as resp:
-                text = resp.read().decode("utf-8")
-            df = pd.read_csv(io.StringIO(text))
-            s = pd.to_numeric(df.iloc[:, 1], errors="coerce")
-            s.index = pd.to_datetime(df.iloc[:, 0])
-            s = s.dropna()
-            if s.empty:
-                raise DataError("FRED DGS1MO returned no observations")
-            return s
+            df = fetch_csv(FRED_URL, 20)
+            return rate_series(df.iloc[:, 0], df.iloc[:, 1]), "FRED DGS1MO"
         except Exception as e:
-            last = e
+            errors.append(f"FRED: {e}")
             time.sleep(2 * (attempt + 1))
-    raise DataError(f"risk-free download failed: {last}")
+    try:
+        parts = []
+        for y in years:
+            df = fetch_csv(TREASURY_URL.format(y=y), 30)
+            parts.append(rate_series(pd.to_datetime(df["Date"], format="%m/%d/%Y"), df["1 Mo"]))
+        return pd.concat(parts).sort_index(), "US Treasury daily par yield curve, 1 Mo"
+    except Exception as e:
+        errors.append(f"Treasury: {e}")
+    try:
+        df = pd.read_csv(RF_CACHE)
+        return rate_series(df.iloc[:, 0], df.iloc[:, 1]), "code data/DGS1MO.csv (cached FRED DGS1MO)"
+    except Exception as e:
+        errors.append(f"cache: {e}")
+    print("WARNING: risk-free rate unavailable, Sharpe ratio left empty -- " + " | ".join(errors), file=sys.stderr)
+    return None, None
 
 
 # ---------------------------------------------------------------- calculations
@@ -187,8 +219,6 @@ def build(cfg_path, allow_short):
     if as_of < started[-1]["start"]:
         return pending(now, f"{started[-1]['id']}: waiting for the first close on {started[-1]['start'].date()}")
 
-    rf = download_rf()
-
     # ---- NAV per round, chain-linked index
     series, rets, round_rows = [], [], []
     level = 100.0
@@ -220,14 +250,18 @@ def build(cfg_path, allow_short):
     max_dd = float((index_level / index_level.cummax() - 1).min())
     n = len(daily)
     vol = sharpe = None
-    if n >= 2:
+    rf, rf_source = None, None
+    if n >= MIN_STATS_DAYS:
         vol = float(daily.std(ddof=1) * math.sqrt(TRADING_DAYS))
-        rf_d = rf.reindex(rf.index.union(daily.index)).ffill().reindex(daily.index) / 100.0 / TRADING_DAYS
-        if rf_d.isna().any():
-            raise DataError("risk-free rate missing for some return dates")
-        ex = daily - rf_d
-        sd = ex.std(ddof=1)
-        sharpe = float(ex.mean() / sd * math.sqrt(TRADING_DAYS)) if sd > 0 else None
+        rf, rf_source = download_rf(range(daily.index[0].year, today.year + 1))
+        if rf is not None:
+            rf_d = rf.reindex(rf.index.union(daily.index)).ffill().reindex(daily.index) / 100.0 / TRADING_DAYS
+            if rf_d.isna().any():
+                print("WARNING: risk-free rate missing for some return dates, Sharpe ratio left empty", file=sys.stderr)
+            else:
+                ex = daily - rf_d
+                sd = ex.std(ddof=1)
+                sharpe = float(ex.mean() / sd * math.sqrt(TRADING_DAYS)) if sd > 0 else None
 
     # ---- current holdings of the active round
     r, nav, cash, mv, px = last
@@ -249,6 +283,7 @@ def build(cfg_path, allow_short):
             "weight": r6(w_now[i]), "target_weight": r6(tw),
             "drift_pp": round((w_now[i] - tw) * 100, 4),
             "risk_contribution": r6(rc[i]),
+            "target_risk_contribution": r6(h.get("target_risk_contribution")),
         })
     cash_w = cash_now / nav_now
     classes = {}
@@ -272,7 +307,9 @@ def build(cfg_path, allow_short):
             "var_1m_95_pct": r6(var_pct),
             "var_1m_95_usd": round(var_pct * nav_now, 2),
             "daily_returns": n,
-            "rf_1m_latest": r6(rf.iloc[-1] / 100.0),
+            "min_days_for_stats": MIN_STATS_DAYS,
+            "rf_1m_latest": r6(rf.iloc[-1] / 100.0) if rf is not None else None,
+            "rf_source": rf_source,
             "risk_model_months": n_months,
             "risk_model_window": [m_from.date().isoformat(), m_to.date().isoformat()],
         },

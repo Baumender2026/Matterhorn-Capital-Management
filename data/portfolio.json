@@ -1,5 +1,200 @@
 {
- "status": "pending",
- "message": "holdings.json not filled in: Round 1: BIL has 0 shares",
- "generated_at": "2026-10-16T13:07:08Z"
+ "status": "ok",
+ "as_of": "2026-10-16",
+ "generated_at": "2026-10-18T22:08:54Z",
+ "currency": "USD",
+ "current_round": "Round 1",
+ "nav": 100000000.79,
+ "metrics": {
+  "total_return": 0.0,
+  "realised_vol": null,
+  "sharpe": null,
+  "max_drawdown": 0.0,
+  "ex_ante_vol": 0.085006,
+  "var_1m_95_pct": 0.040367,
+  "var_1m_95_usd": 4036666.98,
+  "daily_returns": 0,
+  "min_days_for_stats": 20,
+  "rf_1m_latest": null,
+  "rf_source": null,
+  "risk_model_months": 60,
+  "risk_model_window": [
+   "2021-10-31",
+   "2026-09-30"
+  ]
+ },
+ "rounds": [
+  {
+   "id": "Round 1",
+   "start_date": "2026-10-16",
+   "end_date": "2026-10-16",
+   "status": "active",
+   "start_nav": 100000000.79,
+   "end_nav": 100000000.79,
+   "return": 0.0
+  },
+  {
+   "id": "Round 2",
+   "start_date": null,
+   "status": "pending"
+  },
+  {
+   "id": "Round 3",
+   "start_date": null,
+   "status": "pending"
+  }
+ ],
+ "holdings": [
+  {
+   "ticker": "VTI",
+   "name": "Vanguard Total Stock Market ETF",
+   "asset_class": "Equity",
+   "shares": 29149.0,
+   "price": 374.07,
+   "market_value": 10903766.64,
+   "weight": 0.109038,
+   "target_weight": 0.109,
+   "drift_pp": 0.0038,
+   "risk_contribution": 0.160603,
+   "target_risk_contribution": 0.1521
+  },
+  {
+   "ticker": "VEA",
+   "name": "Vanguard FTSE Developed Markets ETF",
+   "asset_class": "Equity",
+   "shares": 147369.0,
+   "price": 69.49,
+   "market_value": 10240671.5,
+   "weight": 0.102407,
+   "target_weight": 0.1024,
+   "drift_pp": 0.0007,
+   "risk_contribution": 0.180006,
+   "target_risk_contribution": 0.1742
+  },
+  {
+   "ticker": "IEMG",
+   "name": "iShares Core MSCI Emerging Markets ETF",
+   "asset_class": "Equity",
+   "shares": 133320.0,
+   "price": 76.79,
+   "market_value": 10237642.92,
+   "weight": 0.102376,
+   "target_weight": 0.1023,
+   "drift_pp": 0.0076,
+   "risk_contribution": 0.176708,
+   "target_risk_contribution": 0.1736
+  },
+  {
+   "ticker": "BND",
+   "name": "Vanguard Total Bond Market ETF",
+   "asset_class": "Bonds",
+   "shares": 188225.0,
+   "price": 70.82,
+   "market_value": 13330094.44,
+   "weight": 0.133301,
+   "target_weight": 0.1333,
+   "drift_pp": 0.0001,
+   "risk_contribution": 0.08052,
+   "target_risk_contribution": 0.0834
+  },
+  {
+   "ticker": "BNDX",
+   "name": "Vanguard Total International Bond ETF",
+   "asset_class": "Bonds",
+   "shares": 349731.0,
+   "price": 47.13,
+   "market_value": 16482822.4,
+   "weight": 0.164828,
+   "target_weight": 0.1648,
+   "drift_pp": 0.0028,
+   "risk_contribution": 0.075981,
+   "target_risk_contribution": 0.0783
+  },
+  {
+   "ticker": "TIP",
+   "name": "iShares TIPS Bond ETF",
+   "asset_class": "Bonds",
+   "shares": 144602.0,
+   "price": 105.54,
+   "market_value": 15261295.21,
+   "weight": 0.152613,
+   "target_weight": 0.1526,
+   "drift_pp": 0.0013,
+   "risk_contribution": 0.090519,
+   "target_risk_contribution": 0.0884
+  },
+  {
+   "ticker": "GLD",
+   "name": "SPDR Gold Shares",
+   "asset_class": "Real assets",
+   "shares": 29177.0,
+   "price": 382.01,
+   "market_value": 11145906.05,
+   "weight": 0.111459,
+   "target_weight": 0.1115,
+   "drift_pp": -0.0041,
+   "risk_contribution": 0.141147,
+   "target_risk_contribution": 0.1549
+  },
+  {
+   "ticker": "BCI",
+   "name": "abrdn Bloomberg All Commodity Strategy K-1 Free ETF",
+   "asset_class": "Real assets",
+   "shares": 469258.0,
+   "price": 26.42,
+   "market_value": 12397796.4,
+   "weight": 0.123978,
+   "target_weight": 0.124,
+   "drift_pp": -0.0022,
+   "risk_contribution": 0.094515,
+   "target_risk_contribution": 0.0951
+  },
+  {
+   "ticker": "BIL",
+   "name": "SPDR Bloomberg 1-3 Month T-Bill ETF",
+   "asset_class": "Cash leg",
+   "shares": 0.0,
+   "price": 91.57,
+   "market_value": 0.0,
+   "weight": 0.0,
+   "target_weight": 0.0,
+   "drift_pp": 0.0,
+   "risk_contribution": 0.0,
+   "target_risk_contribution": 0.0
+  }
+ ],
+ "cash": {
+  "market_value": 5.22,
+  "weight": 0.0
+ },
+ "asset_classes": [
+  {
+   "name": "Equity",
+   "weight": 0.313821
+  },
+  {
+   "name": "Bonds",
+   "weight": 0.450742
+  },
+  {
+   "name": "Real assets",
+   "weight": 0.235437
+  },
+  {
+   "name": "Cash leg",
+   "weight": 0.0
+  },
+  {
+   "name": "Cash",
+   "weight": 0.0
+  }
+ ],
+ "nav_series": [
+  {
+   "date": "2026-10-16",
+   "round": "Round 1",
+   "nav": 100000000.79,
+   "index": 100.0
+  }
+ ]
 }
