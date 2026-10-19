@@ -18,9 +18,11 @@ Rules (AMC):
     (New York time) today's bar is an intraday price and is ignored.
 
 If today's close is not out yet, the JSON stays at the previous close. If Yahoo
-returns no prices at all, the previous JSON is left untouched and the script exits 0
-with a warning (the next run retries). On any other data error the previous JSON is
-left untouched and the script exits 1.
+returns no prices for any ticker, the previous JSON is left untouched and the script
+exits 0 with a warning (the next run retries). It exits 1, also leaving the JSON
+untouched, if only some tickers come back, if the latest close is more than
+MAX_STALE_DAYS trading days old (weekdays; holidays are not excluded), or on any
+other data error.
 The risk-free rate is only needed for the Sharpe ratio: if every source fails, the
 Sharpe ratio is left empty instead.
 """
@@ -51,6 +53,7 @@ Z_95 = 1.645
 TRADING_DAYS = 252
 MIN_STATS_DAYS = 20     # daily returns needed before realised vol and Sharpe are reported
 CLOSE_CUTOFF = dtime(16, 15)  # New York time after which today's daily bar is the close
+MAX_STALE_DAYS = 3      # trading days the latest close may lag before the run fails
 
 
 class DataError(Exception):
@@ -58,7 +61,7 @@ class DataError(Exception):
 
 
 class PricesUnavailable(DataError):
-    """Yahoo returned no prices: keep the previous JSON and let the next run retry."""
+    """Yahoo returned no prices for any ticker: keep the previous JSON and let the next run retry."""
 
 
 # ---------------------------------------------------------------- config
@@ -95,7 +98,7 @@ def placeholder_problems(r):
 
 def download_prices(tickers, start, end):
     """Raw close, adjusted close and dividends per ticker, indexed by date."""
-    close, adj, div = {}, {}, {}
+    close, adj, div, missing = {}, {}, {}, []
     for t in tickers:
         df, err = None, "empty response"
         for attempt in range(3):
@@ -109,13 +112,18 @@ def download_prices(tickers, start, end):
                 err = e
             time.sleep(2 * (attempt + 1))
         if df is None or df.empty:
-            raise PricesUnavailable(f"no price data for {t} ({err})")
+            missing.append(f"{t} ({err})")
+            continue
         idx = df.index.tz_localize(None).normalize() if df.index.tz is not None else df.index.normalize()
         df.index = idx
         df = df[~df.index.duplicated(keep="last")]
         close[t] = df["Close"]
         adj[t] = df["Adj Close"] if "Adj Close" in df else df["Close"]
         div[t] = df["Dividends"] if "Dividends" in df else pd.Series(0.0, index=df.index)
+    if len(missing) == len(tickers):
+        raise PricesUnavailable("Yahoo returned no prices for any ticker: " + ", ".join(missing))
+    if missing:
+        raise DataError("Yahoo returned no prices for " + ", ".join(missing) + " while the other tickers downloaded")
     return pd.DataFrame(close), pd.DataFrame(adj), pd.DataFrame(div).fillna(0.0)
 
 
@@ -165,6 +173,14 @@ def download_rf(years):
 
 
 # ---------------------------------------------------------------- calculations
+
+def trading_days_old(as_of, ny_now):
+    """Weekdays after the as_of close up to the latest close due by ny_now (holidays not excluded)."""
+    due = pd.Timestamp(ny_now.date())
+    if ny_now.time() < CLOSE_CUTOFF:
+        due -= pd.Timedelta(days=1)
+    return len(pd.bdate_range(as_of + pd.Timedelta(days=1), due))
+
 
 def round_nav(r, close, div, as_of):
     """Daily NAV of one round from its start to its end (next round's start) or as_of."""
@@ -230,11 +246,19 @@ def build(cfg_path, allow_short):
         close, adj, div = (x[x.index < today] for x in (close, adj, div))
 
     # common trading calendar = dates where every ticker of the active round has a close
-    as_of = close[[h["ticker"] for h in started[-1]["holdings"]]].dropna().index.max()
-    if as_of < today and today.dayofweek < 5 and after_close:
-        print(f"NOTE: no {today.date()} close from Yahoo yet; latest close is {as_of.date()}")
+    active = close[[h["ticker"] for h in started[-1]["holdings"]]]
+    as_of = active.dropna().index.max()
     if as_of < started[-1]["start"]:
         return pending(now, f"{started[-1]['id']}: waiting for the first close on {started[-1]['start'].date()}")
+    latest = active.apply(lambda s: s.last_valid_index())
+    behind = ", ".join(f"{t} (last close {latest[t].date()})" for t in active if latest[t] < latest.max())
+    age = trading_days_old(as_of, ny_now)
+    if age > MAX_STALE_DAYS:
+        raise DataError(f"latest common close {as_of.date()} is {age} trading days old (limit {MAX_STALE_DAYS})"
+                        + (f"; behind the others: {behind}" if behind else "; Yahoo has no newer close"))
+    if age:
+        print(f"NOTE: latest common close is {as_of.date()}, {age} trading day(s) old"
+              + (f"; behind the others: {behind}" if behind else "; Yahoo has no newer close yet"))
 
     # ---- NAV per round, chain-linked index
     series, rets, round_rows = [], [], []
@@ -364,6 +388,16 @@ def check(obj, path="$"):
             raise DataError(f"risk contributions sum to {rcs:.6f}, not 1")
 
 
+def published_age(out):
+    """Trading days since the as_of of the JSON already at out (None if there is none)."""
+    try:
+        with open(out, encoding="utf-8") as f:
+            as_of = json.load(f).get("as_of")
+    except (ValueError, OSError):
+        return None
+    return trading_days_old(pd.Timestamp(as_of), datetime.now(ZoneInfo("America/New_York"))) if as_of else None
+
+
 def write_if_changed(payload, out):
     def strip(p):
         return {k: v for k, v in p.items() if k != "generated_at"}
@@ -395,10 +429,14 @@ def main():
     try:
         payload = build(args.config, args.allow_short_history)
     except PricesUnavailable as e:
+        age = published_age(args.out)
+        if age is not None and age > MAX_STALE_DAYS:
+            print(f"::error::{e} -- and {args.out} is {age} trading days old (limit {MAX_STALE_DAYS})")
+            sys.exit(1)
         print(f"::warning::{e} -- {args.out} left unchanged")
         return
     except Exception as e:
-        print(f"ERROR: {e} -- {args.out} left unchanged", file=sys.stderr)
+        print(f"::error::{e} -- {args.out} left unchanged")
         sys.exit(1)
     if payload["status"] == "pending":
         print(f"pending: {payload['message']}")
