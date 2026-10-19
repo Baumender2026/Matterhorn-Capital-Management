@@ -1,16 +1,17 @@
-# Daily NAV / risk update: rebuilds data/portfolio.json after the US close
+# Daily NAV / risk update: rebuilds data/portfolio.json after the US close and deploys the site
 name: Update portfolio data
 
 on:
   schedule:
-    # 22:30 UTC, Monday–Friday (after the 16:00 New York close, summer and winter time)
-    - cron: "30 22 * * 1-5"
+    # 21:30 UTC, Monday–Friday: after the 16:00 New York close (20:00 UTC summer, 21:00 UTC winter)
+    - cron: "30 21 * * 1-5"
+    # 23:30 UTC backup, in case Yahoo is late or the first run is delayed or dropped
+    - cron: "30 23 * * 1-5"
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
 permissions:
   contents: write   # commit data/portfolio.json
-  actions: write    # trigger the Pages deploy
 
 concurrency:
   group: "update-portfolio"
@@ -18,7 +19,9 @@ concurrency:
 
 jobs:
   update:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    outputs:
+      changed: ${{ steps.commit.outputs.changed }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -48,13 +51,38 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data/portfolio.json
           git commit -m "Update portfolio data ($(date -u +%Y-%m-%d))"
-          git push
+          git pull --rebase origin main
+          git push origin HEAD:main
           echo "changed=true" >> "$GITHUB_OUTPUT"
 
-      # Pushes made with GITHUB_TOKEN do not trigger other workflows,
-      # so start the Pages deploy explicitly.
-      - name: Redeploy site
-        if: steps.commit.outputs.changed == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh workflow run static.yml --ref main
+  # Pushes made with GITHUB_TOKEN do not trigger static.yml, so deploy Pages here.
+  # Manual runs always redeploy.
+  deploy:
+    needs: update
+    if: needs.update.outputs.changed == 'true' || github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    # Same group as static.yml, so the two never deploy at the same time
+    concurrency:
+      group: "pages"
+      cancel-in-progress: false
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main   # includes the data commit pushed by the update job
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

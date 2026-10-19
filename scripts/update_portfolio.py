@@ -14,8 +14,13 @@ Rules (AMC):
     chain-linked across rounds into an index (base 100) for the inception figures.
   * Realised volatility and the Sharpe ratio are left empty until there are
     MIN_STATS_DAYS daily returns.
+  * The data runs to the latest close every holding has. Before CLOSE_CUTOFF
+    (New York time) today's bar is an intraday price and is ignored.
 
-On any price-data error the previous JSON is left untouched and the script exits 1.
+If today's close is not out yet, the JSON stays at the previous close. If Yahoo
+returns no prices at all, the previous JSON is left untouched and the script exits 0
+with a warning (the next run retries). On any other data error the previous JSON is
+left untouched and the script exits 1.
 The risk-free rate is only needed for the Sharpe ratio: if every source fails, the
 Sharpe ratio is left empty instead.
 """
@@ -28,7 +33,7 @@ import os
 import sys
 import time
 import urllib.request
-from datetime import datetime, timezone
+from datetime import datetime, time as dtime, timezone
 from zoneinfo import ZoneInfo
 
 import numpy as np
@@ -45,10 +50,15 @@ RISK_YEARS = 6          # history downloaded for the monthly risk model
 Z_95 = 1.645
 TRADING_DAYS = 252
 MIN_STATS_DAYS = 20     # daily returns needed before realised vol and Sharpe are reported
+CLOSE_CUTOFF = dtime(16, 15)  # New York time after which today's daily bar is the close
 
 
 class DataError(Exception):
     pass
+
+
+class PricesUnavailable(DataError):
+    """Yahoo returned no prices: keep the previous JSON and let the next run retry."""
 
 
 # ---------------------------------------------------------------- config
@@ -99,7 +109,7 @@ def download_prices(tickers, start, end):
                 err = e
             time.sleep(2 * (attempt + 1))
         if df is None or df.empty:
-            raise DataError(f"no price data for {t} ({err})")
+            raise PricesUnavailable(f"no price data for {t} ({err})")
         idx = df.index.tz_localize(None).normalize() if df.index.tz is not None else df.index.normalize()
         df.index = idx
         df = df[~df.index.duplicated(keep="last")]
@@ -200,7 +210,9 @@ def r6(x):
 def build(cfg_path, allow_short):
     cfg, rounds = load_config(cfg_path)
     now = datetime.now(timezone.utc)
-    today = pd.Timestamp(datetime.now(ZoneInfo("America/New_York")).date())
+    ny_now = datetime.now(ZoneInfo("America/New_York"))
+    today = pd.Timestamp(ny_now.date())
+    after_close = ny_now.time() >= CLOSE_CUTOFF
 
     started = [r for r in rounds if r["start"] <= today]
     if not started:
@@ -213,9 +225,14 @@ def build(cfg_path, allow_short):
     tickers = sorted({h["ticker"] for r in started for h in r["holdings"]})
     dl_start = min(started[0]["start"], today - pd.DateOffset(years=RISK_YEARS)) - pd.Timedelta(days=10)
     close, adj, div = download_prices(tickers, dl_start, today + pd.Timedelta(days=1))
+    if not after_close:
+        # before the close Yahoo's bar for today holds an intraday price, not a close
+        close, adj, div = (x[x.index < today] for x in (close, adj, div))
 
     # common trading calendar = dates where every ticker of the active round has a close
     as_of = close[[h["ticker"] for h in started[-1]["holdings"]]].dropna().index.max()
+    if as_of < today and today.dayofweek < 5 and after_close:
+        print(f"NOTE: no {today.date()} close from Yahoo yet; latest close is {as_of.date()}")
     if as_of < started[-1]["start"]:
         return pending(now, f"{started[-1]['id']}: waiting for the first close on {started[-1]['start'].date()}")
 
@@ -377,6 +394,9 @@ def main():
     args = ap.parse_args()
     try:
         payload = build(args.config, args.allow_short_history)
+    except PricesUnavailable as e:
+        print(f"::warning::{e} -- {args.out} left unchanged")
+        return
     except Exception as e:
         print(f"ERROR: {e} -- {args.out} left unchanged", file=sys.stderr)
         sys.exit(1)
