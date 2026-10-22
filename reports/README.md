@@ -86,6 +86,7 @@ Charts are inline SVG so they stay sharp in PDF. Line chart: `viewBox="0 0 600 2
 | Body | 13.5px / 1.6 |
 | Table | 12.5–13px, header 10px uppercase muted, row hairline `#e9eaeb`, last row `#111111` |
 | Numbers | always Geist Mono |
+| Logo | inline SVG `<svg width="N" height="N" viewBox="0 0 32 32"><path d="M2.94 25.24A16 16 0 1 1 29.06 25.24L16 12.18ZM16 12.18V32A16 16 0 0 0 26.54 28.04Z" fill="#111111"></path></svg>` — `fill="#ffffff"` on dark pages; the mountain cut-outs are transparent. Sizes: report footer 16, report cover 36, slide footer 28, slide cover 56. Source PNGs in `/Logo/` |
 | Footer | logo + `Matterhorn Capital Management · AMC 2026 Round N · Group 3` + `NN / TT` |
 
 No gradients, no shadows, no icons, no emoji, one accent at most (black). Use `−` (U+2212) for negatives.

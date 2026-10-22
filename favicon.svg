@@ -1,5 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <style>.c{fill:#111111}.m{fill:#ffffff}@media (prefers-color-scheme:dark){.c{fill:#ffffff}.m{fill:#111111}}</style>
-  <circle class="c" cx="50" cy="50" r="50"/>
-  <path class="m" d="M50 36.8 L84 86.7 L16 86.7 Z"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <style>.c{fill:#111111}@media (prefers-color-scheme:dark){.c{fill:#ffffff}}</style>
+  <path class="c" d="M2.94 25.24A16 16 0 1 1 29.06 25.24L16 12.18ZM16 12.18V32A16 16 0 0 0 26.54 28.04Z"/>
 </svg>
