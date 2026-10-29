@@ -1,19 +1,19 @@
 {
  "status": "ok",
- "as_of": "2026-10-27",
- "generated_at": "2026-10-29T00:04:12Z",
+ "as_of": "2026-10-28",
+ "generated_at": "2026-10-29T12:59:00Z",
  "currency": "USD",
  "current_round": "Round 1",
- "nav": 99862229.35,
+ "nav": 100136424.99,
  "metrics": {
-  "total_return": -0.001378,
+  "total_return": 0.001364,
   "realised_vol": null,
   "sharpe": null,
   "max_drawdown": -0.006274,
-  "ex_ante_vol": 0.084921,
-  "var_1m_95_pct": 0.040326,
-  "var_1m_95_usd": 4027093.96,
-  "daily_returns": 7,
+  "ex_ante_vol": 0.085091,
+  "var_1m_95_pct": 0.040407,
+  "var_1m_95_usd": 4046238.84,
+  "daily_returns": 8,
   "min_days_for_stats": 20,
   "rf_1m_latest": null,
   "rf_source": null,
@@ -27,11 +27,11 @@
   {
    "id": "Round 1",
    "start_date": "2026-10-16",
-   "end_date": "2026-10-27",
+   "end_date": "2026-10-28",
    "status": "active",
-   "start_nav": 100000000.79,
-   "end_nav": 99862229.35,
-   "return": -0.001378
+   "start_nav": 100000000.0,
+   "end_nav": 100136424.99,
+   "return": 0.001364
   },
   {
    "id": "Round 2",
@@ -50,12 +50,12 @@
    "name": "Vanguard Total Stock Market ETF",
    "asset_class": "Equity",
    "shares": 29149.0,
-   "price": 377.92,
-   "market_value": 11015990.47,
-   "weight": 0.110312,
+   "price": 379.17,
+   "market_value": 11052426.33,
+   "weight": 0.110374,
    "target_weight": 0.109,
-   "drift_pp": 0.1312,
-   "risk_contribution": 0.163367,
+   "drift_pp": 0.1374,
+   "risk_contribution": 0.163148,
    "target_risk_contribution": 0.1521
   },
   {
@@ -63,12 +63,12 @@
    "name": "Vanguard FTSE Developed Markets ETF",
    "asset_class": "Equity",
    "shares": 147369.0,
-   "price": 69.88,
-   "market_value": 10298145.32,
-   "weight": 0.103124,
+   "price": 70.34,
+   "market_value": 10365935.46,
+   "weight": 0.103518,
    "target_weight": 0.1024,
-   "drift_pp": 0.0724,
-   "risk_contribution": 0.181759,
+   "drift_pp": 0.1118,
+   "risk_contribution": 0.182141,
    "target_risk_contribution": 0.1742
   },
   {
@@ -76,12 +76,12 @@
    "name": "iShares Core MSCI Emerging Markets ETF",
    "asset_class": "Equity",
    "shares": 133320.0,
-   "price": 76.18,
-   "market_value": 10156317.64,
-   "weight": 0.101703,
+   "price": 77.33,
+   "market_value": 10309635.6,
+   "weight": 0.102956,
    "target_weight": 0.1023,
-   "drift_pp": -0.0597,
-   "risk_contribution": 0.175804,
+   "drift_pp": 0.0656,
+   "risk_contribution": 0.177783,
    "target_risk_contribution": 0.1736
   },
   {
@@ -89,12 +89,12 @@
    "name": "Vanguard Total Bond Market ETF",
    "asset_class": "Bonds",
    "shares": 188225.0,
-   "price": 71.31,
-   "market_value": 13422324.29,
-   "weight": 0.134408,
+   "price": 71.19,
+   "market_value": 13399737.75,
+   "weight": 0.133815,
    "target_weight": 0.1333,
-   "drift_pp": 0.1108,
-   "risk_contribution": 0.081511,
+   "drift_pp": 0.0515,
+   "risk_contribution": 0.080965,
    "target_risk_contribution": 0.0834
   },
   {
@@ -102,12 +102,12 @@
    "name": "Vanguard Total International Bond ETF",
    "asset_class": "Bonds",
    "shares": 349731.0,
-   "price": 47.29,
-   "market_value": 16538779.31,
-   "weight": 0.165616,
+   "price": 47.28,
+   "market_value": 16535281.68,
+   "weight": 0.165128,
    "target_weight": 0.1648,
-   "drift_pp": 0.0816,
-   "risk_contribution": 0.076745,
+   "drift_pp": 0.0328,
+   "risk_contribution": 0.076336,
    "target_risk_contribution": 0.0783
   },
   {
@@ -115,12 +115,12 @@
    "name": "iShares TIPS Bond ETF",
    "asset_class": "Bonds",
    "shares": 144602.0,
-   "price": 106.31,
-   "market_value": 15372638.27,
-   "weight": 0.153938,
+   "price": 106.26,
+   "market_value": 15365408.52,
+   "weight": 0.153445,
    "target_weight": 0.1526,
-   "drift_pp": 0.1338,
-   "risk_contribution": 0.091615,
+   "drift_pp": 0.0845,
+   "risk_contribution": 0.091078,
    "target_risk_contribution": 0.0884
   },
   {
@@ -128,12 +128,12 @@
    "name": "SPDR Gold Shares",
    "asset_class": "Real assets",
    "shares": 29177.0,
-   "price": 372.28,
-   "market_value": 10862013.52,
-   "weight": 0.10877,
+   "price": 373.51,
+   "market_value": 10897901.27,
+   "weight": 0.108831,
    "target_weight": 0.1115,
-   "drift_pp": -0.273,
-   "risk_contribution": 0.136888,
+   "drift_pp": -0.2669,
+   "risk_contribution": 0.136667,
    "target_risk_contribution": 0.1549
   },
   {
@@ -141,12 +141,12 @@
    "name": "abrdn Bloomberg All Commodity Strategy K-1 Free ETF",
    "asset_class": "Real assets",
    "shares": 469258.0,
-   "price": 25.99,
-   "market_value": 12196015.31,
-   "weight": 0.122128,
+   "price": 26.02,
+   "market_value": 12210093.16,
+   "weight": 0.121935,
    "target_weight": 0.124,
-   "drift_pp": -0.1872,
-   "risk_contribution": 0.092312,
+   "drift_pp": -0.2065,
+   "risk_contribution": 0.091881,
    "target_risk_contribution": 0.0951
   },
   {
@@ -170,15 +170,15 @@
  "asset_classes": [
   {
    "name": "Equity",
-   "weight": 0.315139
+   "weight": 0.316848
   },
   {
    "name": "Bonds",
-   "weight": 0.453962
+   "weight": 0.452388
   },
   {
    "name": "Real assets",
-   "weight": 0.230898
+   "weight": 0.230766
   },
   {
    "name": "Cash leg",
@@ -193,50 +193,56 @@
   {
    "date": "2026-10-16",
    "round": "Round 1",
-   "nav": 100000000.79,
+   "nav": 100000000.0,
    "index": 100.0
   },
   {
    "date": "2026-10-19",
    "round": "Round 1",
-   "nav": 99874914.21,
+   "nav": 99874914.62,
    "index": 99.8749
   },
   {
    "date": "2026-10-20",
    "round": "Round 1",
-   "nav": 99976953.81,
+   "nav": 99976953.1,
    "index": 99.977
   },
   {
    "date": "2026-10-21",
    "round": "Round 1",
-   "nav": 100103797.71,
+   "nav": 100103796.2,
    "index": 100.1038
   },
   {
    "date": "2026-10-22",
    "round": "Round 1",
-   "nav": 99485682.5,
+   "nav": 99485681.12,
    "index": 99.4857
   },
   {
    "date": "2026-10-23",
    "round": "Round 1",
-   "nav": 99475740.94,
+   "nav": 99475742.1,
    "index": 99.4757
   },
   {
    "date": "2026-10-26",
    "round": "Round 1",
-   "nav": 99491771.98,
+   "nav": 99491771.43,
    "index": 99.4918
   },
   {
    "date": "2026-10-27",
    "round": "Round 1",
-   "nav": 99862229.35,
+   "nav": 99862229.96,
    "index": 99.8622
+  },
+  {
+   "date": "2026-10-28",
+   "round": "Round 1",
+   "nav": 100136424.99,
+   "index": 100.1364
   }
  ]
 }

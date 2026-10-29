@@ -8,8 +8,9 @@ ex-ante risk model. Run daily by .github/workflows/update-portfolio.yml.
     python scripts/update_portfolio.py [--config data/holdings.json] [--out data/portfolio.json]
 
 Rules (AMC):
-  * NAV = cash + sum(shares * raw close). Dividends are credited to cash on the
-    ex-date; cash earns 0%.
+  * NAV = cash + sum(shares * raw close). Dividends are reinvested in the ETF that
+    pays them at the ex-date close, as in the Bloomberg portfolio (PRTU "reinvest
+    cash dividends"); cash earns 0%.
   * Each round restarts at its own starting NAV (USD 100M). Daily returns are
     chain-linked across rounds into an index (base 100) for the inception figures.
   * Realised volatility and the Sharpe ratio are left empty until there are
@@ -18,8 +19,9 @@ Rules (AMC):
     (New York time) today's bar is an intraday price and is ignored.
 
 If today's close is not out yet, the JSON stays at the previous close. If Yahoo
-returns no prices for any ticker, the previous JSON is left untouched and the script
-exits 0 with a warning (the next run retries). It exits 1, also leaving the JSON
+returns no prices for any ticker, or its latest common close is older than the one
+already published, the previous JSON is left untouched and the script exits 0 with
+a warning (the next run retries). It exits 1, also leaving the JSON
 untouched, if only some tickers come back, if the latest close is more than
 MAX_STALE_DAYS trading days old (weekdays; holidays are not excluded), or on any
 other data error.
@@ -117,7 +119,7 @@ def download_prices(tickers, start, end):
         idx = df.index.tz_localize(None).normalize() if df.index.tz is not None else df.index.normalize()
         df.index = idx
         df = df[~df.index.duplicated(keep="last")]
-        close[t] = df["Close"]
+        close[t] = df["Close"].round(4)  # Yahoo sends float32 noise (374.0700073 for 374.07)
         adj[t] = df["Adj Close"] if "Adj Close" in df else df["Close"]
         div[t] = df["Dividends"] if "Dividends" in df else pd.Series(0.0, index=df.index)
     if len(missing) == len(tickers):
@@ -195,10 +197,12 @@ def round_nav(r, close, div, as_of):
         raise DataError(f"{r['id']}: missing prices for {list(px.columns[px.isna().any()])}")
     d = div.reindex(px.index).loc[:, tickers].fillna(0.0)
     d.iloc[0] = 0.0  # bought at the start-date close: not entitled to that day's ex-dividend
-    cash = float(r.get("cash", 0.0)) + (d * shares).sum(axis=1).cumsum()
-    mv = px * shares
+    # dividends buy more of the ETF that pays them at the ex-date close (Bloomberg PRTU "reinvest cash dividends")
+    units = shares * (1 + d / px).cumprod()
+    cash = pd.Series(float(r.get("cash", 0.0)), index=px.index)
+    mv = px * units
     nav = cash + mv.sum(axis=1)
-    return nav, cash, mv, px
+    return nav, cash, mv, px, units
 
 
 def ex_ante(tickers, weights, adj, as_of, allow_short):
@@ -264,7 +268,7 @@ def build(cfg_path, allow_short):
     series, rets, round_rows = [], [], []
     level = 100.0
     for r in started:
-        nav, cash, mv, px = round_nav(r, close, div, as_of)
+        nav, cash, mv, px, units = round_nav(r, close, div, as_of)
         rr = nav.pct_change().iloc[1:]
         idx = level * nav / nav.iloc[0]
         for d in nav.index:
@@ -277,7 +281,7 @@ def build(cfg_path, allow_short):
                            "status": "closed" if r["next_start"] is not None else "active",
                            "start_nav": round(float(nav.iloc[0]), 2), "end_nav": round(float(nav.iloc[-1]), 2),
                            "return": r6(nav.iloc[-1] / nav.iloc[0] - 1)})
-        last = (r, nav, cash, mv, px)
+        last = (r, nav, cash, mv, px, units)
     for r in cfg.get("rounds", []):
         if r["id"] not in {x["id"] for x in round_rows}:
             round_rows.append({"id": r["id"], "start_date": r.get("start_date"), "status": "pending"})
@@ -305,7 +309,7 @@ def build(cfg_path, allow_short):
                 sharpe = float(ex.mean() / sd * math.sqrt(TRADING_DAYS)) if sd > 0 else None
 
     # ---- current holdings of the active round
-    r, nav, cash, mv, px = last
+    r, nav, cash, mv, px, units = last
     nav_now = float(nav.iloc[-1])
     cash_now = float(cash.iloc[-1])
     tick = [h["ticker"] for h in r["holdings"]]
@@ -319,7 +323,7 @@ def build(cfg_path, allow_short):
         tw = float(h.get("target_weight") or 0.0)
         holdings.append({
             "ticker": t, "name": h.get("name") or t, "asset_class": h.get("asset_class") or "",
-            "shares": float(h["shares"]), "price": round(float(px[t].iloc[-1]), 4),
+            "shares": round(float(units[t].iloc[-1]), 4), "price": round(float(px[t].iloc[-1]), 4),
             "market_value": round(float(mv[t].iloc[-1]), 2),
             "weight": r6(w_now[i]), "target_weight": r6(tw),
             "drift_pp": round((w_now[i] - tw) * 100, 4),
@@ -388,14 +392,20 @@ def check(obj, path="$"):
             raise DataError(f"risk contributions sum to {rcs:.6f}, not 1")
 
 
-def published_age(out):
-    """Trading days since the as_of of the JSON already at out (None if there is none)."""
+def published_as_of(out):
+    """as_of of the JSON already at out (None if there is none)."""
     try:
         with open(out, encoding="utf-8") as f:
             as_of = json.load(f).get("as_of")
     except (ValueError, OSError):
         return None
-    return trading_days_old(pd.Timestamp(as_of), datetime.now(ZoneInfo("America/New_York"))) if as_of else None
+    return pd.Timestamp(as_of) if as_of else None
+
+
+def published_age(out):
+    """Trading days since the as_of of the JSON already at out (None if there is none)."""
+    as_of = published_as_of(out)
+    return trading_days_old(as_of, datetime.now(ZoneInfo("America/New_York"))) if as_of is not None else None
 
 
 def write_if_changed(payload, out):
@@ -441,6 +451,12 @@ def main():
     if payload["status"] == "pending":
         print(f"pending: {payload['message']}")
     else:
+        # Yahoo sometimes drops the newest bar of a ticker for a while: never step back a day
+        prev = published_as_of(args.out)
+        if prev is not None and pd.Timestamp(payload["as_of"]) < prev:
+            print(f"::warning::latest common close is {payload['as_of']}, older than the published "
+                  f"{prev.date()} -- {args.out} left unchanged")
+            return
         m = payload["metrics"]
         print(f"as of {payload['as_of']}: NAV {payload['nav']:,.0f}  return {m['total_return']:+.2%}  "
               f"ex-ante vol {m['ex_ante_vol']:.2%}  VaR {m['var_1m_95_pct']:.2%}")
