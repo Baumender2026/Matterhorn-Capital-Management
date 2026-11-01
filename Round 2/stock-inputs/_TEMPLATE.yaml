@@ -1,0 +1,73 @@
+# Stock report inputs. Copy this file to <TICKER>.yaml, fill it in, then run from the repo root:
+#     python3 "Round 2/build_stock_report.py" <TICKER>
+# Final numbers: add --as-of 2026-11-06 on 7-8 November.
+# Everything not listed here (prices, statements, multiples, beta, charts) is computed by the script.
+#
+# Text may use {tokens}, which update when you re-run, so never type a computed number by hand:
+#   Prices     {P0} {V0} {V_ddm} {V_comp} {V_gordon} {V_ddm_beta1} {D0} {target}
+#   Gaps       {mos} {mos_ddm} {mos_comp} {target_up} (margin of safety on fair value, DDM, comps; analyst target)
+#   Discount   {k} {beta} {rf10} {erp} {g1} {g2} {T} {implied_g} {tv_share}
+#   Alpha      {alpha} {alpha_closed} {alpha_never} {alpha_ddm} {ir} {ir_ddm}
+#   Earnings   {eps_ago} {eps_cur} {eps_fwd} {eps_ttm} {eps_growth} {yield}
+#   Multiples  {fpe} {fpe_med} {tpe} {ev_ebitda} {ev_ebitda_med} {pb} {pb_just}
+#   Quality    {roe_fwd} {retention} {payout_fwd} {g_sust} {de} {payout_fcf} {red_flags} {verdict} {fy} {fy_prev}
+# Use **double asterisks** for bold, and [1] [2] for the numbered sources at the bottom.
+# Pages are fixed. If the text is too long the build stops and says which page, by how many pixels.
+# As a guide: thesis 850 characters, each catalyst cell 150, each method paragraph 400, each specific issue 165.
+
+name:                          # short company name; leave empty to use Yahoo's
+peers: []                      # 5 or 6 tickers from Bloomberg RV: same industry, US-listed if possible
+
+valuation:
+  method: two_stage            # gordon: mature, stable growth. two_stage: not in its normal state today
+                               # (turnaround, cyclical low). none: no dividend, fair value uses the comps only.
+  dividend_basis: dividends    # dividends_plus_buybacks if buybacks are large: the DDM on dividends undervalues
+  erp: 0.06114                 # Bloomberg CRP. The notebook says to recompute it: replace it for the final run
+  erp_source: "Bloomberg CRP, Class 5: refresh"
+  g1: 0.05                     # first-stage growth: analysts' consensus (Bloomberg EE or BDVD)
+  g1_source: ""
+  T: 5                         # years to reach the normal state: your assumption
+  T_source: ""
+  g2: 0.02                     # terminal growth: below k and close to long-run economic growth
+  g2_source: ""
+  # Default is the TA's convention: the DDM sets the value and the comps are a second opinion.
+  # When they disagree, or when the DDM fits badly, give the comps a weight and explain why in the text.
+  fair_value_weights: {ddm: 1.0, comps: 0.0}
+  comps_primary: [forward_pe, ev_ebitda]   # also: trailing_pe, pb, ps, ev_sales, yield. Banks: use pb
+  comps_stat: median           # median or mean of the peers
+  overrides: {}                # any computed input, with its source. Keys: P0, D0, beta, rf10, forward_eps
+                               # e.g. beta: {value: 0.30, source: "Bloomberg BETA"}
+
+alpha:
+  convergence_years: 1         # years for the price to reach fair value. 1 is the TA's alpha closed
+  probability_gap_closes: 1.0  # 0 is the TA's alpha never: no catalyst, or the value-trap check fails
+  rationale: ""                # why the gap closes, by when, and why this alpha is credible
+
+position:                      # fill in after Treynor-Black; shown in the alpha section
+  weight: null                 # e.g. 0.035
+  shares: null
+
+text:
+  thesis: ""                   # what the market has wrong, and why you are right
+  value_trap: ""               # your reading of the check, after the rule's verdict
+  issue_value_trap: ""         # sustainability of profits and free cash flow
+  issue_sustainable_growth: "" # {g_sust} against your g
+  issue_management: ""         # acquisitions, governance, use of capital
+  issue_activist: ""           # a stake or 13D, or why this route is closed
+  issue_upside: ""             # what the valuation leaves out on the upside
+  issue_risks: ""              # what would prove you wrong
+
+method_text:
+  why: ""                      # why this method suits the company
+  not_suitable: ""             # which methods are unsuitable or difficult, and why
+
+catalysts:                     # the central part of the analysis. 3 rows fit; date must be 6 Nov to 27 Dec
+  - event: ""
+    date: 2026-12-01           # the date the flag checks, YYYY-MM-DD
+    date_label: ""             # what is printed, e.g. "About 3 Dec (Yahoo)"
+    why: ""                    # why it can happen before the end of December
+    effect: ""                 # how it moves the price towards fair value
+
+sources:                       # numbered [1], [2] ... in the order listed
+  - text: ""
+    url: ""
