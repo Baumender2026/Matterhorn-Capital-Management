@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the three-page Round 2 stock report (valuation dossier) for one stock.
+"""Build the two-page Round 2 stock report (valuation dossier) for one stock.
 
     python3 "Round 2/build_stock_report.py" HRL                      latest close
     python3 "Round 2/build_stock_report.py" HRL --as-of 2026-11-06   final numbers
@@ -7,16 +7,19 @@
 
 Reads   Round 2/stock-inputs/<TICKER>.yaml       peers, growth inputs, thesis, catalysts
 Saves   Round 2/data/<TICKER>_<date>.json        the download, so the report can be reproduced
-Writes  Round 2/reports/<TICKER> Report.dc.html  the three A4 pages
+Writes  Round 2/reports/<TICKER> Report.dc.html  the two A4 pages
         Round 2/reports/<TICKER>.pdf             the export (Chrome, headless)
         Round 2/reports/<TICKER>_figures.json    every computed number and the flags
 
 The formulas follow the TA's 02_round2_lecture.ipynb and the Round 2 cheat sheet. Differences:
   * Beta and residual risk use our own SAA (data/holdings.json) and complete months only.
-  * Alpha is generalised: alpha = p * alpha_N + (1 - p) * alpha_never, with
-    alpha_N = (1 + k) * ((V0 / P0) ** (1 / N) - 1). N = 1, p = 1 is the TA's alpha_closed.
+  * Alpha allows a probability: alpha = p * alpha_closed + (1 - p) * alpha_never.
+    p = 1 is the TA's alpha closed, p = 0 is the TA's alpha never.
   * The earnings test compares forward EPS with last year's adjusted EPS, so a one-off
     write-down cannot fake a rise (the cheat sheet's "careful" on GIS).
+
+Fair value is the DDM value. The comparables are a double check and do not feed it; only a stock
+with no dividend, where the DDM does not apply, falls back on them.
 
 An existing snapshot for the date is reused, unless --refresh is given or the peers changed.
 """
@@ -54,7 +57,7 @@ WINDOW = 60                                 # months, as in Round 1
 ERP_DEFAULT = 0.06114                       # Bloomberg CRP, Class 5; the notebook says to recompute it
 ENTRY_DATE = pd.Timestamp("2026-11-06")     # prices of the new positions
 CHALLENGE_END = pd.Timestamp("2026-12-27")  # General guidelines: the challenge ends on 27 December
-IR_GOOD, IR_BUFFETT = 0.50, 0.64            # cheat sheet §9, credibility benchmarks
+IR_BUFFETT = 0.64                           # cheat sheet §9, credibility benchmark
 HISTORY_YEARS = 7                           # price history downloaded for the 60-month window
 
 INK, MUTED, CARD, LINE, LINE_B = "#111111", "#615e5b", "#f3efeb", "#e9eaeb", "#d8d3cc"
@@ -77,10 +80,9 @@ STATEMENT_ITEMS = ["Total Revenue", "Gross Profit", "Net Income", "Diluted EPS",
 
 # id, column title, kind for the sanity filter
 MULTIPLES = [("forward_pe", "Fwd P/E", "earnings"), ("trailing_pe", "Trail. P/E", "earnings"),
-             ("ev_ebitda", "EV/EBITDA", "earnings"), ("pb", "P/B", "positive"), ("ps", "P/S", "positive"),
-             ("ev_sales", "EV/Sales", "positive"), ("yield", "Div. yield", "yield")]
-MULTIPLE_NAMES = {"forward_pe": "Forward P/E", "trailing_pe": "Trailing P/E", "ev_ebitda": "EV/EBITDA", "pb": "P/B",
-                  "ps": "P/S", "ev_sales": "EV/Sales", "yield": "Dividend yield"}
+             ("p_fcf", "P/FCF", "earnings"), ("ev_ebitda", "EV/EBITDA", "earnings"), ("pb", "P/B", "positive"),
+             ("ps", "P/S", "positive"), ("ev_sales", "EV/Sales", "positive"), ("yield", "Div. yield", "yield")]
+SHOWN = ("forward_pe", "p_fcf", "ev_ebitda")   # the multiples printed in the report; the others stay in figures.json
 
 # metric, characteristic of Class 5, higher is better, percent format
 TRAP_METRICS = [("ROE", "Profitability", True, True), ("ROA", "Profitability", True, True),
@@ -108,9 +110,9 @@ def pv_terminal(D0, k, g1, g2, T):
     return D0 * (1 + g1) ** T * (1 + g2) / (k - g2) / (1 + k) ** T
 
 
-def alpha_converges(V0, P0, k, years=1):
-    """Annual alpha if the price reaches the value in `years`. years = 1 is the TA's alpha_closed."""
-    return (1 + k) * ((V0 / P0) ** (1 / years) - 1)
+def alpha_closed(V0, P0, k):
+    """Annual alpha if the price reaches the value within one year."""
+    return (1 + k) * (V0 - P0) / P0
 
 
 def alpha_never(D0, P0, g, k):
@@ -318,10 +320,17 @@ def stats_of(values):
             "max": float(v.max()), "q1": float(q1), "q3": float(q3)}
 
 
-def peer_multiples(i):
-    price, rate = i.get("currentPrice"), i.get("dividendRate")
+def last_fcf(statements):
+    """Free cash flow (operating cash flow - capex) of the latest fiscal year, or None."""
+    fcf = statements.get("Free Cash Flow") or {}
+    return fcf[max(fcf)] if fcf else None
+
+
+def peer_multiples(i, fcf):
+    price, rate, cap = i.get("currentPrice"), i.get("dividendRate"), i.get("marketCap")
     y = rate / price * 100 if rate and price else None
-    return {"forward_pe": i.get("forwardPE"), "trailing_pe": i.get("trailingPE"), "ev_ebitda": i.get("enterpriseToEbitda"),
+    return {"forward_pe": i.get("forwardPE"), "trailing_pe": i.get("trailingPE"), "p_fcf": cap / fcf if cap and fcf else None,
+            "ev_ebitda": i.get("enterpriseToEbitda"),
             "pb": i.get("priceToBook"), "ps": i.get("priceToSalesTrailing12Months"), "ev_sales": i.get("enterpriseToRevenue"),
             "yield": y}
 
@@ -410,12 +419,11 @@ def analyse(cfg, snap):
     k_grid = [k + d for d in (-0.01, -0.005, 0, 0.005, 0.01)]
     g_grid = [g2 + d for d in (-0.01, -0.005, 0, 0.005, 0.01)]
     grid = [[ddm(kk, gg) for gg in g_grid] for kk in k_grid]
-    inner = [x for row in grid[1:4] for x in row[1:4] if x is not None]
 
     # --- comparables
     rows = []
     for p in snap["peers"]:
-        m = peer_multiples(snap["info"][p])
+        m = peer_multiples(snap["info"][p], last_fcf(snap["statements"][p]))
         rows.append({"ticker": p, "name": (cfg.get("peer_names") or {}).get(p) or short_name(snap["info"][p].get("longName")),
                      "market_cap": snap["info"][p].get("marketCap"),
                      **{mid: sane(m[mid], kind) for mid, _, kind in MULTIPLES}})
@@ -431,11 +439,13 @@ def analyse(cfg, snap):
     eps_fwd, src_fe = given("forward_eps", snap["estimates"]["eps_next"], "Yahoo consensus")
     eps_ttm = info.get("trailingEps")
     bvps, ebitda, revenue = info.get("bookValue"), info.get("ebitda"), info.get("totalRevenue")
+    fcf = last_fcf(snap["statements"][t])
 
     per_share = lambda x: x / shares
     implied = {        # price at a given multiple, for each multiple
         "forward_pe": lambda m: eps_fwd * m,
         "trailing_pe": lambda m: eps_ttm * m if eps_ttm and eps_ttm > 0 else None,
+        "p_fcf": lambda m: per_share(m * fcf) if fcf and fcf > 0 else None,
         "ev_ebitda": lambda m: per_share(m * ebitda - net_debt) if ebitda and ebitda > 0 else None,
         "pb": lambda m: bvps * m if bvps and bvps > 0 else None,
         "ps": lambda m: per_share(revenue * m) if revenue else None,
@@ -444,6 +454,7 @@ def analyse(cfg, snap):
     }
     own = {"forward_pe": P0 / eps_fwd if eps_fwd and eps_fwd > 0 else None,
            "trailing_pe": P0 / eps_ttm if eps_ttm and eps_ttm > 0 else None,
+           "p_fcf": market_cap / fcf if fcf and fcf > 0 else None,
            "ev_ebitda": ev / ebitda if ebitda and ebitda > 0 else None,
            "pb": P0 / bvps if bvps and bvps > 0 else None,
            "ps": market_cap / revenue if revenue else None,
@@ -460,22 +471,21 @@ def analyse(cfg, snap):
         comps[mid] = st
 
     primary = list(v.get("comps_primary") or ["forward_pe", "ev_ebitda"])
+    outside = [mid for mid in primary if mid not in SHOWN]
+    if outside:
+        raise SystemExit(f"comps_primary can only use the multiples in the report ({', '.join(SHOWN)}), not {', '.join(outside)}")
     stat = v.get("comps_stat", "median")
     prices = [comps[mid][f"price_{stat}"] for mid in primary if comps[mid][f"price_{stat}"] is not None]
     V_comp = float(np.mean(prices)) if prices else None
     if len(snap["peers"]) < 5:
         flags.append((f"Only {len(snap['peers'])} peers: the template asks for 5 or 6", True))
 
-    # --- fair value
-    w = v.get("fair_value_weights") or {"ddm": 1.0, "comps": 0.0}
-    w_ddm, w_comp = float(w.get("ddm", 1.0)), float(w.get("comps", 0.0))
-    if V_ddm is None:
-        w_ddm, w_comp = 0.0, 1.0
-    if V_comp is None:
-        w_ddm, w_comp = 1.0, 0.0
+    # --- fair value: the DDM. The comps are a double check, unless there is no DDM at all
     if V_ddm is None and V_comp is None:
         raise SystemExit("Neither the DDM nor the comparables give a value")
-    V0 = ((w_ddm * V_ddm if w_ddm else 0) + (w_comp * V_comp if w_comp else 0)) / (w_ddm + w_comp)
+    V0 = V_ddm if V_ddm is not None else V_comp
+    if V_ddm is None:
+        flags.append(("No dividend, so no DDM: the fair value comes from the comparables", True))
     mos = V0 / P0 - 1
     mos_ddm = V_ddm / P0 - 1 if V_ddm else None
     mos_comp = V_comp / P0 - 1 if V_comp else None
@@ -515,16 +525,11 @@ def analyse(cfg, snap):
     # --- index model on the SAA and alpha
     beta_S, s2_eps = regress_on_saa(est[t], R_S)
     sig_eps = math.sqrt(s2_eps)
-    N = float(a.get("convergence_years", 1))
     p = float(a.get("probability_gap_closes", 1.0))
     a_never = alpha_never(D0, P0, g2, k)
-    a_N = alpha_converges(V0, P0, k, N)
-    alpha = p * a_N + (1 - p) * a_never
+    a_closed = alpha_closed(V0, P0, k)
+    alpha = p * a_closed + (1 - p) * a_never
     ir = alpha / sig_eps
-    scenarios = [{"years": n, "alpha": alpha_converges(V0, P0, k, n), "ir": alpha_converges(V0, P0, k, n) / sig_eps} for n in (1, 2, 3)]
-    a_ddm = alpha_converges(V_ddm, P0, k, 1) if V_ddm else None
-    start_hold = max(as_of, ENTRY_DATE)
-    days_held = max((CHALLENGE_END - start_hold).days, 0)
 
     if alpha < 0:
         flags.append(("Negative alpha: weight 0 (long-only)", True))
@@ -532,6 +537,10 @@ def analyse(cfg, snap):
         flags.append((f"IR of {ir:.2f} is above Buffett's {IR_BUFFETT:.2f}: the alpha is probably too optimistic", True))
     if verdict == "Fail" and p > 0 and alpha > 0:
         flags.append(("The value-trap check fails but the alpha assumes the gap closes: use probability 0 or drop the stock", True))
+
+    n_issues = len(cfg.get("issues") or [])
+    if n_issues not in (2, 3):
+        flags.append((f"{n_issues} specific issues: the template asks for 2 or 3", True))
 
     catalysts = cfg.get("catalysts") or []
     if not catalysts:
@@ -561,10 +570,10 @@ def analyse(cfg, snap):
         "P0": P0, "D0": D0, "beta": beta, "rf10": rf10, "erp": erp, "k": k, "g1": g1, "g2": g2, "T": T, "method": method,
         "sources": {"P0": src_p, "D0": src_d, "beta": src_b, "rf10": src_rf, "erp": src_erp, "forward_eps": src_fe},
         "V_gordon": V_gordon, "V_2stage": V_2stage, "V_ddm": V_ddm, "pv_tv": pv_tv, "tv_share": pv_tv / V_ddm if pv_tv else None,
-        "V_ddm_beta1": V_ddm_beta1, "V_comp": V_comp, "V0": V0, "w_ddm": w_ddm, "w_comp": w_comp, "mos": mos, "mos_ddm": mos_ddm,
+        "V_ddm_beta1": V_ddm_beta1, "V_comp": V_comp, "V0": V0, "mos": mos, "mos_ddm": mos_ddm,
         "mos_comp": mos_comp, "methods_verdict": methods, "implied_g": implied_growth(P0, D0, k) if D0 > 0 else None,
-        "k_grid": k_grid, "g_grid": g_grid, "grid": grid, "ddm_lo": min(inner) if inner else None, "ddm_hi": max(inner) if inner else None,
-        "market_cap": market_cap, "enterprise_value": ev, "net_debt": net_debt, "shares": shares, "ebitda": ebitda, "revenue": revenue,
+        "k_grid": k_grid, "g_grid": g_grid, "grid": grid,
+        "market_cap": market_cap, "enterprise_value": ev, "net_debt": net_debt, "shares": shares, "ebitda": ebitda, "revenue": revenue, "fcf_last": fcf,
         "bvps": bvps, "eps_ttm": eps_ttm, "eps_ago": eps_ago, "eps_cur": eps_cur, "eps_fwd": eps_fwd,
         "eps_growth_next": snap["estimates"]["growth_next"], "dividend_yield": D0 / P0, "week52_low": info.get("fiftyTwoWeekLow"),
         "week52_high": info.get("fiftyTwoWeekHigh"), "target_mean": target_mean, "target_low": info.get("targetLowPrice"),
@@ -583,19 +592,10 @@ def analyse(cfg, snap):
         "beta_S": beta_S, "sigma2_eps": s2_eps, "sigma_eps": sig_eps, "vol": float(est[t].std() * math.sqrt(12)),
         "te_per_unit": float((est[t] - R_S).std() * math.sqrt(12)), "score": alpha / s2_eps,
         "window": [est.index[0].strftime("%Y-%m"), est.index[-1].strftime("%Y-%m")], "saa_vol": float(sigma_S), "saa_excess": float(mu_S),
-        "alpha_scenarios": scenarios, "alpha_never": a_never, "alpha_closed": scenarios[0]["alpha"], "alpha_ddm": a_ddm,
-        "ir_ddm": a_ddm / sig_eps if a_ddm is not None else None, "convergence_years": N, "probability": p, "alpha": alpha, "ir": ir,
-        "ir_never": a_never / sig_eps, "days_held": days_held, "alpha_hold": alpha * days_held / 365,
+        "alpha_never": a_never, "alpha_closed": a_closed, "probability": p, "alpha": alpha, "ir": ir,
+        "ir_closed": a_closed / sig_eps, "ir_never": a_never / sig_eps,
         "signal": signal, "flags": [x[0] for x in flags], "flags_report": [x[0] for x in flags if x[1]],
-        "position": cfg.get("position") or {},
     }
-    # 12-month price chart, adjusted for dividends and rebased to 100
-    window = adj[[t, "SPY"]].loc[as_of - pd.DateOffset(months=12):as_of].dropna()
-    rebased = window / window.iloc[0] * 100
-    weekly = rebased.resample("W-FRI").last().dropna()
-    fig["price_chart"] = {c: [float(x) for x in weekly[c]] for c in weekly.columns}
-    fig["price_return_12m"] = float(rebased[t].iloc[-1] / 100 - 1)
-    fig["spy_return_12m"] = float(rebased["SPY"].iloc[-1] / 100 - 1)
     return fig
 
 
@@ -636,6 +636,7 @@ def day(s):
 def tokens(fig):
     """The values YAML text can use as {name}: they update when the report is re-run."""
     c = fig["comps"]
+    grid_cells = [x for row in fig["grid"] for x in row if x is not None]
     return {
         "P0": usd(fig["P0"]), "D0": usd(fig["D0"]), "V0": usd(fig["V0"]), "V_ddm": usd(fig["V_ddm"]), "V_comp": usd(fig["V_comp"]),
         "V_ddm_beta1": usd(fig["V_ddm_beta1"]), "V_gordon": usd(fig["V_gordon"]),
@@ -643,17 +644,19 @@ def tokens(fig):
         "k": pct(fig["k"], 2), "beta": num(fig["beta"]), "rf10": pct(fig["rf10"], 2), "erp": pct(fig["erp"], 2),
         "g1": pct(fig["g1"], 1), "g2": pct(fig["g2"], 1), "T": str(fig["T"]), "implied_g": pct(fig["implied_g"], 1),
         "alpha": pct(fig["alpha"], 1), "alpha_closed": pct(fig["alpha_closed"], 1), "alpha_never": pct(fig["alpha_never"], 1),
-        "alpha_ddm": pct(fig["alpha_ddm"], 0), "ir": num(fig["ir"]), "ir_ddm": num(fig["ir_ddm"], 1),
+        "ir": num(fig["ir"]),
         "eps_ago": num(fig["eps_ago"]), "eps_cur": num(fig["eps_cur"]), "eps_fwd": num(fig["eps_fwd"]), "eps_ttm": num(fig["eps_ttm"]),
         "eps_growth": pct(fig["eps_growth_next"], 1), "yield": pct(fig["dividend_yield"], 1),
         "fpe": mult(c["forward_pe"]["own"]), "fpe_med": mult(c["forward_pe"]["median"]), "tpe": mult(c["trailing_pe"]["own"]),
         "ev_ebitda": mult(c["ev_ebitda"]["own"]), "ev_ebitda_med": mult(c["ev_ebitda"]["median"]),
+        "pfcf": mult(c["p_fcf"]["own"]), "pfcf_med": mult(c["p_fcf"]["median"]),
         "pb": mult(fig["pb"], 2), "pb_just": mult(fig["pb_just"], 2), "roe_fwd": pct(fig["roe_fwd"], 1),
         "payout_fwd": pct(fig["payout_fwd"], 0), "retention": pct(1 - fig["payout_fwd"], 0) if fig["payout_fwd"] is not None else "n/a",
         "g_sust": pct(fig["g_sust"], 1), "de": num(fig["metrics"]["debt / equity"][-1]),
         "payout_fcf": num(fig["metrics"]["payout / FCF"][-1]), "target": usd(fig["target_mean"]), "target_up": pct(fig["target_up"], 0, True),
         "fy": fig["fy_labels"][-1], "fy_prev": fig["fy_labels"][-2] if len(fig["fy_labels"]) > 1 else "",
         "red_flags": ", ".join(fig["red_flags"]) or "no metric", "tv_share": pct(fig["tv_share"], 0), "verdict": fig["trap_verdict"],
+        "grid_above": f"{sum(x >= fig['P0'] for x in grid_cells)} of {len(grid_cells)}",
     }
 
 
@@ -670,28 +673,30 @@ def rich(text, tok):
 
 # ---------------------------------------------------------------- HTML blocks (inline styles, as in Round 1)
 
+DDM_ROW = 22    # px: the DDM inputs and the sensitivity matrix share it, so their rows line up
 SECTION = "font-size:12.5px;font-weight:600;letter-spacing:0.38px;text-transform:uppercase;"
 SMALL_CAP = f"font-size:9.6px;font-weight:600;letter-spacing:0.29px;text-transform:uppercase;color:{MUTED};"
 BODY = "margin:0;font-size:12px;line-height:1.55;"
 NOTE = f"margin:0;font-size:9.8px;line-height:1.45;font-style:italic;color:{MUTED};"
 
 
-def tag(text, solid=True):
-    style = f"background:{INK};color:#ffffff;" if solid else f"border:1px solid {INK};"
-    return (f'<span style="{style}{MONO}font-size:9.6px;font-weight:500;letter-spacing:0.29px;text-transform:uppercase;'
+def tag(text):
+    return (f'<span style="background:{INK};color:#ffffff;{MONO}font-size:9.6px;font-weight:500;letter-spacing:0.29px;text-transform:uppercase;'
             f'padding:2.5px 9px;border-radius:999px;white-space:nowrap;">{text}</span>')
 
 
-def table(head, rows, size=11, pad=3.2, first=0, gutter=6):
-    """head: [(title, align, extra style)], rows: [(cells, row options)], a cell is a string or (string, extra style)."""
+def table(head, rows, size=11, pad=3.2, first=0, gutter=6, row_h=None):
+    """head: [(title, align, extra style)], rows: [(cells, row options)], a cell is a string or (string, extra style).
+    row_h: a fixed row height, so that two tables side by side line up."""
+    fixed = f"height:{row_h}px;" if row_h else ""
     ths = "".join(f'<th style="padding:{pad + 0.8}px 0 {pad + 0.8}px {gutter if i else first}px;font-weight:600;text-align:{al};{ex}">{ti}</th>'
                   for i, (ti, al, ex) in enumerate(head))
     out = [f'<table style="width:100%;border-collapse:collapse;font-size:{size}px;">'
-           f'<thead><tr style="border-bottom:1px solid {INK};font-size:9.4px;letter-spacing:0.28px;text-transform:uppercase;color:{MUTED};">{ths}</tr></thead><tbody>']
+           f'<thead><tr style="{fixed}border-bottom:1px solid {INK};font-size:9.4px;letter-spacing:0.28px;text-transform:uppercase;color:{MUTED};">{ths}</tr></thead><tbody>']
     for r, (cells, opt) in enumerate(rows):
         opt = opt or {}
         border = INK if (opt.get("line") or r == len(rows) - 1) else LINE
-        style = f"border-bottom:1px solid {border};"
+        style = f"{fixed}border-bottom:1px solid {border};"
         if opt.get("bg"):
             style += f"background:{opt['bg']};"
         if opt.get("bold"):
@@ -747,106 +752,6 @@ def nice_ticks(lo, hi, n=5):
     return [start + i * step for i in range(int((hi - start) / step + 1e-9) + 1)]
 
 
-def price_chart(fig):
-    d = fig["price_chart"]
-    a, b = d[fig["ticker"]], d["SPY"]
-    W, H, L, R, T, B = 232, 64, 2, 54, 5, 7
-    lo, hi = min(a + b), max(a + b)
-    pad = (hi - lo) * 0.08 or 1
-    lo, hi = lo - pad, hi + pad
-    X = lambda i: L + i / (len(a) - 1) * (W - L - R)
-    Y = lambda v: T + (hi - v) / (hi - lo) * (H - T - B)
-    body = ln(L, Y(100), W - R, Y(100), LINE_B, 0.8)
-    body += polyline([(X(i), Y(v)) for i, v in enumerate(b)], REF, 1.3, "4 3")
-    body += polyline([(X(i), Y(v)) for i, v in enumerate(a)], INK, 1.6)
-    ya, yb = Y(a[-1]), Y(b[-1])
-    if abs(ya - yb) < 11:     # end labels stay readable when the lines end close together
-        mid = (ya + yb) / 2
-        sign = 1 if ya >= yb else -1
-        ya, yb = mid + sign * 5.5, mid - sign * 5.5
-    body += dot(X(len(a) - 1), Y(a[-1]), 2.2, INK, "#ffffff")
-    body += tx(W - R + 5, ya + 3, f"{fig['ticker']} {minus(f'{a[-1] - 100:+.0f}%')}", size=9, fill=INK, weight=500)
-    body += tx(W - R + 5, yb + 3, f"SPY {minus(f'{b[-1] - 100:+.0f}%')}", size=9)
-    return svg(W, H, body)
-
-
-def football_field(fig):
-    c = fig["comps"]
-    rows = []
-    if fig["V_ddm"] is not None:
-        rows.append((f"DDM (k, g2 ±0.5%)", fig["ddm_lo"], fig["ddm_hi"], fig["V_ddm"], fig["w_ddm"] > 0))
-    for mid, _, _ in MULTIPLES:
-        s = c[mid]
-        if s["price_min"] is None or s["price_max"] is None:
-            continue
-        lo, hi = sorted((s["price_min"], s["price_max"]))
-        rows.append((f"Comps: {MULTIPLE_NAMES[mid]}", lo, hi, s[f"price_{fig['comps_stat']}"], mid in fig["comps_primary"] and fig["w_comp"] > 0))
-    if fig["target_low"] and fig["target_high"]:
-        rows.append(("Analyst targets", fig["target_low"], fig["target_high"], fig["target_mean"], False))
-    if fig["week52_low"] and fig["week52_high"]:
-        rows.append(("52-week range", fig["week52_low"], fig["week52_high"], None, False))
-
-    P0, V0 = fig["P0"], fig["V0"]
-    W, L, R, TOP, ROW = 654, 134, 10, 19, 19
-    x_hi = min(max([r[2] for r in rows] + [P0, V0]), 2.6 * P0) * 1.05
-    x_lo = max(min([r[1] for r in rows] + [P0, V0]) * 0.93, 0)
-    X = lambda v: L + (min(max(v, x_lo), x_hi) - x_lo) / (x_hi - x_lo) * (W - L - R)
-    H = TOP + ROW * len(rows) + 17
-    bottom = TOP + ROW * len(rows)
-    body = ""
-    for v in nice_ticks(x_lo, x_hi, 8):
-        body += ln(X(v), TOP - 2, X(v), bottom, LINE_B, 0.6) + tx(X(v), bottom + 12, f"{v:,.0f}", "middle", 9)
-    for i, (name, lo, hi, mid, main) in enumerate(rows):
-        y = TOP + ROW * i + ROW / 2
-        body += tx(0, y + 3.6, name, size=10.6, fill=INK, weight=500 if main else None, family="Geist")
-        body += rc(X(lo), y - 5, X(hi) - X(lo), 10, RANGE_HI if main else RANGE, 1)
-        if mid is not None:
-            body += rc(X(mid) - 1, y - 7, 2, 14, INK)
-    body += ln(X(P0), TOP - 3, X(P0), bottom, INK, 1.2)
-    body += ln(X(V0), TOP - 3, X(V0), bottom, INK, 1, "3 2.5")
-    for i, (_, lo, hi, _, _) in enumerate(rows):     # value labels go on top of the two reference lines
-        y = TOP + ROW * i + ROW / 2
-        body += tx(X(lo) - 3, y + 3.2, num(lo), "end", 9, halo=CARD)
-        body += tx(X(hi) + 3, y + 2.8, num(hi) if hi <= x_hi else f"{num(hi)} →", "start", 9, halo=CARD)
-    left_is_price = P0 <= V0
-    body += tx(X(P0) + (-3 if left_is_price else 3), TOP - 7, f"Price {num(P0)}", "end" if left_is_price else "start", 9.6, INK, 500)
-    body += tx(X(V0) + (3 if left_is_price else -3), TOP - 7, f"Fair value {num(V0)}", "start" if left_is_price else "end", 9.6, INK, 500)
-    return svg(W, H, body)
-
-
-def box_rows(fig):
-    W, ROW, TOP = 654, 19, 1
-    PL, PR = 136, 444
-    ids = [m for m in MULTIPLES if fig["comps"][m[0]]["n"] > 0]
-    H = TOP + ROW * len(ids) + 1
-    body = ""
-    for i, (mid, _, _) in enumerate(ids):
-        s = fig["comps"][mid]
-        y = TOP + ROW * i + ROW / 2
-        peers = [r[mid] for r in fig["peers"] if r[mid] is not None]
-        all_v = peers + ([s["own"]] if s["own"] is not None else [])
-        lo, hi = min(all_v), max(all_v)
-        pad = (hi - lo) * 0.06 or 0.5
-        lo, hi = lo - pad, hi + pad
-        X = lambda v: PL + (v - lo) / (hi - lo) * (PR - PL)
-        unit = "%" if mid == "yield" else "x"
-        main = mid in fig["comps_primary"]
-        body += tx(0, y + 3.6, MULTIPLE_NAMES[mid], size=10.6, fill=INK, weight=500 if main else None, family="Geist")
-        body += tx(PL - 8, y + 3.2, f"{lo + pad:.1f}{unit}", "end", 9)
-        body += tx(PR + 8, y + 3.2, f"{hi - pad:.1f}{unit}", "start", 9)
-        body += ln(X(s["min"]), y, X(s["max"]), y, REF, 0.9)
-        body += rc(X(s["q1"]), y - 5.5, X(s["q3"]) - X(s["q1"]), 11, RANGE)
-        body += rc(X(s["median"]) - 1, y - 7.5, 2, 15, INK)
-        for v in peers:
-            body += dot(X(v), y, 2.5, REF, CARD)
-        if s["own"] is not None:
-            x0 = X(s["own"])
-            body += f'<path d="M{x0:.1f} {y - 6:.1f}L{x0 + 6:.1f} {y:.1f}L{x0:.1f} {y + 6:.1f}L{x0 - 6:.1f} {y:.1f}Z" fill="{INK}" stroke="{CARD}" stroke-width="1.2"></path>'
-        own = f"{s['own']:.1f}{unit}" if s["own"] is not None else "n/m"
-        body += tx(W, y + 2.8, f"{fig['ticker']} {own} · median {s['median']:.1f}{unit} · n={s['n']}", "end", 9, INK)
-    return svg(W, H, body)
-
-
 def mini_line(title, values, peers, labels, fmt, W=153, H=64):
     L, R, T, B = 26, 5, 17, 12
     pts = [(i, v) for i, v in enumerate(values) if v is not None]
@@ -876,7 +781,7 @@ def mini_line(title, values, peers, labels, fmt, W=153, H=64):
     return svg(W, H, body)
 
 
-def mini_bars(title, a, b, labels, W=320, H=64):
+def mini_bars(title, a, b, labels, W=153, H=64):
     L, R, T, B = 30, 1, 17, 12
     a, b = [x or 0 for x in a], [x or 0 for x in b]
     hi = max(a + b + [1])
@@ -902,18 +807,9 @@ def stat(label, value, sub):
             f'<span style="font-size:9.4px;color:{MUTED};white-space:nowrap;">{sub}</span></div>')
 
 
-def strip_cell(label, value, first=False):
-    left = "padding:7px 8px 7px 0;" if first else f"padding:7px 8px;border-left:1px solid {LINE};"
-    return (f'<div style="{left}display:flex;flex-direction:column;gap:3px;min-width:0;"><span style="{SMALL_CAP}white-space:nowrap;">{label}</span>'
-            f'<span style="{MONO}font-size:11.4px;font-weight:600;white-space:nowrap;">{value}</span></div>')
-
-
 def legend_item(text, kind):
     swatch = {"solid": f"width:14px;height:2px;background:{INK};", "dash": f"width:14px;border-top:1.5px dashed {REF};",
-              "bar": f"width:10px;height:6px;background:{RANGE_HI};", "bar_dark": f"width:10px;height:6px;background:{INK};",
-              "bar_light": f"width:10px;height:6px;background:{RANGE};", "tick": f"width:2px;height:9px;background:{INK};",
-              "diamond": f"width:7px;height:7px;background:{INK};transform:rotate(45deg);",
-              "dot": f"width:5px;height:5px;background:{REF};border-radius:50%;"}[kind]
+              "bar": f"width:10px;height:6px;background:{RANGE_HI};", "bar_dark": f"width:10px;height:6px;background:{INK};"}[kind]
     return f'<span style="display:flex;align-items:center;gap:4px;"><span style="{swatch}"></span>{text}</span>'
 
 
@@ -933,12 +829,6 @@ def footer(page, total):
             f'<span>Matterhorn Capital Management · AMC 2026 Round 2 · Group 3</span></div><span style="{MONO}">{page:02d} / {total:02d}</span></div>')
 
 
-def fv_basis(fig):
-    if fig["w_ddm"] and fig["w_comp"]:
-        return f"{fig['w_ddm'] * 100:.0f}% DDM, {fig['w_comp'] * 100:.0f}% comps"
-    return "DDM only" if fig["w_ddm"] else "Comps only"
-
-
 def blocks(cfg, fig):
     tok = tokens(fig)
     txt = cfg.get("text") or {}
@@ -948,53 +838,41 @@ def blocks(cfg, fig):
     b = {"title": f"{fig['name']} ({t}) · Matterhorn Capital Management", "runtime": RUNTIME, "ticker": t}
 
     # --- header
-    pills = tag(fig["signal"]) + tag(f"Value-trap check: {fig['trap_verdict']}", False) + tag({"undervalued": "DDM and comps: cheap", "overvalued": "DDM and comps: expensive",
-                                                                                 "mixed: check": "DDM and comps: mixed"}.get(fig["methods_verdict"], "One method only"), False)
     meta = " · ".join(x for x in [fig["exchange"], fig["sector"], fig["industry"], fig["currency"], f"Price date {day(fig['as_of'])}"] if x)
     b["header"] = (
-        '<div style="display:flex;justify-content:space-between;align-items:flex-end;gap:18px;">'
-        '<div style="display:flex;flex-direction:column;gap:6px;min-width:0;">'
+        '<div style="display:flex;flex-direction:column;gap:6px;">'
         f'<div style="display:flex;align-items:baseline;gap:10px;"><h2 style="margin:0;font-size:30px;line-height:1.1;font-weight:600;letter-spacing:-0.9px;">{html.escape(fig["name"])}</h2>'
         f'<span style="{MONO}font-size:15px;font-weight:600;">{t}</span></div>'
-        f'<span style="{MONO}font-size:10px;color:{MUTED};">{html.escape(meta)}</span>'
-        f'<div style="display:flex;flex-wrap:wrap;gap:5px;">{pills}</div></div>'
-        f'<div style="width:232px;flex:none;display:flex;flex-direction:column;gap:3px;"><span style="font-size:9.6px;color:{MUTED};">12 months, total return, rebased to 100</span>{price_chart(fig)}</div></div>')
+        f'<span style="{MONO}font-size:10px;color:{MUTED};">{html.escape(meta)}</span></div>')
 
-    # --- stat card and strip
+    # --- stat card, in the order of the reasoning
     b["stats"] = (
         f'<div style="background:{CARD};border-radius:16px;padding:13px 16px;display:grid;grid-template-columns:repeat(6,auto);justify-content:space-between;gap:8px;">'
+        + stat("Fair value", num(fig["V0"]), "DDM" if fig["V_ddm"] is not None else "Comparables: no DDM")
         + stat("Price", num(fig["P0"]), f"USD, close {day(fig['as_of'])}")
-        + stat("Fair value", num(fig["V0"]), fv_basis(fig))
         + stat("Margin of safety", pct(fig["mos"], 1, True), f"{V_0} / {P_0} − 1")
         + stat("Alpha, annual", pct(fig["alpha"], 1, True), f"IR {num(fig['ir'])}")
         + stat("Market cap", bn(fig["market_cap"]), "USD")
         + stat("Dividend yield", pct(fig["dividend_yield"], 1), f"D0 USD {num(fig['D0'])}")
         + "</div>")
-    target = f"{num(fig['target_mean'])} ({pct(fig['target_up'], 0, True)})" if fig["target_mean"] else "n/a"
-    b["strip"] = (
-        f'<div style="display:grid;grid-template-columns:repeat(6,auto);border-top:1px solid {INK};border-bottom:1px solid {INK};">'
-        + strip_cell("Enterprise value", bn(fig["enterprise_value"]), True)
-        + strip_cell("Forward P/E", mult(c["forward_pe"]["own"]))
-        + strip_cell("EV/EBITDA", mult(c["ev_ebitda"]["own"]))
-        + strip_cell("52-week range", f"{num(fig['week52_low'])}–{num(fig['week52_high'])}")
-        + strip_cell(f"Analyst target (n={fig['n_analysts'] or 0})", target)
-        + strip_cell("Next earnings", day(fig["next_earnings"]) if fig["next_earnings"] else "n/a")
-        + "</div>")
 
-    b["thesis"] = f'<p style="{BODY}">{rich(txt.get("thesis"), tok)}</p>'
-
-    # --- catalysts
-    rows = []
-    for x in cfg.get("catalysts") or []:
-        rows.append(([(rich(x.get("event"), tok), "font-weight:500;"), (rich(x.get("date_label") or str(x.get("date")), tok), f"{MONO}font-size:10px;"),
-                      rich(x.get("why"), tok), rich(x.get("effect"), tok)], {}))
-    b["catalysts"] = table([("Event", "left", "width:24.5%;"), ("Date", "left", "width:14.5%;"), ("Why before the end of December", "left", "width:28.5%;"),
-                            ("Expected effect on the price", "left", "")], rows or [(["[TO FILL]", "", "", ""], {})], size=11.2, pad=5.5, gutter=14)
+    # --- investment case: fair value, price, margin of safety and alpha, catalyst, decision
+    case = cfg.get("case") or {}
+    chance = fig["probability"]
+    assumption = "the gap closes within one year" if chance == 1 else "the gap never closes" if chance == 0 else f"a {chance * 100:.0f}% chance that the gap closes within one year"
+    step = lambda label, content: (f'<div style="display:grid;grid-template-columns:112px 1fr;gap:14px;border-top:1px solid {LINE};padding-top:6px;">'
+                                   f'<span style="{SMALL_CAP}padding-top:3px;">{label}</span><div style="display:flex;flex-direction:column;gap:5px;">{content}</div></div>')
+    events = "".join(f'<p style="{BODY}"><span style="font-weight:600;">{rich(x.get("event"), tok)}</span> · <span style="{MONO}font-size:10.4px;">{rich(x.get("date_label") or str(x.get("date")), tok)}</span>. '
+                     f'{rich(x.get("why"), tok)} {rich(x.get("effect"), tok)}</p>' for x in cfg.get("catalysts") or []) or f'<p style="{BODY}">{rich(None, tok)}</p>'
+    b["case"] = (step("Fair value vs price", f'<p style="{BODY}">{rich(case.get("value"), tok)}</p>')
+                 + step("Margin of safety and alpha", f'<p style="{BODY}">Margin of safety {pct(fig["mos"], 1, True)}, alpha {pct(fig["alpha"], 1, True)} a year (IR {num(fig["ir"])}), assuming {assumption}.</p>')
+                 + step("Catalyst", events)
+                 + step("Decision", f'<p style="{BODY}"><span style="font-weight:600;">{html.escape(fig["signal"])}.</span> {rich(case.get("decision"), tok)}</p>'))
 
     # --- method
     m = cfg.get("method_text") or {}
     col = "display:flex;flex-direction:column;gap:4px;border-top:1px solid #111111;padding-top:6px;"
-    b["method"] = (f'<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;"><div style="{col}"><span style="{SMALL_CAP}">Why this method</span><p style="{BODY}font-size:11.6px;">{rich(m.get("why"), tok)}</p></div>'
+    b["method"] = (f'<div style="display:grid;grid-template-columns:1.22fr 1fr;gap:20px;"><div style="{col}"><span style="{SMALL_CAP}">Why this method</span><p style="{BODY}font-size:11.6px;">{rich(m.get("why"), tok)}</p></div>'
                    f'<div style="{col}"><span style="{SMALL_CAP}">Methods that do not fit</span><p style="{BODY}font-size:11.6px;">{rich(m.get("not_suitable"), tok)}</p></div></div>')
 
     # --- DDM inputs
@@ -1013,7 +891,7 @@ def blocks(cfg, fig):
     rows.append((["Gordon value", (usd(fig["V_gordon"]), f"{MONO}white-space:nowrap;"), (f"{pct(fig['V_gordon'] / fig['P0'] - 1, 0, True) if fig['V_gordon'] else 'n/a'} vs price", "")], used(fig["method"] == "gordon")))
     rows.append((["Two-stage value", (usd(fig["V_2stage"]), f"{MONO}white-space:nowrap;"),
                   (f"{pct(fig['V_2stage'] / fig['P0'] - 1, 0, True) if fig['V_2stage'] else 'n/a'} vs price" + (f"; {pct(fig['tv_share'], 0)} terminal value" if fig["tv_share"] else ""), "")], used(two)))
-    b["ddm_inputs"] = table([("Input", "left", "width:27%;"), ("Value", "right", "width:17%;"), ("Source or reason", "left", "")], rows, size=10.8, pad=3.3, first=4, gutter=9)
+    b["ddm_inputs"] = table([("Input", "left", "width:27%;"), ("Value", "right", "width:17%;"), ("Source or reason", "left", "")], rows, size=10.8, pad=3.3, first=4, gutter=9, row_h=DDM_ROW)
 
     # --- sensitivity
     if fig["method"] == "none":
@@ -1033,41 +911,31 @@ def blocks(cfg, fig):
             rows.append((cells, {}))
         base = fig["grid"][2]
         rows.append(([("Upside", "font-size:9.8px;")] + [(pct(x / fig["P0"] - 1, 0, True) if x else "n/m", f"{MONO}font-size:9.8px;padding-right:3px;") for x in base], {"muted": True}))
-        b["sensitivity"] = table(head, rows, size=10.6, pad=3.3) + (
-            f'<p style="{NOTE}margin-top:5px;">{"Two-stage" if two else "Gordon"} DDM value, USD. Shaded: at or above the price of {num(fig["P0"])}. Dark: base case. Upside at the base k.</p>')
+        b["sensitivity"] = table(head, rows, size=10.8, pad=3.3, row_h=DDM_ROW) + (
+            f'<p style="{NOTE}">{"Two-stage" if two else "Gordon"} DDM value, USD. Shaded: at or above the price of {num(fig["P0"])}. Dark: base case. Upside at the base k.</p>'
+            f'<p style="{BODY}font-size:11.2px;line-height:1.5;">{rich(m.get("sensitivity"), tok)}</p>')
 
-    kv = lambda a1, a2: (f'<div style="display:flex;justify-content:space-between;gap:8px;padding:3.3px 0;border-bottom:1px solid {LINE};"><span>{a1}</span><span style="{MONO}font-weight:500;white-space:nowrap;">{a2}</span></div>')
-    b["ddm_checks"] = (f'<div style="font-size:10.6px;display:flex;flex-direction:column;">'
-                       + kv("Growth the price implies (reverse Gordon)", pct(fig["implied_g"], 2))
-                       + kv("Sustainable growth, forward ROE × retention", pct(fig["g_sust"], 2))
-                       + kv("Justified P/B vs actual", f"{mult(fig['pb_just'], 2)} vs {mult(fig['pb'], 2)}")
-                       + kv("DDM value at β = 1", usd(fig["V_ddm_beta1"]))
-                       + "</div>")
-
-    b["football"] = card("Fair value by method, USD a share",
-                         legend([("Feeds fair value", "bar"), ("Cross-check", "bar_light"), ("Base, median or mean", "tick")]), football_field(fig))
-
-    # --- comps table
-    head = [("Company", "left", "width:26%;")] + [("Cap, bn", "right", "width:8.3%;")] + [(ti, "right", "width:9.4%;" + (f"background:{CARD};" if mid in fig["comps_primary"] else "")) for mid, ti, _ in MULTIPLES]
+    # --- comps table: a double check
+    shown = [m for m in MULTIPLES if m[0] in SHOWN]
+    stats = (("average", "mean"), ("median", "median"))
+    stat_name = dict((key, name) for name, key in stats)[fig["comps_stat"]]
     shade = lambda mid: f"background:{CARD};" if mid in fig["comps_primary"] else ""
-    fmt_m = lambda mid, x: ("n/m" if x is None else f"{x:.1f}%" if mid == "yield" else f"{x:.2f}x" if mid in ("pb", "ps", "ev_sales") else f"{x:.1f}x")
+    fmt_m = lambda x: "n/m" if x is None else f"{x:.1f}x"
+    head = [("Company", "left", "width:44%;"), ("Cap, bn", "right", "width:11%;")] + [(ti, "right", "width:15%;" + shade(mid)) for mid, ti, _ in shown]
     rows = []
     for r in fig["peers"]:
         rows.append(([f'<span style="{MONO}font-weight:600;">{r["ticker"]}</span> {html.escape(r["name"])}', (f"{(r['market_cap'] or 0) / 1e9:,.1f}", MONO)]
-                     + [(fmt_m(mid, r[mid]), f"{MONO}{shade(mid)}") for mid, _, _ in MULTIPLES], {}))
+                     + [(fmt_m(r[mid]), f"{MONO}{shade(mid)}") for mid, _, _ in shown], {}))
     rows[-1] = (rows[-1][0], {"line": True})
-    for lab, key in (("Peer mean", "mean"), ("Peer median", "median")):
-        rows.append(([(lab, "font-weight:500;"), ""] + [(fmt_m(mid, c[mid][key]), f"{MONO}font-weight:500;{shade(mid)}") for mid, _, _ in MULTIPLES], {}))
+    for name, key in stats:
+        rows.append(([(f"Peer {name}", "font-weight:500;"), ""] + [(fmt_m(c[mid][key]), f"{MONO}font-weight:500;{shade(mid)}") for mid, _, _ in shown], {}))
     rows.append(([f'<span style="{MONO}font-weight:600;">{t}</span> {html.escape(fig["name"])}', (f"{fig['market_cap'] / 1e9:,.1f}", f"{MONO}font-weight:600;")]
-                 + [(fmt_m(mid, c[mid]["own"]), f"{MONO}font-weight:600;{shade(mid)}") for mid, _, _ in MULTIPLES], {"line": True}))
-    for lab, key in (("Implied price at peer mean", "mean"), ("Implied price at peer median", "median")):
-        rows.append(([(lab, ""), ""] + [(num(c[mid][f"price_{key}"], 2), f"{MONO}{shade(mid)}") for mid, _, _ in MULTIPLES], {}))
+                 + [(fmt_m(c[mid]["own"]), f"{MONO}font-weight:600;{shade(mid)}") for mid, _, _ in shown], {"line": True}))
+    for name, key in stats:
+        rows.append(([(f"Implied price at peer {name}", ""), ""] + [(num(c[mid][f"price_{key}"], 2), f"{MONO}{shade(mid)}") for mid, _, _ in shown], {}))
     b["comps"] = table(head, rows, size=10.8, pad=2.8)
-    prim = " and ".join(MULTIPLE_NAMES[x] for x in fig["comps_primary"])
     fv_comp = f"{usd(fig['V_comp'])} ({pct(fig['mos_comp'], 0, True)})" if fig["V_comp"] else "n/a"
-    b["comps_note"] = f'<p style="{NOTE}">Comps value {fv_comp}: average of the {fig["comps_stat"]} implied prices on {prim} (shaded). n/m: negative or above 100x, excluded.</p>'
-    b["boxplots"] = card(f"Peer multiples: box plots, each on its own scale",
-                         legend([(t, "diamond"), ("Peers", "dot"), ("Median", "tick")]), box_rows(fig))
+    b["comps_note"] = f'<p style="{NOTE}">Comps value {fv_comp}: average of the {stat_name} implied prices in shaded columns. P/FCF on last FY\'s FCF. n/m: negative or above 100x.</p>'
 
     # --- value-trap table
     rows = []
@@ -1086,61 +954,38 @@ def blocks(cfg, fig):
     fl = "falling" if fig["earnings_falling"] else "rising"
     verdict_rule = {"Fail": "Red flags and falling earnings: value trap.", "Watch": "Red flags or falling earnings, not both: watch, not a trap.", "Pass": "No red flags, earnings rising: pass."}[fig["trap_verdict"]]
     distorted = fig["eps_ttm"] is not None and abs(fig["eps_ttm"] / fig["eps_ago"] - 1) > 0.2 if fig["eps_ago"] else False
-    ttm_note = f'Trailing GAAP EPS of {num(fig["eps_ttm"])} ' + ("is not comparable: it includes one-off items." if distorted else "is close to the adjusted figure.")
+    ttm_note = f'Trailing GAAP EPS of {num(fig["eps_ttm"])} ' + ("includes one-off items." if distorted else "is close to the adjusted figure.")
     b["earnings_line"] = (f'<p style="{BODY}font-size:11.2px;line-height:1.5;margin-top:3px;"><span style="font-weight:600;">Earnings test:</span> adjusted EPS {num(fig["eps_ago"])} ({fy}) → {num(fig["eps_cur"])} → {num(fig["eps_fwd"])} (forward): {fl}. '
                           f'{ttm_note}</p>')
 
     charts = []
-    for name, _, _, is_pct in TRAP_METRICS:
-        if name == "payout / FCF":
-            continue
-        f1 = (lambda x, axis=False: pct(x, 0 if axis else 1)) if is_pct else (lambda x, axis=False: num(x, 1 if axis else 2))
-        vals, peers = fig["metrics"][name], fig["peer_median"][name]
+    for name in ("ROE", "FCF margin", "revenue growth"):
+        vals, peers, lbl = fig["metrics"][name], fig["peer_median"][name], fig["fy_labels"]
         if name == "revenue growth":     # the first year has no growth rate
-            vals, peers, lbl = vals[1:], peers[1:], fig["fy_labels"][1:]
-        else:
-            lbl = fig["fy_labels"]
-        charts.append(mini_line(name[0].upper() + name[1:], vals, peers, lbl, f1))
+            vals, peers, lbl = vals[1:], peers[1:], lbl[1:]
+        charts.append(mini_line(name[0].upper() + name[1:], vals, peers, lbl, lambda x, axis=False: pct(x, 0 if axis else 1)))
     charts.append(mini_bars("FCF vs payout, USD m", fig["fcf"], fig["payout_cash"], fig["fy_labels"]))
-    grid = ('<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:7px 14px;">' + "".join(f"<div>{x}</div>" for x in charts[:-1])
-            + f'<div style="grid-column:span 2;">{charts[-1]}</div></div>')
-    b["evolution"] = card(f"Evolution vs peer median", legend([(t, "solid"), ("Peer median", "dash"), ("FCF", "bar_dark"), ("Dividends + buybacks", "bar")]), grid, "9px 14px 8px")
+    grid = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;">' + "".join(f"<div>{x}</div>" for x in charts) + "</div>"
+    b["evolution"] = card("Evolution vs peer median", legend([(t, "solid"), ("Peer median", "dash"), ("FCF", "bar_dark"), ("Dividends + buybacks", "bar")]), grid, "9px 14px 8px")
 
     # --- verdict
     b["verdict"] = (f'<div style="display:flex;gap:10px;align-items:flex-start;">{tag(fig["trap_verdict"])}'
                     f'<p style="{BODY}font-size:11.2px;line-height:1.5;"><span style="font-weight:600;">{verdict_rule}</span> {rich(txt.get("value_trap"), tok)}</p></div>')
 
     # --- alpha
-    N, p = fig["convergence_years"], fig["probability"]
-    assume = f"Used: {N:g} year{'s' if N != 1 else ''}, p = {p * 100:.0f}%" if p > 0 else "Used: never closes"
-    rows = []
-    for s in fig["alpha_scenarios"]:
-        form = f"α closed = (1 + k)({V_0} − {P_0}) / {P_0}" if s["years"] == 1 else f"(1 + k)[({V_0}/{P_0})^(1/{s['years']}) − 1]"
-        rows.append(([f"Gap closes in {s['years']} year{'s' if s['years'] > 1 else ''}", (form, f"color:{MUTED};font-size:9.8px;"), (pct(s["alpha"], 1, True), MONO), (num(s["ir"]), MONO)], {}))
-    rows.append((["Gap never closes", (f"α never = {D_1} / {P_0} + g − k", f"color:{MUTED};font-size:9.8px;"), (pct(fig["alpha_never"], 1, True), MONO), (num(fig["ir_never"]), MONO)], {"line": True}))
-    rows.append(([assume, ("Goes into Treynor-Black", "font-size:9.8px;"), (pct(fig["alpha"], 1, True), MONO), (num(fig["ir"]), MONO)], {"bg": RANGE, "bold": True}))
+    assume = "Used: closes in 1 year" if chance == 1 else "Used: never closes" if chance == 0 else f"Used: {chance * 100:.0f}% closes in 1 year"
+    formula = f"color:{MUTED};font-size:9.8px;"
+    rows = [(["Gap closes in 1 year", (f"α closed = (1 + k)({V_0} − {P_0}) / {P_0}", formula), (pct(fig["alpha_closed"], 1, True), MONO), (num(fig["ir_closed"]), MONO)], {}),
+            (["Gap never closes", (f"α never = {D_1} / {P_0} + g − k", formula), (pct(fig["alpha_never"], 1, True), MONO), (num(fig["ir_never"]), MONO)], {"line": True}),
+            ([assume, ("Goes into Treynor-Black", "font-size:9.8px;"), (pct(fig["alpha"], 1, True), MONO), (num(fig["ir"]), MONO)], {"bg": RANGE, "bold": True})]
     alpha_t = table([("Assumption", "left", "width:36%;"), ("Formula", "left", ""), ("α, annual", "right", "text-transform:none;"), ("IR", "right", "")], rows, size=10.6, pad=2.4, first=4)
-    pos = fig["position"]
-    span = "–".join(pd.Timestamp(x).strftime("%b %y") for x in fig["window"])
-    position = f"{pct(pos['weight'], 1)}, {int(pos['shares']):,} shares" if pos.get("weight") and pos.get("shares") else "0: negative alpha" if fig["alpha"] < 0 else "set by Treynor-Black"
-    rs = (f'<div style="font-size:10.4px;display:flex;flex-direction:column;">'
-          + kv(f"β on our SAA, {span}", num(fig["beta_S"]))
-          + kv("σ(ε) · σ²(ε), annual", f"{pct(fig['sigma_eps'], 1)} · {num(fig['sigma2_eps'], 4)}")
-          + kv("α / σ²(ε), weight score", num(fig["score"]))
-          + kv(f"Pro rata over the {fig['days_held']} days to 27 Dec", pct(fig["alpha_hold"], 1, True))
-          + kv("Position", position)
-          + "</div>")
-    credible = "below" if fig["ir"] <= IR_GOOD else "between" if fig["ir"] <= IR_BUFFETT else "above"
-    bench = f"{IR_GOOD:.2f} for four good bets and {IR_BUFFETT:.2f} for Buffett"
-    
-    b["alpha"] = (f'<div style="display:grid;grid-template-columns:1.72fr 1fr;gap:18px;align-items:start;">{alpha_t}{rs}</div>'
-                  f'<p style="{BODY}font-size:11.2px;line-height:1.5;margin-top:3px;">{rich((cfg.get("alpha") or {}).get("rationale"), tok)} IR {num(fig["ir"])} is {credible} the benchmarks of {bench}.</p>')
+    b["alpha"] = (f'<div style="display:grid;grid-template-columns:1.5fr 1fr;gap:18px;align-items:start;">{alpha_t}'
+                  f'<p style="{BODY}font-size:11.2px;line-height:1.5;">{rich((cfg.get("alpha") or {}).get("rationale"), tok)} IR {num(fig["ir"])}, against {IR_BUFFETT:.2f} for Buffett.</p></div>')
 
     # --- issues
-    items = [("Value trap", txt.get("issue_value_trap")), ("Sustainable growth", txt.get("issue_sustainable_growth")), ("Management quality", txt.get("issue_management")),
-             ("Activist investment", txt.get("issue_activist")), ("Upside potential", txt.get("issue_upside")), ("Risks: what would prove us wrong", txt.get("issue_risks"))]
-    cells = "".join(f'<div style="display:flex;flex-direction:column;gap:2px;border-top:1px solid {LINE};padding-top:5px;"><span style="{SMALL_CAP}">{a1}</span><p style="{BODY}font-size:10.8px;line-height:1.42;">{rich(a2, tok)}</p></div>' for a1, a2 in items)
-    b["issues"] = f'<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 20px;">{cells}</div>'
+    items = cfg.get("issues") or [{}, {}]
+    cells = "".join(f'<div style="display:flex;flex-direction:column;gap:3px;border-top:1px solid {INK};padding-top:6px;"><span style="{SECTION}font-size:10.4px;">{rich(x.get("title"), tok)}</span><p style="{BODY}font-size:11.2px;line-height:1.5;">{rich(x.get("text"), tok)}</p></div>' for x in items)
+    b["issues"] = f'<div style="display:grid;grid-template-columns:repeat({len(items)},1fr);gap:20px;">{cells}</div>'
 
     # --- flags and sources
     b["flags"] = (f'<p style="{NOTE}"><span style="font-weight:600;">Model flags:</span> {html.escape("; ".join(fig["flags_report"]))}.</p>' if fig["flags_report"] else "")
@@ -1152,10 +997,10 @@ def blocks(cfg, fig):
     b["sources"] = f'<p style="margin:0;font-size:8.8px;line-height:1.4;color:{MUTED};">{" ".join(src_items)} {data_note}</p>'
 
     left = f"Stock analysis · Valuation dossier — {t}"
-    b["running_left_1"], b["running_left_2"], b["running_left_3"] = left, f"{left} · Valuation", f"{left} · Checks"
+    b["running_left_1"], b["running_left_2"] = left, f"{left} · Checks"
     pages = cfg.get("pages") or {}
-    first, total = int(pages.get("first", 1)), int(pages.get("total", 3))
-    b["footer_1"], b["footer_2"], b["footer_3"] = footer(first, total), footer(first + 1, total), footer(first + 2, total)
+    first, total = int(pages.get("first", 1)), int(pages.get("total", 2))
+    b["footer_1"], b["footer_2"] = footer(first, total), footer(first + 1, total)
     return b
 
 
@@ -1240,15 +1085,12 @@ def selftest():
             close_to(f"{s} two-stage", two_stage(D0, k, g1, g2, 5), v2, 0.05)
     k_gis = rf + 0.0102 * erp
     close_to("GIS alpha never", alpha_never(2.44, 33.215, 0.02, k_gis), 0.0443, 0.0002)
-    close_to("GIS alpha closed", alpha_converges(81.2631, 33.215, k_gis), 1.5198, 0.002)
-    close_to("NKE alpha closed", alpha_converges(29.7820, 37.545, rf + 1.0369 * erp), -0.2302, 0.002)
+    close_to("GIS alpha closed", alpha_closed(81.2631, 33.215, k_gis), 1.5198, 0.002)
+    close_to("NKE alpha closed", alpha_closed(29.7820, 37.545, rf + 1.0369 * erp), -0.2302, 0.002)
 
     print("Cheat sheet, Nike worked example (k = 11.30%)")
     close_to("Gordon", gordon(1.64, 0.1130, 0.04), 23.36, 0.01)
     close_to("Two-stage", two_stage(1.64, 0.1130, 0.10, 0.04, 5), 29.95, 0.01)
-
-    print("Alpha generalisation")
-    close_to("years = 1 equals (1 + k)(V0 - P0)/P0", alpha_converges(30, 20, 0.08), 1.08 * 0.5, 1e-12)
 
     print("Value-trap table, notebook Checkpoint 2 (GIS vs KHC, CAG, CPB, TA's CSV)")
     fund = pd.read_csv(TA / "r2_fundamentals.csv", index_col=[0, 1], parse_dates=["Date"])

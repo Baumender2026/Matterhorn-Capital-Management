@@ -15,52 +15,37 @@ valuation:
   T_source: "Years to rebuild margins; ours"
   g2: 0.02
   g2_source: "Below the 2–3% sales algorithm [3]; ours"
-  # The DDM and the comps disagree, so we weight them equally rather than trust either alone.
-  fair_value_weights: {ddm: 0.5, comps: 0.5}
   comps_primary: [forward_pe, ev_ebitda]
   comps_stat: median
   overrides: {}                  # e.g. beta: {value: 0.30, source: "Bloomberg BETA"}
 
 alpha:
-  convergence_years: 1           # 1 is the TA's alpha closed
-  probability_gap_closes: 1.0    # 0 is the TA's alpha never
+  probability_gap_closes: 1.0    # 1 is the TA's alpha closed, 0 is the TA's alpha never
   rationale: >-
-    Two dated events fall in the window, so we assume the gap closes within 1 year (Class 5), on the blended fair value.
-    On the DDM alone alpha would be {alpha_ddm} and IR {ir_ddm}: too good to be credible.
+    Two dated events fall in the window, so we assume the gap closes within 1 year (Class 5). The comparables give {V_comp},
+    below the price, so this alpha is an upper bound, not a forecast.
 
-position:                        # fill in after Treynor-Black
-  weight: null
-  shares: null
+case:
+  value: >-
+    The two-stage DDM gives {V_ddm}, against a price of {P0}. At a cost of equity of {k}, the price implies only {implied_g}
+    dividend growth forever. Yet consensus has adjusted EPS rising from {eps_ago} to {eps_fwd} by next fiscal year, and the
+    company targets 5–7% operating profit growth [3]. GAAP hides this: trailing EPS of {eps_ttm} carries charges such as a
+    USD 56m loss on the Brazil sale [1].
+  decision: >-
+    A low-beta, conservatively financed company yielding {yield}, with dated news inside the challenge. The comparables give
+    {V_comp}, so we read the margin as an upper bound.
 
-text:
-  thesis: >-
-    At {P0}, with a cost of equity of {k}, Hormel is priced for only {implied_g} dividend growth forever. Yet consensus
-    has adjusted EPS rising from {eps_ago} to {eps_fwd} by next fiscal year, and the company targets 5–7% operating profit
-    growth [3]. GAAP numbers hide this: trailing EPS of {eps_ttm} carries charges such as a USD 56m loss on the Brazil sale
-    [1], so the stock screens at {tpe} trailing earnings. **This is a modest mispricing, not a deep one.** Peers trade below
-    Hormel on forward earnings ({fpe_med} against {fpe}), so we value it halfway between the DDM and the comps, for a margin
-    of safety of {mos}. The case is a low-beta, conservatively financed company yielding {yield}, with dated news inside
-    the challenge.
-  value_trap: >-
-    Margins and cash flow weakened in {fy} and sales guidance was cut in August [1], but earnings are expected to grow and
-    debt is low. The FY26 accounts, due with Q4 results, are the real test.
-  issue_value_trap: >-
-    {fy} FCF did not cover the dividend (payout/FCF {payout_fcf}), the main trap risk. Nine-month FY26 operating cash flow:
-    USD 769m [1].
-  issue_sustainable_growth: >-
-    Forward ROE {roe_fwd} × {retention} retained = {g_sust}, above g2 of {g2}. First-stage {g1} needs a lower payout
-    (now {payout_fwd}).
-  issue_management: >-
-    CEO John Ghingo, since 26 Oct 2026 [5], is unproven. Discipline so far: debt/equity {de}, no buybacks, Brazil and
-    whole-bird turkey sold [1].
-  issue_activist: >-
-    No route here: the Hormel Foundation holds 46.8% of the shares [6], so outsiders cannot force change.
-  issue_upside: >-
-    If FY27 guidance meets the algorithm and the market pays the DDM value: {V_ddm} ({mos_ddm}). Analyst mean target:
-    {target} ({target_up}).
-  issue_risks: >-
-    Q3 volume fell 7.4% [1]; at beta 1 the DDM is {V_ddm_beta1}. Wrong if FY27 EPS guidance is below FY26 or FCF again
-    misses the dividend.
+catalysts:
+  - event: "Q4 results, FY26 accounts and FY27 guidance, the first from the new CEO"
+    date: 2026-12-03
+    date_label: "About 3 Dec (Yahoo)"
+    why: "Reported on 4 Dec in 2024 and 2025 [4]; this year's date is not yet confirmed."
+    effect: "The main event: guidance on algorithm supports EPS of {eps_fwd}, and FY26 cash flow could clear the FCF red flags."
+  - event: "61st annual dividend increase"
+    date: 2026-11-24
+    date_label: "Late Nov (expected)"
+    why: "Last year's came on 24 Nov 2025 [2]. Not yet announced."
+    effect: "A raise above last year's 1% would signal that the CEO expects cash flow to recover."
 
 method_text:
   why: >-
@@ -70,23 +55,25 @@ method_text:
   not_suitable: >-
     Gordon alone would ignore the recovery or extend it forever. Trailing P/E is distorted by one-off charges. P/B says
     little after write-downs across the sector. A cash-flow DCF would start from {fy} FCF, the lowest in four years (USD 534m).
+  sensitivity: >-
+    The DDM is at or above the price in {grid_above} cases; it falls below only if k rises and g2 falls by a full point each.
+    The terminal rate of {g2} is also below sustainable growth of {g_sust}.
 
-catalysts:
-  - event: "61st annual dividend increase"
-    date: 2026-11-24
-    date_label: "Late Nov (expected)"
-    why: "Last year's came on 24 Nov 2025 [2]. Not yet announced for 2026."
-    effect: "A raise above last year's 1% would signal that the new CEO expects cash flow to recover."
-  - event: "Q4 results, FY26 accounts and FY27 guidance, the first from the new CEO"
-    date: 2026-12-03
-    date_label: "About 3 Dec (Yahoo)"
-    why: "Reported on 4 Dec in 2024 and 2025 [4]; this year's date is not yet confirmed."
-    effect: "The main event: guidance on algorithm supports EPS of {eps_fwd}, and FY26 cash flow could clear the FCF red flags."
-  - event: "Peers report: Smucker, Campbell's, Conagra, General Mills"
-    date: 2026-11-24
-    date_label: "24 Nov–23 Dec (Yahoo)"
-    why: "Set by their calendars, all inside the window."
-    effect: "These set the sector multiple. They can move either way: a risk as much as a catalyst."
+text:
+  value_trap: >-
+    Margins and cash flow weakened in {fy}, lifting P/FCF to {pfcf} against {pfcf_med} for peers, and sales guidance was cut
+    in August [1]. But earnings are expected to grow and debt is low. The FY26 accounts, due with Q4 results, are the real test.
+
+issues:
+  - title: "Value-trap risk: cash must cover the dividend"
+    text: >-
+      {fy} FCF did not cover the dividend (payout/FCF {payout_fcf}), the main trap risk, and Q3 volume fell 7.4% [1]. We are
+      wrong if FY27 EPS guidance is below FY26 or FCF again misses the dividend. First-stage growth of {g1} also needs a
+      lower payout (now {payout_fwd}).
+  - title: "Management quality and upside"
+    text: >-
+      CEO John Ghingo, since 26 Oct 2026 [5], is unproven. So far: debt/equity {de}, no buybacks, two businesses sold [1].
+      No activist route: the Hormel Foundation holds 46.8% [6]. Upside: {V_ddm} ({mos_ddm}), if FY27 guidance is on algorithm.
 
 sources:
   - text: "Hormel Foods, Q3 FY2026 results, 27 Aug 2026."
