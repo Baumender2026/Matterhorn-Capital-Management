@@ -1,5 +1,5 @@
 # Stock report inputs. Copy this file to <TICKER>.yaml, fill it in, then run from the repo root:
-#     python3 "Round 2/build_stock_report.py" <TICKER>
+#     python3 scripts/build_stock_report.py <TICKER>
 # Final numbers: add --as-of 2026-11-06 on 7-8 November.
 # Everything not listed here (prices, statements, multiples, beta, charts) is computed by the script.
 #

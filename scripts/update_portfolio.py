@@ -47,7 +47,7 @@ import yfinance as yf
 FRED_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=DGS1MO"
 TREASURY_URL = ("https://home.treasury.gov/resource-center/data-chart-center/interest-rates/"
                 "daily-treasury-rates.csv/{y}/all?type=daily_treasury_yield_curve&field_tdr_date_value={y}&page&_format=csv")
-RF_CACHE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "code data", "DGS1MO.csv")
+RF_CACHE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data", "DGS1MO.csv")
 PLACEHOLDER_TICKERS = {"", "COMMODITY"}
 RISK_MONTHS = 60
 RISK_YEARS = 6          # history downloaded for the monthly risk model
@@ -167,7 +167,7 @@ def download_rf(years):
         errors.append(f"Treasury: {e}")
     try:
         df = pd.read_csv(RF_CACHE)
-        return rate_series(df.iloc[:, 0], df.iloc[:, 1]), "code data/DGS1MO.csv (cached FRED DGS1MO)"
+        return rate_series(df.iloc[:, 0], df.iloc[:, 1]), "data/DGS1MO.csv (cached FRED DGS1MO)"
     except Exception as e:
         errors.append(f"cache: {e}")
     print("WARNING: risk-free rate unavailable, Sharpe ratio left empty -- " + " | ".join(errors), file=sys.stderr)

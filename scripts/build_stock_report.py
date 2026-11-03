@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
 """Build the two-page Round 2 stock report (valuation dossier) for one stock.
 
-    python3 "Round 2/build_stock_report.py" HRL                      latest close
-    python3 "Round 2/build_stock_report.py" HRL --as-of 2026-11-06   final numbers
-    python3 "Round 2/build_stock_report.py" --selftest               checks against the TA's numbers
+    python3 scripts/build_stock_report.py HRL                      latest close
+    python3 scripts/build_stock_report.py HRL --as-of 2026-11-06   final numbers
+    python3 scripts/build_stock_report.py --selftest               checks against the TA's numbers
 
-Reads   Round 2/stock-inputs/<TICKER>.yaml       peers, growth inputs, thesis, catalysts
-Saves   Round 2/data/<TICKER>_<date>.json        the download, so the report can be reproduced
-Writes  Round 2/reports/<TICKER> Report.dc.html  the two A4 pages
-        Round 2/reports/<TICKER>.pdf             the export (Chrome, headless)
-        Round 2/reports/<TICKER>_figures.json    every computed number and the flags
+One run = one as-of date: everything goes to runs/round2/<as-of>/, next to the inputs it used.
+Reads   runs/round2/inputs/<TICKER>.yaml           peers, growth inputs, thesis, catalysts
+Saves   runs/round2/<as-of>/<TICKER>_data.json     the download, so the report can be reproduced
+Writes  runs/round2/<as-of>/<TICKER>.yaml          a copy of the inputs this run used
+        runs/round2/<as-of>/<TICKER>.dc.html       the two A4 pages
+        runs/round2/<as-of>/<TICKER>.pdf           the export (Chrome, headless)
+        runs/round2/<as-of>/<TICKER>_figures.json  every computed number and the flags
+Promote the final ones into report/ with scripts/promote.py.
 
 The formulas follow the TA's 02_round2_lecture.ipynb and the Round 2 cheat sheet. Differences:
   * Beta and residual risk use our own SAA (data/holdings.json) and complete months only.
@@ -45,11 +48,12 @@ import yaml
 
 warnings.filterwarnings("ignore")
 
-ROOT = Path(__file__).resolve().parent
-INPUTS, REPORTS, DATA, TA = ROOT / "stock-inputs", ROOT / "reports", ROOT / "data", ROOT / "TA code"
-SHELL = ROOT / "Stock Report Template.dc.html"
-HOLDINGS = ROOT.parent / "data" / "holdings.json"
-RUNTIME = "../../reports/templates"         # support.js and doc-page.js, relative to reports/
+REPO = Path(__file__).resolve().parent.parent
+RUNS = REPO / "runs" / "round2"             # one folder per as-of date
+INPUTS, TA = RUNS / "inputs", REPO / "course" / "ta-code"
+SHELL = REPO / "report" / "templates" / "stock-report.dc.html"
+HOLDINGS = REPO / "data" / "holdings.json"
+RUNTIME = "../../../report/runtime"         # support.js and doc-page.js, relative to runs/round2/<as-of>/
 CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 FRED = "https://fred.stlouisfed.org/graph/fredgraph.csv?id="
 
@@ -206,7 +210,7 @@ def fred_series(sid):
         s = pd.read_csv(FRED + sid, index_col=0, parse_dates=True, na_values=".").iloc[:, 0].dropna()
         return s.loc["2016":].rename(sid)
     except Exception as e:                     # FRED is down: the TA's copy is good enough for history
-        print(f"WARNING: FRED {sid} unavailable ({e}); using TA code/r2_rates.csv")
+        print(f"WARNING: FRED {sid} unavailable ({e}); using course/ta-code/r2_rates.csv")
         return pd.read_csv(TA / "r2_rates.csv", index_col=0, parse_dates=True)[sid].dropna()
 
 
@@ -272,8 +276,8 @@ def download(cfg, as_of_arg):
         "adj": to_records(adj), "close": to_records(close[[t]]),
         "rates": to_records(pd.concat([fred_series("DGS1MO"), fred_series("DGS10")], axis=1)),
     }
-    DATA.mkdir(exist_ok=True)
-    path = DATA / f"{t}_{snap['as_of']}.json"
+    path = RUNS / snap["as_of"] / f"{t}_data.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(snap, indent=1))
     print(f"Saved {path.name}")
     return snap
@@ -281,7 +285,7 @@ def download(cfg, as_of_arg):
 
 def load_or_download(cfg, as_of_arg, refresh):
     if as_of_arg and not refresh:
-        path = DATA / f"{cfg['ticker']}_{as_of_arg}.json"
+        path = RUNS / as_of_arg / f"{cfg['ticker']}_data.json"
         if path.exists():
             snap = json.loads(path.read_text())
             if sorted(snap["peers"]) == sorted(cfg["peers"]):
@@ -1037,8 +1041,10 @@ def build(ticker, as_of_arg, refresh):
     fig = analyse(cfg, snap)
     page = Template(SHELL.read_text()).substitute(blocks(cfg, fig))
 
-    REPORTS.mkdir(exist_ok=True)
-    out_html, out_pdf, out_json = REPORTS / f"{ticker} Report.dc.html", REPORTS / f"{ticker}.pdf", REPORTS / f"{ticker}_figures.json"
+    run = RUNS / fig["as_of"]                   # the run folder: the as-of date of the prices
+    run.mkdir(parents=True, exist_ok=True)
+    out_html, out_pdf, out_json = run / f"{ticker}.dc.html", run / f"{ticker}.pdf", run / f"{ticker}_figures.json"
+    (run / f"{ticker}.yaml").write_bytes(path.read_bytes())   # the inputs this run used
     out_html.write_text(page)
     out_json.write_text(json.dumps(fig, indent=1, default=str))
 
@@ -1128,7 +1134,7 @@ def selftest():
 
 def main():
     ap = argparse.ArgumentParser(description="Build the Round 2 stock report for one ticker.")
-    ap.add_argument("ticker", nargs="?", help="Ticker with a YAML file in stock-inputs/")
+    ap.add_argument("ticker", nargs="?", help="Ticker with a YAML file in runs/round2/inputs/")
     ap.add_argument("--as-of", help="Price date, YYYY-MM-DD. The final reports use 2026-11-06. Default: latest close")
     ap.add_argument("--refresh", action="store_true", help="Download again even if a saved snapshot exists")
     ap.add_argument("--selftest", action="store_true", help="Check the formulas against the TA's numbers")

@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<script src="../templates/support.js"></script>
+<script src="runtime/support.js"></script>
 </head>
 <body>
 <x-dc>
 <helmet>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500&amp;family=Geist+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
-<script src="../templates/image-slot.js"></script>
+<script src="runtime/image-slot.js"></script>
 <style>
 body{margin:0;background:#1e1e1d;font-family:'Geist',ui-sans-serif,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
 a{color:#111111;text-decoration:none}
@@ -18,7 +18,7 @@ a:hover{color:#615e5b}
 *{box-sizing:border-box}
 </style>
 </helmet>
-<x-import component-from-global-scope="deck-stage" from="../templates/deck-stage.js" width="1920" height="1080" hint-size="100%,100%" data-uneditable="">
+<x-import component-from-global-scope="deck-stage" from="runtime/deck-stage.js" width="1920" height="1080" hint-size="100%,100%" data-uneditable="">
 
 <section data-label="01 Cover" data-screen-label="01 Cover" data-speaker-notes="With markets and economists split on where rates and inflation go next, Matterhorn Capital Management does not bet on a single regime: eight broad, low-cost ETFs are combined so that equity, bonds and real assets each carry a fixed share of the risk, for an ex-ante volatility of 8%. Starting NAV USD 100M." style="background:#ffffff;color:#111111;font-family:'Geist',sans-serif;overflow:hidden;">
   <svg viewBox="0 0 1920 620" preserveAspectRatio="xMidYMax slice" style="position:absolute;left:0;right:0;bottom:0;width:1920px;height:620px;display:block;" data-om-raster="true">
@@ -44,7 +44,7 @@ a:hover{color:#615e5b}
     </div>
     <div style="margin-top:48px;display:flex;justify-content:space-between;align-items:flex-start;gap:64px;">
       <h1 style="margin:0;font-size:112px;line-height:1;font-weight:500;letter-spacing:-3.4px;max-width:1240px;">Strategic Asset Allocation — Round 1</h1><div style="background:#f3efeb;border-radius:32px;padding:28px;display:flex;flex-direction:column;align-items:center;gap:18px;flex:none;">
-        <img src="../templates/qr-website.png" alt="QR code to matterhorncapitalmanagement.com" style="width:200px;height:200px;display:block;border-radius:16px;image-rendering:pixelated;">
+        <img src="runtime/qr-website.png" alt="QR code to matterhorncapitalmanagement.com" style="width:200px;height:200px;display:block;border-radius:16px;image-rendering:pixelated;">
         <span style="font-family:'Geist Mono',monospace;font-size:24px;letter-spacing:0.72px;text-transform:uppercase;color:#615e5b;">Scan to visit</span>
       </div>
     </div>
@@ -354,12 +354,12 @@ a:hover{color:#615e5b}
     <h2 style="margin:0;font-size:80px;line-height:1.05;font-weight:500;letter-spacing:-2.4px;">Six analysts, one portfolio</h2>
   </div>
   <div style="flex:1;display:grid;grid-template-columns:repeat(6,1fr);gap:24px;align-content:center;">
-    <div style="display:flex;flex-direction:column;gap:20px;"><div style="width:100%;aspect-ratio:4/5;"><image-slot id="deck-team-1" shape="rounded" radius="32" placeholder="Photo" src="../../assets/team/luca-di-pietro.png"></image-slot></div><div style="display:flex;flex-direction:column;gap:6px;"><span style="font-size:30px;font-weight:500;letter-spacing:-0.4px;line-height:1.15;">Luca Di Pietro</span><span style="font-family:'Geist Mono',monospace;font-size:24px;color:#615e5b;">Analyst</span></div></div>
-    <div style="display:flex;flex-direction:column;gap:20px;"><div style="width:100%;aspect-ratio:4/5;"><image-slot id="deck-team-2" shape="rounded" radius="32" placeholder="Photo" src="../../assets/team/tommaso-rotondo.png"></image-slot></div><div style="display:flex;flex-direction:column;gap:6px;"><span style="font-size:30px;font-weight:500;letter-spacing:-0.4px;line-height:1.15;">Tommaso Rotondò</span><span style="font-family:'Geist Mono',monospace;font-size:24px;color:#615e5b;">Analyst</span></div></div>
-    <div style="display:flex;flex-direction:column;gap:20px;"><div style="width:100%;aspect-ratio:4/5;"><image-slot id="deck-team-3" shape="rounded" radius="32" placeholder="Photo" src="../../assets/team/filippo-selmi.png"></image-slot></div><div style="display:flex;flex-direction:column;gap:6px;"><span style="font-size:30px;font-weight:500;letter-spacing:-0.4px;line-height:1.15;">Filippo Selmi</span><span style="font-family:'Geist Mono',monospace;font-size:24px;color:#615e5b;">Analyst</span></div></div>
-    <div style="display:flex;flex-direction:column;gap:20px;"><div style="width:100%;aspect-ratio:4/5;"><image-slot id="deck-team-4" shape="rounded" radius="32" placeholder="Photo" src="../../assets/team/giulia-musi.png"></image-slot></div><div style="display:flex;flex-direction:column;gap:6px;"><span style="font-size:30px;font-weight:500;letter-spacing:-0.4px;line-height:1.15;">Giulia Musi</span><span style="font-family:'Geist Mono',monospace;font-size:24px;color:#615e5b;">Analyst</span></div></div>
-    <div style="display:flex;flex-direction:column;gap:20px;"><div style="width:100%;aspect-ratio:4/5;"><image-slot id="deck-team-5" shape="rounded" radius="32" placeholder="Photo" src="../../assets/team/elena-rocco.png"></image-slot></div><div style="display:flex;flex-direction:column;gap:6px;"><span style="font-size:30px;font-weight:500;letter-spacing:-0.4px;line-height:1.15;">Elena Rocco</span><span style="font-family:'Geist Mono',monospace;font-size:24px;color:#615e5b;">Analyst</span></div></div>
-    <div style="display:flex;flex-direction:column;gap:20px;"><div style="width:100%;aspect-ratio:4/5;"><image-slot id="deck-team-6" shape="rounded" radius="32" placeholder="Photo" src="../../assets/team/aaron-arauz.png"></image-slot></div><div style="display:flex;flex-direction:column;gap:6px;"><span style="font-size:30px;font-weight:500;letter-spacing:-0.4px;line-height:1.15;">Aaron Arauz</span><span style="font-family:'Geist Mono',monospace;font-size:24px;color:#615e5b;">Analyst</span></div></div>
+    <div style="display:flex;flex-direction:column;gap:20px;"><div style="width:100%;aspect-ratio:4/5;"><image-slot id="deck-team-1" shape="rounded" radius="32" placeholder="Photo" src="../assets/team/luca-di-pietro.png"></image-slot></div><div style="display:flex;flex-direction:column;gap:6px;"><span style="font-size:30px;font-weight:500;letter-spacing:-0.4px;line-height:1.15;">Luca Di Pietro</span><span style="font-family:'Geist Mono',monospace;font-size:24px;color:#615e5b;">Analyst</span></div></div>
+    <div style="display:flex;flex-direction:column;gap:20px;"><div style="width:100%;aspect-ratio:4/5;"><image-slot id="deck-team-2" shape="rounded" radius="32" placeholder="Photo" src="../assets/team/tommaso-rotondo.png"></image-slot></div><div style="display:flex;flex-direction:column;gap:6px;"><span style="font-size:30px;font-weight:500;letter-spacing:-0.4px;line-height:1.15;">Tommaso Rotondò</span><span style="font-family:'Geist Mono',monospace;font-size:24px;color:#615e5b;">Analyst</span></div></div>
+    <div style="display:flex;flex-direction:column;gap:20px;"><div style="width:100%;aspect-ratio:4/5;"><image-slot id="deck-team-3" shape="rounded" radius="32" placeholder="Photo" src="../assets/team/filippo-selmi.png"></image-slot></div><div style="display:flex;flex-direction:column;gap:6px;"><span style="font-size:30px;font-weight:500;letter-spacing:-0.4px;line-height:1.15;">Filippo Selmi</span><span style="font-family:'Geist Mono',monospace;font-size:24px;color:#615e5b;">Analyst</span></div></div>
+    <div style="display:flex;flex-direction:column;gap:20px;"><div style="width:100%;aspect-ratio:4/5;"><image-slot id="deck-team-4" shape="rounded" radius="32" placeholder="Photo" src="../assets/team/giulia-musi.png"></image-slot></div><div style="display:flex;flex-direction:column;gap:6px;"><span style="font-size:30px;font-weight:500;letter-spacing:-0.4px;line-height:1.15;">Giulia Musi</span><span style="font-family:'Geist Mono',monospace;font-size:24px;color:#615e5b;">Analyst</span></div></div>
+    <div style="display:flex;flex-direction:column;gap:20px;"><div style="width:100%;aspect-ratio:4/5;"><image-slot id="deck-team-5" shape="rounded" radius="32" placeholder="Photo" src="../assets/team/elena-rocco.png"></image-slot></div><div style="display:flex;flex-direction:column;gap:6px;"><span style="font-size:30px;font-weight:500;letter-spacing:-0.4px;line-height:1.15;">Elena Rocco</span><span style="font-family:'Geist Mono',monospace;font-size:24px;color:#615e5b;">Analyst</span></div></div>
+    <div style="display:flex;flex-direction:column;gap:20px;"><div style="width:100%;aspect-ratio:4/5;"><image-slot id="deck-team-6" shape="rounded" radius="32" placeholder="Photo" src="../assets/team/aaron-arauz.png"></image-slot></div><div style="display:flex;flex-direction:column;gap:6px;"><span style="font-size:30px;font-weight:500;letter-spacing:-0.4px;line-height:1.15;">Aaron Arauz</span><span style="font-family:'Geist Mono',monospace;font-size:24px;color:#615e5b;">Analyst</span></div></div>
   </div>
   <div style="display:flex;justify-content:space-between;align-items:center;font-family:'Geist Mono',monospace;font-size:24px;color:#615e5b;"><span style="display:flex;align-items:center;gap:14px;"><svg width="28" height="28" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="#111111"></circle><path d="M5.6 27.5 L16 12 L26.4 27.5 Z" fill="#ffffff"></path></svg>Matterhorn Capital Management</span><span>15</span></div>
 </section>
