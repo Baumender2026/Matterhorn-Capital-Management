@@ -1,0 +1,10 @@
+Name,Bloomberg ticker,Currency,Shares,Close price,Price date,Weight
+Vanguard Total Stock Market ETF,VTI US Equity,USD,23208,371.5700,2026-10-30,0.087199
+Vanguard FTSE Developed Markets ETF,VEA US Equity,USD,116666,69.4400,2026-10-30,0.081920
+iShares Core MSCI Emerging Markets ETF,IEMG US Equity,USD,109002,74.2500,2026-10-30,0.081840
+Vanguard Total Bond Market ETF,BND US Equity,USD,147372,71.5600,2026-10-30,0.106640
+Vanguard Total International Bond ETF,BNDX US Equity,USD,275123,47.3900,2026-10-30,0.131840
+iShares TIPS Bond ETF,TIP US Equity,USD,113158,106.6900,2026-10-30,0.122079
+SPDR Gold Shares,GLD US Equity,USD,24794,355.7800,2026-10-30,0.089199
+abrdn Bloomberg All Commodity Strategy K-1 Free ETF,BCI US Equity,USD,381126,25.7400,2026-10-30,0.099200
+Hormel Foods,HRL US Equity,USD,929447,21.2800,2026-10-30,0.200000

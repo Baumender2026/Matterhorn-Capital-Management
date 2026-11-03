@@ -1,0 +1,291 @@
+{
+ "about": "Round 1 performance from its start to as_of, written by scripts/round1_performance.py with the website's calculations (scripts/update_portfolio.py).",
+ "round": "Round 1",
+ "start_date": "2026-10-16",
+ "as_of": "2026-10-30",
+ "generated_at": "2026-11-03T17:39:52Z",
+ "currency": "USD",
+ "prices": "Yahoo Finance closes; dividends reinvested at the ex-date close (Bloomberg PRTU reinvest cash dividends)",
+ "nav_start": 100000000.0,
+ "nav_end": 98893226.96,
+ "cash": 5.22,
+ "trading_days": 10,
+ "vol_target": 0.08,
+ "vol_band": [
+  0.07,
+  0.09
+ ],
+ "metrics": {
+  "total_return": -0.01106773,
+  "realised_vol": null,
+  "sharpe": null,
+  "max_drawdown": -0.01241504,
+  "max_drawdown_from": "2026-10-28",
+  "max_drawdown_to": "2026-10-30",
+  "ex_ante_vol": 0.08450954,
+  "var_1m_95_pct": 0.0401311,
+  "var_1m_95_usd": 3968693.6,
+  "min_days_for_stats": 20,
+  "rf_source": null,
+  "risk_model_months": 60,
+  "risk_model_window": [
+   "2021-10-31",
+   "2026-09-30"
+  ]
+ },
+ "positions": [
+  {
+   "ticker": "VTI",
+   "name": "Vanguard Total Stock Market ETF",
+   "asset_class": "Equity",
+   "target_weight": 0.109,
+   "shares_start": 29149.0,
+   "shares_now": 29149.0,
+   "price_start": 374.07,
+   "price_now": 371.57,
+   "value_start": 10903766.43,
+   "value_now": 10830893.93,
+   "weight_start": 0.10903766,
+   "weight_now": 0.10952109,
+   "return": -0.00668324,
+   "contribution": -0.00072873,
+   "risk_contribution": 0.16344429,
+   "target_risk_contribution": 0.1521
+  },
+  {
+   "ticker": "VEA",
+   "name": "Vanguard FTSE Developed Markets ETF",
+   "asset_class": "Equity",
+   "target_weight": 0.1024,
+   "shares_start": 147369.0,
+   "shares_now": 147369.0,
+   "price_start": 69.49,
+   "price_now": 69.44,
+   "value_start": 10240671.81,
+   "value_now": 10233303.36,
+   "weight_start": 0.10240672,
+   "weight_now": 0.1034783,
+   "return": -0.00071953,
+   "contribution": -7.368e-05,
+   "risk_contribution": 0.18342683,
+   "target_risk_contribution": 0.1742
+  },
+  {
+   "ticker": "IEMG",
+   "name": "iShares Core MSCI Emerging Markets ETF",
+   "asset_class": "Equity",
+   "target_weight": 0.1023,
+   "shares_start": 133320.0,
+   "shares_now": 133320.0,
+   "price_start": 76.79,
+   "price_now": 74.25,
+   "value_start": 10237642.8,
+   "value_now": 9899010.0,
+   "weight_start": 0.10237643,
+   "weight_now": 0.10009796,
+   "return": -0.03307722,
+   "contribution": -0.00338633,
+   "risk_contribution": 0.17374638,
+   "target_risk_contribution": 0.1736
+  },
+  {
+   "ticker": "BND",
+   "name": "Vanguard Total Bond Market ETF",
+   "asset_class": "Bonds",
+   "target_weight": 0.1333,
+   "shares_start": 188225.0,
+   "shares_now": 188225.0,
+   "price_start": 70.82,
+   "price_now": 71.56,
+   "value_start": 13330094.5,
+   "value_now": 13469381.0,
+   "weight_start": 0.13330094,
+   "weight_now": 0.13620125,
+   "return": 0.01044903,
+   "contribution": 0.00139287,
+   "risk_contribution": 0.08319818,
+   "target_risk_contribution": 0.0834
+  },
+  {
+   "ticker": "BNDX",
+   "name": "Vanguard Total International Bond ETF",
+   "asset_class": "Bonds",
+   "target_weight": 0.1648,
+   "shares_start": 349731.0,
+   "shares_now": 349731.0,
+   "price_start": 47.13,
+   "price_now": 47.39,
+   "value_start": 16482822.03,
+   "value_now": 16573752.09,
+   "weight_start": 0.16482822,
+   "weight_now": 0.16759239,
+   "return": 0.00551666,
+   "contribution": 0.0009093,
+   "risk_contribution": 0.07827359,
+   "target_risk_contribution": 0.0783
+  },
+  {
+   "ticker": "TIP",
+   "name": "iShares TIPS Bond ETF",
+   "asset_class": "Bonds",
+   "target_weight": 0.1526,
+   "shares_start": 144602.0,
+   "shares_now": 144602.0,
+   "price_start": 105.54,
+   "price_now": 106.69,
+   "value_start": 15261295.08,
+   "value_now": 15427587.38,
+   "weight_start": 0.15261295,
+   "weight_now": 0.15600247,
+   "return": 0.01089634,
+   "contribution": 0.00166292,
+   "risk_contribution": 0.09354428,
+   "target_risk_contribution": 0.0884
+  },
+  {
+   "ticker": "GLD",
+   "name": "SPDR Gold Shares",
+   "asset_class": "Real assets",
+   "target_weight": 0.1115,
+   "shares_start": 29177.0,
+   "shares_now": 29177.0,
+   "price_start": 382.01,
+   "price_now": 355.78,
+   "value_start": 11145905.77,
+   "value_now": 10380593.06,
+   "weight_start": 0.11145906,
+   "weight_now": 0.10496768,
+   "return": -0.06866312,
+   "contribution": -0.00765313,
+   "risk_contribution": 0.1317662,
+   "target_risk_contribution": 0.1549
+  },
+  {
+   "ticker": "BCI",
+   "name": "abrdn Bloomberg All Commodity Strategy K-1 Free ETF",
+   "asset_class": "Real assets",
+   "target_weight": 0.124,
+   "shares_start": 469258.0,
+   "shares_now": 469258.0,
+   "price_start": 26.42,
+   "price_now": 25.74,
+   "value_start": 12397796.36,
+   "value_now": 12078700.92,
+   "weight_start": 0.12397796,
+   "weight_now": 0.12213881,
+   "return": -0.02573808,
+   "contribution": -0.00319095,
+   "risk_contribution": 0.09260026,
+   "target_risk_contribution": 0.0951
+  },
+  {
+   "ticker": "BIL",
+   "name": "SPDR Bloomberg 1-3 Month T-Bill ETF",
+   "asset_class": "Cash leg",
+   "target_weight": 0.0,
+   "shares_start": 0.0,
+   "shares_now": 0.0,
+   "price_start": 91.57,
+   "price_now": 91.7,
+   "value_start": 0.0,
+   "value_now": 0.0,
+   "weight_start": 0.0,
+   "weight_now": 0.0,
+   "return": null,
+   "contribution": 0.0,
+   "risk_contribution": 0.0,
+   "target_risk_contribution": 0.0
+  }
+ ],
+ "asset_classes": [
+  {
+   "name": "Equity",
+   "weight_start": 0.31382081,
+   "weight_now": 0.31309735,
+   "contribution": -0.00418874,
+   "risk_contribution": 0.5206175
+  },
+  {
+   "name": "Bonds",
+   "weight_start": 0.45074211,
+   "weight_now": 0.45979611,
+   "contribution": 0.00396509,
+   "risk_contribution": 0.25501605
+  },
+  {
+   "name": "Real assets",
+   "weight_start": 0.23543702,
+   "weight_now": 0.22710649,
+   "contribution": -0.01084408,
+   "risk_contribution": 0.22436646
+  },
+  {
+   "name": "Cash leg",
+   "weight_start": 0.0,
+   "weight_now": 0.0,
+   "contribution": 0.0,
+   "risk_contribution": 0.0
+  }
+ ],
+ "nav_series": [
+  {
+   "date": "2026-10-16",
+   "nav": 100000000.0,
+   "index": 100.0
+  },
+  {
+   "date": "2026-10-19",
+   "nav": 99874914.62,
+   "index": 99.874915
+  },
+  {
+   "date": "2026-10-20",
+   "nav": 99976953.1,
+   "index": 99.976953
+  },
+  {
+   "date": "2026-10-21",
+   "nav": 100103796.2,
+   "index": 100.103796
+  },
+  {
+   "date": "2026-10-22",
+   "nav": 99485681.12,
+   "index": 99.485681
+  },
+  {
+   "date": "2026-10-23",
+   "nav": 99475742.1,
+   "index": 99.475742
+  },
+  {
+   "date": "2026-10-26",
+   "nav": 99491771.43,
+   "index": 99.491771
+  },
+  {
+   "date": "2026-10-27",
+   "nav": 99862229.96,
+   "index": 99.86223
+  },
+  {
+   "date": "2026-10-28",
+   "nav": 100136424.99,
+   "index": 100.136425
+  },
+  {
+   "date": "2026-10-29",
+   "nav": 99885069.43,
+   "index": 99.885069
+  },
+  {
+   "date": "2026-10-30",
+   "nav": 98893226.96,
+   "index": 98.893227
+  }
+ ],
+ "checks": {
+  "contributions_add_up": true,
+  "site": "not compared: data/portfolio.json is for 2026-11-02 (Round 1)"
+ }
+}

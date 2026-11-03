@@ -1,0 +1,21 @@
+# Round 2 portfolio: the sleeve, how it is raised, and the stocks. Read by scripts/build_round2_portfolio.py.
+# Run it after the stock pages are built for the same as_of.
+
+as_of: 2026-10-30      # price date of the trades. Now: the date of the HRL and KO data. Final run: 2026-11-06,
+                       # as Bloomberg uses the close of Friday 6 November
+sleeve: 0.20           # share of the portfolio sold from the SAA and reinvested in the stocks
+
+funding: target        # how the 20% is raised. One of:
+                       #   target    every ETF to (1 - sleeve) x its SAA target weight (the TA's notebook, §9);
+                       #             this also undoes the drift since 16 October. Targets below 2% get no shares, as in Round 1
+                       #   pro_rata  sell the sleeve's share of every current position: shares x (1 - sleeve), rounded down
+                       #   positions sell the shares listed under `sell`
+sell: {}               # funding: positions only. Shares to sell per ETF, e.g. {BND: 37645, BNDX: 69946}
+
+negative_weights: zero # a stock whose Treynor-Black weight is negative (negative alpha):
+                       #   stop  the run stops and lists it (the default)
+                       #   zero  the course rule (Checkpoint 1): entered as 0, its raw weight shown and flagged,
+                       #         the positive weights rescaled to fill the sleeve
+
+stocks: [HRL, KO]      # the tickers, in report order (3 to 6; the report has 6 slots). Each needs
+                       # runs/round2/<as_of>/<TICKER>_figures.json and _data.json from build_stock_report.py

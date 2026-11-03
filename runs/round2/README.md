@@ -13,7 +13,27 @@ Run these from the repo root.
 
 If the text is too long, the build stops and says which page and by how many pixels. Shorten the text rather than shrinking the type.
 
-**Final numbers:** on 7–8 November, re-run with `--as-of 2026-11-06`, as the challenge uses the close of Friday 6 November. Text written with `{tokens}` updates by itself, but typed facts do not, so re-read them. Then promote the final pages and figures into the report: `python3 scripts/promote.py runs/round2/2026-11-06/<TICKER>.pdf runs/round2/2026-11-06/<TICKER>_figures.json`.
+**Final numbers:** on 7–8 November, re-run with `--as-of 2026-11-06`, as the challenge uses the close of Friday 6 November. Text written with `{tokens}` updates by itself, but typed facts do not, so re-read them. Then promote the final pages into the report: `python3 scripts/promote.py runs/round2/2026-11-06/<TICKER>.dc.html` (see *The Round 2 report* below).
+
+## The Round 2 report
+
+`report/round2-equity.dc.html`: the cover, the Round 1 results (2 pages), six stock slots (2 pages each), Treynor-Black and the
+new portfolio, the team. Write its text by hand; the numbers come from the runs. On 7–8 November, from the repo root:
+
+1. **Round 1 results:** `python3 scripts/round1_performance.py --end 2026-11-06`. It writes `runs/round2/2026-11-06/round1_performance.json`
+   with the website's calculations, and stops if they do not match `data/portfolio.json` or if the contributions do not add up.
+2. **The stocks:** for each, `python3 scripts/build_stock_report.py <TICKER> --as-of 2026-11-06` (see *Add a stock*).
+3. **The portfolio:** fill in `runs/round2/inputs/portfolio.yaml` (`funding`: how the 20% is raised, and the `stocks` in report
+   order), then `python3 scripts/build_round2_portfolio.py`. Treynor-Black gives each stock's weight inside the 20% sleeve; its
+   weight in the portfolio is that × 20%. The run stops, and says why, on a negative weight (never dropped or rescaled, unless `negative_weights: zero` applies the
+   course rule: weight 0, raw weight shown and flagged, the others rescaled), weights
+   that do not add up to 100%, a tracking error outside 2–5%, or inputs from different dates. It writes `portfolio.json` and
+   `portfolio_for_PRTU.csv` (the positions to enter in Bloomberg PRTU).
+4. **Promote** what the report uses: `python3 scripts/promote.py runs/round2/2026-11-06/round1_performance.json
+   runs/round2/2026-11-06/portfolio.json runs/round2/2026-11-06/<TICKER>.dc.html …` (one page file per stock).
+5. **Assemble and export:** `python3 scripts/build_round2_report.py --pdf`. It fills the marked blocks of the report, the stock
+   slots (a slot without a stock shows the layout with placeholders) and the page numbers, writes
+   `report/pdf/Matterhorn_Round2_Equity.pdf`, and stops if a page overflows.
 
 ## Replace by hand before submitting
 

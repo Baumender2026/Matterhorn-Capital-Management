@@ -14,7 +14,8 @@ runs/          analysis runs, one folder per round and as-of date
   round1/inputs/  round1/2026-10-16/
   round2/inputs/  round2/<as-of>/          (see runs/round2/README.md)
 scripts/       all code: update_portfolio.py (daily site data), SAA_R1.ipynb (Round 1),
-               build_stock_report.py (Round 2), promote.py
+               build_stock_report.py, round1_performance.py, build_round2_portfolio.py,
+               build_round2_report.py (Round 2), promote.py
 data/          what the website reads: holdings.json, portfolio.json (updated daily by a GitHub Action), DGS1MO.csv
 course/        course material: guidelines/, slides/, ta-code/
 notes/         working notes, by round

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Build the two-page Round 2 stock report (valuation dossier) for one stock.
 
-    python3 scripts/build_stock_report.py HRL                      latest close
-    python3 scripts/build_stock_report.py HRL --as-of 2026-11-06   final numbers
+    python3 scripts/build_stock_report.py <TICKER>                      latest close
+    python3 scripts/build_stock_report.py <TICKER> --as-of 2026-11-06   final numbers
     python3 scripts/build_stock_report.py --selftest               checks against the TA's numbers
 
 One run = one as-of date: everything goes to runs/round2/<as-of>/, next to the inputs it used.
@@ -346,6 +346,20 @@ def short_name(s):
     return s.strip(" ,.&")
 
 
+def monthly_excess_returns(snap, t):
+    """Returns on complete months, as in Round 1: the stock, SPY and the SAA ETFs, in excess of the
+    1-month T-bill, last WINDOW months. Also the daily rates (decimal). The Round 2 portfolio uses it too."""
+    as_of = pd.Timestamp(snap["as_of"])
+    adj = frame(snap["adj"]).loc[:as_of].ffill()
+    R = adj.resample("ME").last().pct_change()
+    R = R.loc[:complete_month_end(as_of)]
+    rates = frame(snap["rates"]).loc[:as_of] / 100
+    rf_m = (rates["DGS1MO"].ffill() / 12).resample("ME").mean().reindex(R.index).ffill()   # averaged by month, as in Round 1
+    Re = R.sub(rf_m, axis=0)
+    est = Re.dropna(subset=[t, "SPY", *saa_weights().index]).iloc[-WINDOW:]
+    return est, rates
+
+
 def analyse(cfg, snap):
     t = cfg["ticker"]
     v = cfg.get("valuation") or {}
@@ -361,15 +375,8 @@ def analyse(cfg, snap):
             return float(over[name]["value"]), over[name].get("source", "Override")
         return default, source
 
-    # --- returns on complete months, as in Round 1
-    adj = frame(snap["adj"]).loc[:as_of].ffill()
-    R = adj.resample("ME").last().pct_change()
-    R = R.loc[:complete_month_end(as_of)]
-    rates = frame(snap["rates"]).loc[:as_of] / 100
-    rf_m = (rates["DGS1MO"].ffill() / 12).resample("ME").mean().reindex(R.index).ffill()   # averaged by month, as in Round 1
-    Re = R.sub(rf_m, axis=0)
+    est, rates = monthly_excess_returns(snap, t)
     W = saa_weights()
-    est = Re.dropna(subset=[t, "SPY", *W.index]).iloc[-WINDOW:]
     if len(est) < WINDOW:
         flags.append((f"Only {len(est)} months of returns, not {WINDOW}", True))
     R_S = est[list(W.index)] @ W
@@ -787,6 +794,8 @@ def mini_line(title, values, peers, labels, fmt, W=153, H=64):
 
 def mini_bars(title, a, b, labels, W=153, H=64):
     L, R, T, B = 30, 1, 17, 12
+    if all(x is None for x in a + b):               # nothing to draw (an empty stock slot)
+        return svg(W, H, tx(0, 9, title, size=10, fill=INK, weight=500, family="Geist"))
     a, b = [x or 0 for x in a], [x or 0 for x in b]
     hi = max(a + b + [1])
     lo = min(a + b + [0])
@@ -852,7 +861,7 @@ def blocks(cfg, fig):
     # --- stat card, in the order of the reasoning
     b["stats"] = (
         f'<div style="background:{CARD};border-radius:16px;padding:13px 16px;display:grid;grid-template-columns:repeat(6,auto);justify-content:space-between;gap:8px;">'
-        + stat("Fair value", num(fig["V0"]), "DDM" if fig["V_ddm"] is not None else "Comparables: no DDM")
+        + stat("Fair value", num(fig["V0"]), "DDM" if fig["V_ddm"] is not None or fig.get("placeholder") else "Comparables: no DDM")
         + stat("Price", num(fig["P0"]), f"USD, close {day(fig['as_of'])}")
         + stat("Margin of safety", pct(fig["mos"], 1, True), f"{V_0} / {P_0} − 1")
         + stat("Alpha, annual", pct(fig["alpha"], 1, True), f"IR {num(fig['ir'])}")
@@ -863,7 +872,8 @@ def blocks(cfg, fig):
     # --- investment case: fair value, price, margin of safety and alpha, catalyst, decision
     case = cfg.get("case") or {}
     chance = fig["probability"]
-    assumption = "the gap closes within one year" if chance == 1 else "the gap never closes" if chance == 0 else f"a {chance * 100:.0f}% chance that the gap closes within one year"
+    assumption = ("[assumption]" if chance is None else "the gap closes within one year" if chance == 1 else "the gap never closes" if chance == 0
+                  else f"a {chance * 100:.0f}% chance that the gap closes within one year")
     step = lambda label, content: (f'<div style="display:grid;grid-template-columns:112px 1fr;gap:14px;border-top:1px solid {LINE};padding-top:6px;">'
                                    f'<span style="{SMALL_CAP}padding-top:3px;">{label}</span><div style="display:flex;flex-direction:column;gap:5px;">{content}</div></div>')
     events = "".join(f'<p style="{BODY}"><span style="font-weight:600;">{rich(x.get("event"), tok)}</span> · <span style="{MONO}font-size:10.4px;">{rich(x.get("date_label") or str(x.get("date")), tok)}</span>. '
@@ -887,7 +897,7 @@ def blocks(cfg, fig):
            ("β on SPY", num(fig["beta"]), src["beta"]), (f"{R_F}, 10-year yield", pct(fig["rf10"], 2), src["rf10"]),
            ("ERP", pct(fig["erp"], 2), src["erp"]), (f"k = {R_F} + β ERP", pct(fig["k"], 2), "CAPM"),
            (f"{G_1}, first stage", pct(fig["g1"], 1) if two else "not used", rich(v.get("g1_source"), tok) if two else "Gordon: one growth rate"),
-           ("T, years", str(fig["T"]) if two else "not used", rich(v.get("T_source"), tok) if two else ""),
+           ("T, years", (str(fig["T"]) if fig["T"] is not None else "n/a") if two else "not used", rich(v.get("T_source"), tok) if two else ""),
            (f"{G_2}, terminal", pct(fig["g2"], 1), rich(v.get("g2_source"), tok))]
     rows = [([(a1, ""), (a2, f"{MONO}font-weight:500;white-space:nowrap;"), (a3, f"color:{MUTED};font-size:9.8px;")], {}) for a1, a2, a3 in inp]
     used = lambda on: {"bold": True, "bg": CARD} if on else {}
@@ -925,15 +935,16 @@ def blocks(cfg, fig):
     stat_name = dict((key, name) for name, key in stats)[fig["comps_stat"]]
     shade = lambda mid: f"background:{CARD};" if mid in fig["comps_primary"] else ""
     fmt_m = lambda x: "n/m" if x is None else f"{x:.1f}x"
+    cap = lambda x: f"{x / 1e9:,.1f}" if x else "n/a"     # every real stock and peer has one: the download checks it
     head = [("Company", "left", "width:44%;"), ("Cap, bn", "right", "width:11%;")] + [(ti, "right", "width:15%;" + shade(mid)) for mid, ti, _ in shown]
     rows = []
     for r in fig["peers"]:
-        rows.append(([f'<span style="{MONO}font-weight:600;">{r["ticker"]}</span> {html.escape(r["name"])}', (f"{(r['market_cap'] or 0) / 1e9:,.1f}", MONO)]
+        rows.append(([f'<span style="{MONO}font-weight:600;">{r["ticker"]}</span> {html.escape(r["name"])}', (cap(r["market_cap"]), MONO)]
                      + [(fmt_m(r[mid]), f"{MONO}{shade(mid)}") for mid, _, _ in shown], {}))
     rows[-1] = (rows[-1][0], {"line": True})
     for name, key in stats:
         rows.append(([(f"Peer {name}", "font-weight:500;"), ""] + [(fmt_m(c[mid][key]), f"{MONO}font-weight:500;{shade(mid)}") for mid, _, _ in shown], {}))
-    rows.append(([f'<span style="{MONO}font-weight:600;">{t}</span> {html.escape(fig["name"])}', (f"{fig['market_cap'] / 1e9:,.1f}", f"{MONO}font-weight:600;")]
+    rows.append(([f'<span style="{MONO}font-weight:600;">{t}</span> {html.escape(fig["name"])}', (cap(fig["market_cap"]), f"{MONO}font-weight:600;")]
                  + [(fmt_m(c[mid]["own"]), f"{MONO}font-weight:600;{shade(mid)}") for mid, _, _ in shown], {"line": True}))
     for name, key in stats:
         rows.append(([(f"Implied price at peer {name}", ""), ""] + [(num(c[mid][f"price_{key}"], 2), f"{MONO}{shade(mid)}") for mid, _, _ in shown], {}))
@@ -955,10 +966,11 @@ def blocks(cfg, fig):
                              ("Vs peers", "left", "padding-left:14px;"), ("Trend", "left", ""), ("", "left", "")],
                             [([x[0], x[1], x[2], x[3], x[4], (x[5], "padding-left:14px;"), x[6], x[7]], o) for x, o in rows], size=10.8, pad=2.1, first=4)
 
-    fl = "falling" if fig["earnings_falling"] else "rising"
-    verdict_rule = {"Fail": "Red flags and falling earnings: value trap.", "Watch": "Red flags or falling earnings, not both: watch, not a trap.", "Pass": "No red flags, earnings rising: pass."}[fig["trap_verdict"]]
+    fl = "n/a" if fig.get("placeholder") else "falling" if fig["earnings_falling"] else "rising"
+    verdict_rule = {"Fail": "Red flags and falling earnings: value trap.", "Watch": "Red flags or falling earnings, not both: watch, not a trap.", "Pass": "No red flags, earnings rising: pass."}.get(fig["trap_verdict"], "")
     distorted = fig["eps_ttm"] is not None and abs(fig["eps_ttm"] / fig["eps_ago"] - 1) > 0.2 if fig["eps_ago"] else False
-    ttm_note = f'Trailing GAAP EPS of {num(fig["eps_ttm"])} ' + ("includes one-off items." if distorted else "is close to the adjusted figure.")
+    ttm_note = ("Trailing GAAP EPS: n/a." if fig.get("placeholder") else
+                f'Trailing GAAP EPS of {num(fig["eps_ttm"])} ' + ("includes one-off items." if distorted else "is close to the adjusted figure."))
     b["earnings_line"] = (f'<p style="{BODY}font-size:11.2px;line-height:1.5;margin-top:3px;"><span style="font-weight:600;">Earnings test:</span> adjusted EPS {num(fig["eps_ago"])} ({fy}) → {num(fig["eps_cur"])} → {num(fig["eps_fwd"])} (forward): {fl}. '
                           f'{ttm_note}</p>')
 
@@ -977,7 +989,8 @@ def blocks(cfg, fig):
                     f'<p style="{BODY}font-size:11.2px;line-height:1.5;"><span style="font-weight:600;">{verdict_rule}</span> {rich(txt.get("value_trap"), tok)}</p></div>')
 
     # --- alpha
-    assume = "Used: closes in 1 year" if chance == 1 else "Used: never closes" if chance == 0 else f"Used: {chance * 100:.0f}% closes in 1 year"
+    assume = ("Used: [assumption]" if chance is None else "Used: closes in 1 year" if chance == 1 else "Used: never closes" if chance == 0
+              else f"Used: {chance * 100:.0f}% closes in 1 year")
     formula = f"color:{MUTED};font-size:9.8px;"
     rows = [(["Gap closes in 1 year", (f"α closed = (1 + k)({V_0} − {P_0}) / {P_0}", formula), (pct(fig["alpha_closed"], 1, True), MONO), (num(fig["ir_closed"]), MONO)], {}),
             (["Gap never closes", (f"α never = {D_1} / {P_0} + g − k", formula), (pct(fig["alpha_never"], 1, True), MONO), (num(fig["ir_never"]), MONO)], {"line": True}),
@@ -1009,7 +1022,47 @@ def blocks(cfg, fig):
 
 
 def snap_time(fig):
-    return pd.Timestamp(fig["downloaded_at"]).strftime("%d.%m.%y")
+    return pd.Timestamp(fig["downloaded_at"]).strftime("%d.%m.%y") if fig.get("downloaded_at") else "n/a"
+
+
+# ---------------------------------------------------------------- empty slot of the Round 2 report
+
+def placeholder_fig(label, cfg):
+    """A stock with every number missing, in the shape analyse() returns: the same layout, no values."""
+    n_years, n_peers, n_grid = 4, 6, 5
+    numbers = ("P0 D0 beta rf10 erp k g1 g2 T V_gordon V_2stage V_ddm pv_tv tv_share V_ddm_beta1 V_comp V0 mos mos_ddm mos_comp "
+               "implied_g market_cap bvps eps_ttm eps_ago eps_cur eps_fwd eps_growth_next dividend_yield target_mean target_up "
+               "roe_fwd payout_fwd g_sust pb_just pb beta_S sigma2_eps sigma_eps alpha_never alpha_closed probability alpha ir "
+               "ir_closed ir_never").split()
+    v = cfg.get("valuation") or {}
+    fig = dict.fromkeys(numbers)
+    fig.update({
+        "placeholder": True, "ticker": label, "name": "[Company name]", "exchange": "[Exchange]", "sector": "[Sector]",
+        "industry": "[Industry]", "currency": "USD", "as_of": None, "downloaded_at": None,
+        "method": v.get("method") or "two_stage", "sources": dict.fromkeys(("P0", "D0", "beta", "rf10", "erp", "forward_eps"), "n/a"),
+        "k_grid": [None] * n_grid, "g_grid": [None] * n_grid, "grid": [[None] * n_grid for _ in range(n_grid)],
+        "peers": [{"ticker": "[PEER]", "name": "[Peer name]", "market_cap": None, **dict.fromkeys(m[0] for m in MULTIPLES)} for _ in range(n_peers)],
+        "comps": {m[0]: dict.fromkeys(("n", "mean", "median", "min", "max", "q1", "q3", "price_mean", "price_median", "price_min",
+                                       "price_max", "own")) for m in MULTIPLES},
+        "comps_primary": v.get("comps_primary") or ["forward_pe", "ev_ebitda"], "comps_stat": v.get("comps_stat") or "median",
+        "fy_labels": ["[FY]"] * n_years, "metrics": {m[0]: [None] * n_years for m in TRAP_METRICS},
+        "peer_median": {m[0]: [None] * n_years for m in TRAP_METRICS}, "fcf": [None] * n_years, "payout_cash": [None] * n_years,
+        "trap": {m[0]: {"value": None, "peer": None, "own": None, "better_than_peers": None, "improving": None, "red_flag": False}
+                 for m in TRAP_METRICS},
+        "red_flags": [], "earnings_falling": False, "trap_verdict": "n/a", "signal": "[Decision]", "flags": [], "flags_report": [],
+    })
+    return fig
+
+
+def placeholder_pages(slot, first, total, template=None):
+    """The two pages of an empty stock slot: the stock layout, the blank YAML's [TO FILL] text, a dash for every number."""
+    cfg = yaml.safe_load((template or INPUTS / "_TEMPLATE.yaml").read_text(encoding="utf-8")) or {}
+    cfg["pages"] = {"first": first, "total": total}
+    for c in cfg.get("catalysts") or []:
+        c["date_label"] = "[date]"                    # not the blank's example date
+    b = blocks(cfg, placeholder_fig(f"STOCK {slot}", cfg))
+    b = {k: re.sub(r"\bn/[am]\b(?!:)", "—", s) for k, s in b.items()}   # keeps the "n/m: negative or above 100x" note
+    return Template(SHELL.read_text(encoding="utf-8")).substitute(b)
 
 
 # ---------------------------------------------------------------- output

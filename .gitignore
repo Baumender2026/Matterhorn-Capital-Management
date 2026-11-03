@@ -1,3 +1,4 @@
 github-recovery-codes.txt
 team-raw/
 .DS_Store
+__pycache__/

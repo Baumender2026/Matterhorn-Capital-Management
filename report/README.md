@@ -20,6 +20,7 @@ report/
   manifest.json                   ← which run each file in figures/ came from (written by scripts/promote.py)
   round1-saa.dc.html              ← Round 1 report source (18 pages)
   round1-slides.html              ← Round 1 deck source
+  round2-equity.dc.html           ← Round 2 report: text by hand, numbers and stock pages filled by scripts/build_round2_report.py
   round<N>-<topic>.dc.html        ← one source per round, named by round, all in this folder
   figures/                        ← run outputs the report uses, promoted from runs/ (never edit by hand)
   pdf/                            ← exported deliverables; the website links here

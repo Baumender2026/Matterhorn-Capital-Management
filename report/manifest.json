@@ -6,6 +6,30 @@
    "run": "round1/2026-10-16",
    "sha256": "4b220ee3e14a3bcb66a8aa15f1727289264e4504bc36e6184e23b2652cbc314a",
    "promoted": "2026-11-03"
+  },
+  "figures/round2-HRL.dc.html": {
+   "source": "runs/round2/2026-10-30/HRL.dc.html",
+   "run": "round2/2026-10-30",
+   "sha256": "35d4417a90051d8c4e8c873c7de56d132feb11beb6c35f6a1f6ae080e9ad62e9",
+   "promoted": "2026-11-03"
+  },
+  "figures/round2-KO.dc.html": {
+   "source": "runs/round2/2026-10-30/KO.dc.html",
+   "run": "round2/2026-10-30",
+   "sha256": "62169418896b1b25d5c0eed52aae0e22f4a4c9697b026e5daaf13e0605fed8ed",
+   "promoted": "2026-11-03"
+  },
+  "figures/round2-portfolio.json": {
+   "source": "runs/round2/2026-10-30/portfolio.json",
+   "run": "round2/2026-10-30",
+   "sha256": "ff5a314a3d361874438774343440d1753bdb0afc9fbebb9d424cc8b5d2959a79",
+   "promoted": "2026-11-03"
+  },
+  "figures/round2-round1_performance.json": {
+   "source": "runs/round2/2026-10-30/round1_performance.json",
+   "run": "round2/2026-10-30",
+   "sha256": "7f3afdfc8a4f5cb216e5d605b36b840d5d6e2fd2758c6439fab62bc29a9327b8",
+   "promoted": "2026-11-03"
   }
  }
 }

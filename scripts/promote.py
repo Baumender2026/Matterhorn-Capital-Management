@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Promote run outputs into report/, and record which run each one came from.
 
-    python scripts/promote.py runs/round2/2026-11-06/HRL.pdf runs/round2/2026-11-06/HRL_figures.json
+    python scripts/promote.py runs/round2/2026-11-06/<TICKER>.dc.html runs/round2/2026-11-06/portfolio.json
     python scripts/promote.py --check      every promoted file still matches the run it came from
 
 runs/round<N>/<run>/<name> is copied to report/figures/round<N>-<name> and recorded in
@@ -22,7 +22,7 @@ REPO = Path(__file__).resolve().parent.parent
 REPORT = REPO / "report"
 FIGURES = REPORT / "figures"
 MANIFEST = REPORT / "manifest.json"
-RUN_FILE = re.compile(r"^runs/(round\d+)/([^/]+)/([^/]+)$")      # runs/round2/2026-11-06/HRL.pdf
+RUN_FILE = re.compile(r"^runs/(round\d+)/([^/]+)/([^/]+)$")      # runs/round2/2026-11-06/portfolio.json
 TEXT = {".json", ".html", ".csv", ".yaml", ".md", ".txt"}
 RUNTIME = (b'"../../../report/runtime/', b'"../runtime/')        # from runs/round<N>/<run>/ to report/figures/
 ABOUT = ("Files in report/figures/ and the run each one was promoted from. "
