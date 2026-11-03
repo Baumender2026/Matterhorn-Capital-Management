@@ -1,0 +1,11 @@
+{
+ "about": "Files in report/figures/ and the run each one was promoted from. Written by scripts/promote.py; check with: python scripts/promote.py --check",
+ "files": {
+  "figures/round1-report_figures.json": {
+   "source": "runs/round1/2026-10-16/report_figures.json",
+   "run": "round1/2026-10-16",
+   "sha256": "4b220ee3e14a3bcb66a8aa15f1727289264e4504bc36e6184e23b2652cbc314a",
+   "promoted": "2026-11-03"
+  }
+ }
+}

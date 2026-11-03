@@ -1,0 +1,90 @@
+# Hormel Foods. Inputs of the stock report. Copy _TEMPLATE.yaml for a new stock.
+# {name} in the text is filled from the computed numbers, so it updates when you re-run.
+
+name: Hormel Foods
+peers: [GIS, CPB, SJM, KHC, CAG, MKC]      # listed US packaged food; the TA's GIS group plus Smucker, General Mills, McCormick
+
+valuation:
+  method: two_stage              # two_stage | gordon | none
+  dividend_basis: dividends      # no buybacks in FY24 or FY25, so dividends are the whole payout
+  erp: 0.06114
+  erp_source: "Bloomberg CRP, Class 5: refresh"
+  g1: 0.04
+  g1_source: "Below consensus EPS growth of {eps_growth}"
+  T: 5
+  T_source: "Years to rebuild margins; ours"
+  g2: 0.02
+  g2_source: "Below the 2–3% sales algorithm [3]; ours"
+  comps_primary: [forward_pe, ev_ebitda]
+  comps_stat: median
+  overrides: {}                  # e.g. beta: {value: 0.30, source: "Bloomberg BETA"}
+
+alpha:
+  probability_gap_closes: 1.0    # 1 is the TA's alpha closed, 0 is the TA's alpha never
+  rationale: >-
+    Two dated events fall in the window, so we assume the gap closes within 1 year (Class 5). The comparables give {V_comp},
+    below the price, so this alpha is an upper bound, not a forecast.
+
+case:
+  value: >-
+    The two-stage DDM gives {V_ddm}, against a price of {P0}. At a cost of equity of {k}, the price implies only {implied_g}
+    dividend growth forever. Yet consensus has adjusted EPS rising from {eps_ago} to {eps_fwd} by next fiscal year, and the
+    company targets 5–7% operating profit growth [3]. GAAP hides this: trailing EPS of {eps_ttm} carries charges such as a
+    USD 56m loss on the Brazil sale [1].
+  decision: >-
+    A low-beta, conservatively financed company yielding {yield}, with dated news inside the challenge. The comparables give
+    {V_comp}, so we read the margin as an upper bound.
+
+catalysts:
+  - event: "Q4 results, FY26 accounts and FY27 guidance, the first from the new CEO"
+    date: 2026-12-03
+    date_label: "About 3 Dec (Yahoo)"
+    why: "Reported on 4 Dec in 2024 and 2025 [4]; this year's date is not yet confirmed."
+    effect: "The main event: guidance on algorithm supports EPS of {eps_fwd}, and FY26 cash flow could clear the FCF red flags."
+  - event: "61st annual dividend increase"
+    date: 2026-11-24
+    date_label: "Late Nov (expected)"
+    why: "Last year's came on 24 Nov 2025 [2]. Not yet announced."
+    effect: "A raise above last year's 1% would signal that the CEO expects cash flow to recover."
+
+method_text:
+  why: >-
+    Hormel has paid a dividend every quarter since 1928 and raised it 60 years running [2], with no buybacks in FY24–FY25,
+    so dividends are the cash owners receive. We use two stages because earnings are below normal: higher growth while
+    margins recover, then a low terminal rate.
+  not_suitable: >-
+    Gordon alone would ignore the recovery or extend it forever. Trailing P/E is distorted by one-off charges. P/B says
+    little after write-downs across the sector. A cash-flow DCF would start from {fy} FCF, the lowest in four years (USD 534m).
+  sensitivity: >-
+    The DDM is at or above the price in {grid_above} cases; it falls below only if k rises and g2 falls by a full point each.
+    The terminal rate of {g2} is also below sustainable growth of {g_sust}.
+
+text:
+  value_trap: >-
+    Margins and cash flow weakened in {fy}, lifting P/FCF to {pfcf} against {pfcf_med} for peers, and sales guidance was cut
+    in August [1]. But earnings are expected to grow and debt is low. The FY26 accounts, due with Q4 results, are the real test.
+
+issues:
+  - title: "Value-trap risk: cash must cover the dividend"
+    text: >-
+      {fy} FCF did not cover the dividend (payout/FCF {payout_fcf}), the main trap risk, and Q3 volume fell 7.4% [1]. We are
+      wrong if FY27 EPS guidance is below FY26 or FCF again misses the dividend. First-stage growth of {g1} also needs a
+      lower payout (now {payout_fwd}).
+  - title: "Management quality and upside"
+    text: >-
+      CEO John Ghingo, since 26 Oct 2026 [5], is unproven. So far: debt/equity {de}, no buybacks, two businesses sold [1].
+      No activist route: the Hormel Foundation holds 46.8% [6]. Upside: {V_ddm} ({mos_ddm}), if FY27 guidance is on algorithm.
+
+sources:
+  - text: "Hormel Foods, Q3 FY2026 results, 27 Aug 2026."
+    url: "https://www.sec.gov/Archives/edgar/data/0000048465/000004846526000053/hormelearningsreleaseq32026.htm"
+  - text: "Hormel Foods, 60th dividend increase, 24 Nov 2025."
+    url: "https://www.hormelfoods.com/newsroom/press-releases/hormel-foods-corporation-announces-60th-consecutive-increase-to-the-annual-dividend/"
+  - text: "Hormel Foods, preliminary Q1 FY2026, 17 Feb 2026."
+    url: "https://www.sec.gov/Archives/edgar/data/48465/000004846526000013/exhibit991-2172026.htm"
+  - text: "Hormel Foods, Q4 call notices, 2024–25."
+    url: "https://www.hormelfoods.com/newsroom/press-releases/hormel-foods-corporation-to-hold-fourth-quarter-earnings-conference-call-3/"
+  - text: "Twin Cities Business, CEO succession, 2026."
+    url: "https://tcbmag.com/john-ghingo-to-succeed-jeff-ettinger-as-hormels-ceo/"
+  - text: "Hormel Foods, Who owns Hormel Foods?"
+    url: "https://www.hormelfoods.com/?p=31887"

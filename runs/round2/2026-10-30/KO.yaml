@@ -1,0 +1,97 @@
+# Coca-Cola. Inputs of the stock report. Copy _TEMPLATE.yaml for a new stock.
+# {name} in the text is filled from the computed numbers, so it updates when you re-run.
+
+name: Coca-Cola
+# Listed non-alcoholic beverages, chosen without Bloomberg RV: replace by hand if RV differs.
+# Left out because Yahoo's ratios are broken: COKE (forward P/E 5.4x, negative P/B) and KOF (EV/EBITDA 1.5x, currency mismatch).
+peers: [PEP, KDP, MNST, CCEP, CELH, FIZZ]
+peer_names: {CCEP: Coca-Cola Europacific}
+
+valuation:
+  method: two_stage              # two_stage | gordon | none
+  dividend_basis: dividends      # buybacks are small: USD 0.9bn in nine months against USD 6.8bn of dividends
+  erp: 0.06114
+  erp_source: "Bloomberg CRP, Class 5: refresh"
+  g1: 0.06
+  g1_source: "Near consensus EPS growth of {eps_growth}"
+  T: 5
+  T_source: "Years of above-trend growth; ours"
+  g2: 0.03
+  g2_source: "Below the 4–6% sales algorithm [8]; ours"
+  comps_primary: [forward_pe, ev_ebitda]
+  comps_stat: median
+  overrides: {}                  # e.g. beta: {value: 0.30, source: "Bloomberg BETA"}
+
+alpha:
+  probability_gap_closes: 0.0    # 0 is the TA's alpha never: no dated event forces the gap shut
+  rationale: >-
+    Q4 results and the dividend raise should fall after the challenge [2][5], and no dated event forces the gap shut by
+    December, so we use α never. It turns positive only if dividends grow above {implied_g} forever.
+
+case:
+  value: >-
+    The two-stage DDM gives {V_ddm}, against a price of {P0}. At a cost of equity of {k}, the price implies {implied_g}
+    dividend growth forever, against about 4% at the last raise [2]. The business is doing well: Q3 volume rose 5% and
+    organic revenue 7% [1]. But the market has paid for this, at {fpe} forward earnings against {fpe_med} for peers.
+  decision: >-
+    This is an excellent company at a full price, not a mispricing we can buy. Alpha is negative even if the gap never
+    closes, so we would not hold it in a long-only book.
+
+catalysts:
+  - event: "Sale of 75% of Coca-Cola Beverages Africa closes"
+    date: 2026-12-15             # "by the end of 2026": mid-December, for the flag only
+    date_label: "By 31 Dec (company)"
+    why: "Guidance assumes a Q4 close, subject to approvals [1]; South Africa cleared it in September [3]."
+    effect: "It makes the 2027 drag concrete, about 8% off revenue and 2% off EPS [1], but this is already guided: a small move."
+  - event: "Eleventh Circuit ruling on the IRS tax case"
+    date: 2026-12-15             # no date set: mid-December, for the flag only
+    date_label: "No date set"
+    why: "Heard on 25 Jun 2026, still pending in the Q3 10-Q [4]. It can come any day, but there is no deadline."
+    effect: "It cuts both ways: a full loss costs up to about USD 22bn, near USD 5 a share; a win returns USD 6.6bn [4]."
+
+method_text:
+  why: >-
+    Coca-Cola has raised its dividend for 64 years [2] and returns cash mainly through it: USD 6.8bn of dividends against
+    USD 0.9bn of buybacks in nine months [4]. We use two stages because earnings are growing faster than a global staple
+    can sustain forever: {g1} for {T} years, then {g2}.
+  not_suitable: >-
+    Gordon alone would apply one rate to both phases. A cash-flow DCF would start from {fy} FCF, cut by the one-off fairlife
+    payment [5]. P/B says little: brands built in-house are not on the balance sheet. Few peers have these margins, so the
+    comparables are only a double check.
+  sensitivity: >-
+    The DDM reaches the price in only {grid_above} cases, and only if k falls and g2 rises together. The price already sits
+    in the favourable corner of the grid.
+
+text:
+  value_trap: >-
+    Two flags are one-offs: the USD 6.0bn FY24 IRS deposit [4] and the USD 6.1bn FY25 fairlife payment [5] cut FCF; the
+    second also lifts P/FCF to {pfcf}. FY26 guidance restores FCF [1]. Organic revenue grew 5% in FY25 [5]. **The issue is
+    the price, not the business.**
+
+issues:
+  - title: "Upside: what would prove us wrong"
+    text: >-
+      A g2 of about 4.2% would justify the price, close to the {implied_g} it implies. We are wrong if Q3's volume growth
+      lasts and dividends compound above that, or if long yields fall. A court win returns USD 6.6bn [4].
+  - title: "Management quality and the activist route"
+    text: >-
+      CEO Henrique Braun, since 31 Mar 2026, joined in 1996 [6]. Capital goes to dividends and debt: buybacks were USD 0.9bn
+      in nine months [4]. No activist route: about USD 400bn of market cap, and Berkshire has held since 1988 [7].
+
+sources:
+  - text: "Coca-Cola, Q3 2026 results, 27 Oct 2026."
+    url: "https://www.sec.gov/Archives/edgar/data/0000021344/000162828026067403/a2026q3earningsreleaseex-9.htm"
+  - text: "Coca-Cola, 64th dividend increase, 19 Feb 2026."
+    url: "https://investors.coca-colacompany.com/_assets/_b57fa0fbc981aa2e0565114026432054/cocacolacompany/news/2026-02-19_Board_of_Directors_of_The_Coca_Cola_Company_1152.pdf"
+  - text: "Just Drinks, Tribunal clears bottling deal, 15 Sep 2026."
+    url: "https://www.just-drinks.com/news/tribunal-conditionally-clears-coca-cola-bottling-deal/"
+  - text: "Coca-Cola, Form 10-Q, Q3 2026."
+    url: "https://www.sec.gov/Archives/edgar/data/0000021344/000162828026067844/ko-20261002.htm"
+  - text: "Coca-Cola, Q4 2025 results, 10 Feb 2026."
+    url: "https://www.sec.gov/Archives/edgar/data/21344/000162828026006642/a2025q4earningsreleaseex-9.htm"
+  - text: "Coca-Cola, CEO succession, 10 Dec 2025."
+    url: "https://investors.coca-colacompany.com/news-events/press-releases/detail/1147/the-coca-cola-company-announces-ceo-succession-plan-chief-operating-officer-henrique-braun-to-succeed-james-quincey-as-ceo-in-2026"
+  - text: "Motley Fool, Berkshire's holdings, 27 Feb 2026."
+    url: "https://www.fool.com/investing/2026/02/27/buffett-successor-abel-61-assets-invest-5-stocks/"
+  - text: "Q3 2026 earnings call transcript (Singju Post)."
+    url: "https://singjupost.com/the-coca-cola-company-q3-2026-earnings-call-transcript/"
