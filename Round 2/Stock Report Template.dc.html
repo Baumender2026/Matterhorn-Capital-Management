@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>$title</title>
+<script src="$runtime/support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="$runtime/doc-page.js"></script>
+<style>
+doc-page:not(:defined){visibility:hidden}
+body{margin:0;color:#111111;font-family:'Geist',ui-sans-serif,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+doc-page{font-family:'Geist',ui-sans-serif,system-ui,sans-serif}
+a{color:inherit;text-decoration:underline}
+*{box-sizing:border-box}
+section.page>div>*,section.page svg{flex-shrink:0}
+</style>
+</helmet>
+
+<doc-page size="a4">
+
+<section class="page" data-screen-label="$ticker 1 Case and valuation">
+  <div style="height:100%;display:flex;flex-direction:column;padding:28px 56px 24px;gap:15px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #e9eaeb;padding-bottom:9px;font-family:'Geist Mono',monospace;font-size:10.4px;letter-spacing:0.31px;text-transform:uppercase;color:#615e5b;"><span>$running_left_1</span><span>Round 2</span></div>
+    $header
+    $stats
+    <div style="display:flex;flex-direction:column;gap:6px;">
+      <span style="font-size:12.5px;font-weight:600;letter-spacing:0.38px;text-transform:uppercase;">1 · Investment case</span>
+      $case
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px;">
+      <span style="font-size:12.5px;font-weight:600;letter-spacing:0.38px;text-transform:uppercase;">2 · Valuation: dividend discount model</span>
+      $method
+    </div>
+    <div style="display:grid;grid-template-columns:1.22fr 1fr;gap:20px;align-items:start;">
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <span style="font-size:9.6px;font-weight:600;letter-spacing:0.29px;text-transform:uppercase;color:#615e5b;">DDM inputs</span>
+        $ddm_inputs
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <span style="font-size:9.6px;font-weight:600;letter-spacing:0.29px;text-transform:uppercase;color:#615e5b;">Sensitivity: terminal growth and cost of equity</span>
+        $sensitivity
+      </div>
+    </div>
+    $footer_1
+  </div>
+</section>
+
+<section class="page" data-screen-label="$ticker 2 Checks">
+  <div style="height:100%;display:flex;flex-direction:column;padding:28px 56px 24px;gap:12px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #e9eaeb;padding-bottom:9px;font-family:'Geist Mono',monospace;font-size:10.4px;letter-spacing:0.31px;text-transform:uppercase;color:#615e5b;"><span>$running_left_2</span><span>Round 2</span></div>
+    <div style="display:flex;flex-direction:column;gap:4px;">
+      <span style="font-size:12.5px;font-weight:600;letter-spacing:0.38px;text-transform:uppercase;">3 · Comparable companies: a double check</span>
+      $comps
+      $comps_note
+    </div>
+    <div style="display:flex;flex-direction:column;gap:4px;">
+      <span style="font-size:12.5px;font-weight:600;letter-spacing:0.38px;text-transform:uppercase;">4 · Value-trap check</span>
+      $trap_table
+      $earnings_line
+    </div>
+    $evolution
+    $verdict
+    <div style="display:flex;flex-direction:column;gap:4px;">
+      <span style="font-size:12.5px;font-weight:600;letter-spacing:0.38px;text-transform:uppercase;">5 · Alpha</span>
+      $alpha
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px;">
+      <span style="font-size:12.5px;font-weight:600;letter-spacing:0.38px;text-transform:uppercase;">6 · Specific issues</span>
+      $issues
+    </div>
+    <div style="display:flex;flex-direction:column;gap:4px;">
+      $flags
+      $sources
+    </div>
+    $footer_2
+  </div>
+</section>
+
+</doc-page>
+</x-dc>
+<script>
+// Pages clip what does not fit. Record each page's layout for the build's overflow check.
+window.addEventListener('load', function () {
+  (document.fonts ? document.fonts.ready : Promise.resolve()).then(function () {
+    setTimeout(function () {
+      var out = [];
+      document.querySelectorAll('section.page').forEach(function (s) {
+        var w = s.firstElementChild, k = w.children, foot = k[k.length - 1], cs = getComputedStyle(w);
+        var bottom = w.getBoundingClientRect().bottom - parseFloat(cs.paddingBottom);
+        var top = foot.getBoundingClientRect().top, end = foot.getBoundingClientRect().bottom;
+        out.push({ label: s.dataset.screenLabel, overflow: Math.max(Math.round(end - bottom), 0),
+                   free: Math.round(top - k[k.length - 2].getBoundingClientRect().bottom - parseFloat(cs.rowGap)) });
+      });
+      document.documentElement.setAttribute('data-overflow', JSON.stringify(out));
+    }, 1500);
+  });
+});
+</script>
+</body>
+</html>
