@@ -1,19 +1,19 @@
 {
  "status": "ok",
- "as_of": "2026-11-03",
- "generated_at": "2026-11-04T00:08:16Z",
+ "as_of": "2026-11-04",
+ "generated_at": "2026-11-04T22:16:39Z",
  "currency": "USD",
  "current_round": "Round 1",
- "nav": 98492938.03,
+ "nav": 99221414.36,
  "metrics": {
-  "total_return": -0.015071,
+  "total_return": -0.007786,
   "realised_vol": null,
   "sharpe": null,
   "max_drawdown": -0.016413,
-  "ex_ante_vol": 0.084741,
-  "var_1m_95_pct": 0.040241,
-  "var_1m_95_usd": 3963438.01,
-  "daily_returns": 12,
+  "ex_ante_vol": 0.08514,
+  "var_1m_95_pct": 0.040431,
+  "var_1m_95_usd": 4011575.0,
+  "daily_returns": 13,
   "min_days_for_stats": 20,
   "rf_1m_latest": null,
   "rf_source": null,
@@ -27,11 +27,11 @@
   {
    "id": "Round 1",
    "start_date": "2026-10-16",
-   "end_date": "2026-11-03",
+   "end_date": "2026-11-04",
    "status": "active",
    "start_nav": 100000000.0,
-   "end_nav": 98492938.03,
-   "return": -0.015071
+   "end_nav": 99221414.36,
+   "return": -0.007786
   },
   {
    "id": "Round 2",
@@ -50,12 +50,12 @@
    "name": "Vanguard Total Stock Market ETF",
    "asset_class": "Equity",
    "shares": 29149.0,
-   "price": 371.21,
-   "market_value": 10820400.29,
-   "weight": 0.10986,
+   "price": 376.92,
+   "market_value": 10986841.08,
+   "weight": 0.110731,
    "target_weight": 0.109,
-   "drift_pp": 0.086,
-   "risk_contribution": 0.162051,
+   "drift_pp": 0.1731,
+   "risk_contribution": 0.162494,
    "target_risk_contribution": 0.1521
   },
   {
@@ -63,12 +63,12 @@
    "name": "Vanguard FTSE Developed Markets ETF",
    "asset_class": "Equity",
    "shares": 147369.0,
-   "price": 69.37,
-   "market_value": 10222987.53,
-   "weight": 0.103794,
+   "price": 70.82,
+   "market_value": 10436672.58,
+   "weight": 0.105186,
    "target_weight": 0.1024,
-   "drift_pp": 0.1394,
-   "risk_contribution": 0.183683,
+   "drift_pp": 0.2786,
+   "risk_contribution": 0.185416,
    "target_risk_contribution": 0.1742
   },
   {
@@ -76,12 +76,12 @@
    "name": "iShares Core MSCI Emerging Markets ETF",
    "asset_class": "Equity",
    "shares": 133320.0,
-   "price": 74.27,
-   "market_value": 9901676.4,
-   "weight": 0.100532,
+   "price": 74.94,
+   "market_value": 9991000.8,
+   "weight": 0.100694,
    "target_weight": 0.1023,
-   "drift_pp": -0.1768,
-   "risk_contribution": 0.177743,
+   "drift_pp": -0.1606,
+   "risk_contribution": 0.177562,
    "target_risk_contribution": 0.1736
   },
   {
@@ -89,12 +89,12 @@
    "name": "Vanguard Total Bond Market ETF",
    "asset_class": "Bonds",
    "shares": 188225.0,
-   "price": 71.2,
-   "market_value": 13401620.0,
-   "weight": 0.136067,
+   "price": 71.5,
+   "market_value": 13458087.5,
+   "weight": 0.135637,
    "target_weight": 0.1333,
-   "drift_pp": 0.2767,
-   "risk_contribution": 0.081543,
+   "drift_pp": 0.2337,
+   "risk_contribution": 0.081099,
    "target_risk_contribution": 0.0834
   },
   {
@@ -102,12 +102,12 @@
    "name": "Vanguard Total International Bond ETF",
    "asset_class": "Bonds",
    "shares": 349731.0,
-   "price": 47.29,
-   "market_value": 16538778.99,
-   "weight": 0.167918,
+   "price": 47.49,
+   "market_value": 16608725.19,
+   "weight": 0.167391,
    "target_weight": 0.1648,
-   "drift_pp": 0.3118,
-   "risk_contribution": 0.077635,
+   "drift_pp": 0.2591,
+   "risk_contribution": 0.077268,
    "target_risk_contribution": 0.0783
   },
   {
@@ -117,10 +117,10 @@
    "shares": 144602.0,
    "price": 106.1,
    "market_value": 15342272.2,
-   "weight": 0.15577,
+   "weight": 0.154627,
    "target_weight": 0.1526,
-   "drift_pp": 0.317,
-   "risk_contribution": 0.090859,
+   "drift_pp": 0.2027,
+   "risk_contribution": 0.089575,
    "target_risk_contribution": 0.0884
   },
   {
@@ -128,12 +128,12 @@
    "name": "SPDR Gold Shares",
    "asset_class": "Real assets",
    "shares": 29177.0,
-   "price": 359.26,
-   "market_value": 10482129.02,
-   "weight": 0.106425,
+   "price": 372.49,
+   "market_value": 10868140.73,
+   "weight": 0.109534,
    "target_weight": 0.1115,
-   "drift_pp": -0.5075,
-   "risk_contribution": 0.136951,
+   "drift_pp": -0.1966,
+   "risk_contribution": 0.14117,
    "target_risk_contribution": 0.1549
   },
   {
@@ -141,12 +141,12 @@
    "name": "abrdn Bloomberg All Commodity Strategy K-1 Free ETF",
    "asset_class": "Real assets",
    "shares": 469258.0,
-   "price": 25.11,
-   "market_value": 11783068.38,
-   "weight": 0.119634,
+   "price": 24.57,
+   "market_value": 11529669.06,
+   "weight": 0.116201,
    "target_weight": 0.124,
-   "drift_pp": -0.4366,
-   "risk_contribution": 0.089535,
+   "drift_pp": -0.7799,
+   "risk_contribution": 0.085416,
    "target_risk_contribution": 0.0951
   },
   {
@@ -170,15 +170,15 @@
  "asset_classes": [
   {
    "name": "Equity",
-   "weight": 0.314186
+   "weight": 0.316611
   },
   {
    "name": "Bonds",
-   "weight": 0.459755
+   "weight": 0.457655
   },
   {
    "name": "Real assets",
-   "weight": 0.226059
+   "weight": 0.225735
   },
   {
    "name": "Cash leg",
@@ -267,6 +267,12 @@
    "round": "Round 1",
    "nav": 98492938.03,
    "index": 98.4929
+  },
+  {
+   "date": "2026-11-04",
+   "round": "Round 1",
+   "nav": 99221414.36,
+   "index": 99.2214
   }
  ]
 }
