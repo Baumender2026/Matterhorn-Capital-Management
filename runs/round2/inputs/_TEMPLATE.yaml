@@ -23,8 +23,7 @@ valuation:                     # the fair value is the DDM value; the comparable
   method: two_stage            # gordon: mature, stable growth. two_stage: not in its normal state today
                                # (turnaround, cyclical low). none: no dividend, so the fair value falls back on the comps.
   dividend_basis: dividends    # dividends_plus_buybacks if buybacks are large: the DDM on dividends undervalues
-  erp: 0.06114                 # Bloomberg CRP. The notebook says to recompute it: replace it for the final run
-  erp_source: "Bloomberg CRP, Class 5: refresh"
+                               # ERP: from Inputs C8 of DDM_valuation.xlsx, so the report and the workbook match
   g1: 0.05                     # first-stage growth: analysts' consensus (Bloomberg EE or BDVD)
   g1_source: ""
   T: 5                         # years to reach the normal state: your assumption

@@ -7,8 +7,6 @@ peers: [GIS, CPB, SJM, KHC, CAG, MKC]      # listed US packaged food; the TA's G
 valuation:
   method: two_stage              # two_stage | gordon | none
   dividend_basis: dividends      # no buybacks in FY24 or FY25, so dividends are the whole payout
-  erp: 0.06114
-  erp_source: "Bloomberg CRP, Class 5: refresh"
   g1: 0.04
   g1_source: "Below consensus EPS growth of {eps_growth}"
   T: 5

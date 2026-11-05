@@ -20,7 +20,8 @@ If the text is too long, the build stops and says which page and by how many pix
 Before writing a YAML, value the candidates from the Bloomberg screen (`EQS`) in `runs/round2/inputs/DDM_valuation.xlsx`. It has one sheet per stock, with the Gordon Growth Model and the two-stage DDM as Excel formulas, and a Summary with fair value, margin of safety (V0 / P0 − 1) and signal.
 
 1. **Add the stocks:** `python3 scripts/build_ddm_workbook.py KO PEP` (with the workbook closed in Excel). It downloads the price, D0, β on SPY and the 10-year yield, and adds one sheet and one Summary row per ticker.
-2. **Set the yellow cells** in each sheet: g1 (Bloomberg `BDVD` or `EE`), T, g2, the method, and the β override if you use Bloomberg `BETA`. ERP and the buy threshold are on `Inputs`.
+2. **Set the yellow cells** in each sheet: the payout discounted, g1 (Bloomberg `BDVD` or `EE`), T, g2, the method, and the β override if you use Bloomberg `BETA`. ERP and the buy threshold are on `Inputs`: the stock reports read the ERP from there too.
+   The payout is *Dividends* or *Dividends + buybacks* (cheat sheet p. 2): the second adds the last fiscal year's buybacks per share to D0, as `dividend_basis: dividends_plus_buybacks` does in the stock YAML, so use the same choice in both. With buybacks, g1 and g2 are total growth (compare with the sheet's net income growth), not per-share growth, which would count the buybacks twice. A flag says when buybacks exceed dividends.
 3. **Refresh:** run the same command again, with `--as-of 2026-11-06` for the final numbers. Only the data cells change: your assumptions stay.
 
 The `Example NKE` sheet reproduces the TA notebook's Nike case (GGM 23.24, two-stage 29.78). `--new` starts a blank workbook and loses your edits. The stocks you keep then go through *Add a stock* above.
@@ -32,29 +33,33 @@ new portfolio, the team. Write its text by hand; the numbers come from the runs.
 
 1. **Round 1 results:** `python3 scripts/round1_performance.py --end 2026-11-06`. It writes `runs/round2/2026-11-06/round1_performance.json`
    with the website's calculations, and stops if they do not match `data/portfolio.json` or if the contributions do not add up.
-2. **The stocks:** for each, `python3 scripts/build_stock_report.py <TICKER> --as-of 2026-11-06` (see *Add a stock*).
-3. **The portfolio:** fill in `runs/round2/inputs/portfolio.yaml` (`funding`: how the 20% is raised, and the `stocks` in report
+2. **The workbook first:** `python3 scripts/build_ddm_workbook.py <TICKERS> --as-of 2026-11-06` (workbook closed in Excel), then set
+   the yellow cells, save and close. The stock reports take the ERP from `Inputs` C8, and stop if a YAML's g1, T, g2, method,
+   payout or β override differ from the stock's sheet, so both give the same numbers. Run steps 2 and 3 in one sitting: a
+   report flags a workbook with other prices or another rf (FRED posts Friday's 10-year yield on Monday).
+3. **The stocks:** for each, `python3 scripts/build_stock_report.py <TICKER> --as-of 2026-11-06` (see *Add a stock*).
+4. **The portfolio:** fill in `runs/round2/inputs/portfolio.yaml` (`funding`: how the 20% is raised, and the `stocks` in report
    order), then `python3 scripts/build_round2_portfolio.py`. Treynor-Black gives each stock's weight inside the 20% sleeve; its
    weight in the portfolio is that × 20%. The run stops, and says why, on a negative weight (never dropped or rescaled, unless `negative_weights: zero` applies the
    course rule: weight 0, raw weight shown and flagged, the others rescaled), weights
    that do not add up to 100%, a tracking error outside 2–5%, or inputs from different dates. It writes `portfolio.json` and
    `portfolio_for_PRTU.csv` (the positions to enter in Bloomberg PRTU).
-4. **Promote** what the report uses: `python3 scripts/promote.py runs/round2/2026-11-06/round1_performance.json
+5. **Promote** what the report uses: `python3 scripts/promote.py runs/round2/2026-11-06/round1_performance.json
    runs/round2/2026-11-06/portfolio.json runs/round2/2026-11-06/<TICKER>.dc.html …` (one page file per stock).
-5. **Assemble and export:** `python3 scripts/build_round2_report.py --pdf`. It fills the marked blocks of the report, the stock
+6. **Assemble and export:** `python3 scripts/build_round2_report.py --pdf`. It fills the marked blocks of the report, the stock
    slots (a slot without a stock shows the layout with placeholders) and the page numbers, writes
    `report/pdf/Matterhorn_Round2_Equity.pdf`, and stops if a page overflows.
 
 ## Replace by hand before submitting
 
-Yahoo can't supply these, so they need Bloomberg:
+Yahoo can't supply these, so they are typed by hand:
 
-| Input | Where | Bloomberg |
+| Input | Where | Source |
 |---|---|---|
-| Equity risk premium, now 6.114% from Class 5 | `valuation.erp` | `CRP` |
-| First-stage growth g1 | `valuation.g1` | `EE` or `BDVD` |
-| Peer set | `peers` | `RV` |
-| Optional: beta, forward EPS | `valuation.overrides` | `BETA`, `EE` |
+| Equity risk premium, now 4.46% | `Inputs` C8 of `DDM_valuation.xlsx`: the reports read it | Damodaran, United States, 5 Jan 2026 (country risk premiums page) |
+| First-stage growth g1 | `valuation.g1`, and the stock's sheet in the workbook | Bloomberg `EE` or `BDVD` |
+| Peer set | `peers` | Bloomberg `RV` |
+| Optional: beta, forward EPS | `valuation.overrides` (beta also in the workbook) | Bloomberg `BETA`, `EE` |
 
 ## What the script computes
 

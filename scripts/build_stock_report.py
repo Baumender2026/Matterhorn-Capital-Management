@@ -53,12 +53,12 @@ RUNS = REPO / "runs" / "round2"             # one folder per as-of date
 INPUTS, TA = RUNS / "inputs", REPO / "course" / "ta-code"
 SHELL = REPO / "report" / "templates" / "stock-report.dc.html"
 HOLDINGS = REPO / "data" / "holdings.json"
+DDM_WORKBOOK = INPUTS / "DDM_valuation.xlsx"   # scripts/build_ddm_workbook.py: the report takes its ERP from it
 RUNTIME = "../../../report/runtime"         # support.js and doc-page.js, relative to runs/round2/<as-of>/
 CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 FRED = "https://fred.stlouisfed.org/graph/fredgraph.csv?id="
 
 WINDOW = 60                                 # months, as in Round 1
-ERP_DEFAULT = 0.06114                       # Bloomberg CRP, Class 5; the notebook says to recompute it
 ENTRY_DATE = pd.Timestamp("2026-11-06")     # prices of the new positions
 CHALLENGE_END = pd.Timestamp("2026-12-27")  # General guidelines: the challenge ends on 27 December
 IR_BUFFETT = 0.64                           # cheat sheet §9, credibility benchmark
@@ -360,6 +360,63 @@ def monthly_excess_returns(snap, t):
     return est, rates
 
 
+def ddm_workbook(t):
+    """The ERP of the DDM workbook (Inputs C8) and its source (the first sentence of D8), so that the report and the
+    workbook discount at the same k; plus the cells of sheet t, if the workbook has one, keyed by their label."""
+    from openpyxl import load_workbook
+    if not DDM_WORKBOOK.exists():
+        raise SystemExit(f"{DDM_WORKBOOK.relative_to(REPO)} not found: the report takes the ERP from its Inputs sheet")
+    if (DDM_WORKBOOK.parent / f"~${DDM_WORKBOOK.name}").exists():
+        print(f"WARNING: {DDM_WORKBOOK.name} is open in Excel: the report reads it as last saved")
+    wb = load_workbook(DDM_WORKBOOK)
+    wi = wb["Inputs"]
+    if wi["B8"].value != "Equity risk premium ERP" or not isinstance(wi["C8"].value, (int, float)):
+        raise SystemExit(f"No ERP in Inputs C8 of {DDM_WORKBOOK.name}: type it there")
+    source = str(wi["D8"].value or f"{DDM_WORKBOOK.name}, Inputs").split(". ")[0]
+    cells = None
+    if t in wb.sheetnames:
+        ws = wb[t]
+        cells = {str(ws[f"B{r}"].value).strip(): ws[f"C{r}"].value for r in range(1, ws.max_row + 1) if ws[f"B{r}"].value}
+        cells["rf"] = wi["C7"].value
+    return float(wi["C8"].value), source, cells
+
+
+def check_workbook(t, v, cells, as_of, rf10, flags):
+    """Stop if the YAML's assumptions differ from sheet t of the DDM workbook; flag older workbook data."""
+    def cell(prefix):
+        return next((x for label, x in cells.items() if label.startswith(prefix)), None)
+
+    num = lambda x: float(x) if isinstance(x, (int, float)) else None      # noqa: E731
+    beta_over = (v.get("overrides") or {}).get("beta")
+    method = v.get("method", "two_stage")
+    pairs = [   # name, YAML, workbook, format
+        ("g1", float(v.get("g1", 0.0)), num(cell("g1, growth in stage 1")), "{:.2%}"),
+        ("T", int(v.get("T", 5)), num(cell("T, years in stage 1")), "{:.0f}"),
+        ("g2", float(v.get("g2", 0.02)), num(cell("g2, growth after T")), "{:.2%}"),
+        ("dividend_basis", v.get("dividend_basis", "dividends"),
+         {"Dividends": "dividends", "Dividends + buybacks": "dividends_plus_buybacks"}.get(cell("Dividends, or dividends + buybacks")), "{}"),
+        ("beta override", float(beta_over["value"]) if beta_over else None, num(cell("β override")), "{:.3f}"),
+    ]
+    if method != "none":       # the workbook has no "none": a stock without dividends shows n/a there
+        pairs.append(("method", method, {"Two-stage": "two_stage", "GGM": "gordon"}.get(cell("Method for the fair value")), "{}"))
+    g = cell("g, Gordon growth")
+    if isinstance(g, (int, float)):            # typed over the default link to g2; the report's Gordon uses g2
+        pairs.append(("g2 (workbook g, Gordon growth)", float(v.get("g2", 0.02)), float(g), "{:.2%}"))
+    show = lambda x, f: "empty" if x is None else f.format(x)                # noqa: E731
+    diff = [f"{name}: YAML {show(a, f)}, workbook {show(b, f)}" for name, a, b, f in pairs
+            if not (a == b or (isinstance(a, (int, float)) and isinstance(b, (int, float)) and abs(a - b) < 1e-9))]
+    if diff:
+        raise SystemExit(f"{t}.yaml and sheet {t} of {DDM_WORKBOOK.name} differ, so the report and the workbook would "
+                         "give different numbers:\n  " + "\n  ".join(diff) + "\nMake them the same, then run again.")
+    wb_date = cell("Price date")
+    if isinstance(wb_date, datetime) and pd.Timestamp(wb_date).normalize() != as_of:
+        flags.append((f"Workbook sheet {t} has prices of {wb_date:%d %b %Y}, the report of {as_of:%d %b %Y}: run "
+                      f"build_ddm_workbook.py {t} --as-of {as_of:%Y-%m-%d}", False))
+    elif isinstance(cells.get("rf"), (int, float)) and abs(cells["rf"] - rf10) > 1e-9:
+        flags.append((f"Workbook rf {cells['rf']:.2%}, report {rf10:.2%}: run both on the same download "
+                      "(build_ddm_workbook.py, then this script with --refresh)", False))
+
+
 def analyse(cfg, snap):
     t = cfg["ticker"]
     v = cfg.get("valuation") or {}
@@ -383,7 +440,7 @@ def analyse(cfg, snap):
     mu_S, sigma_S = R_S.mean() * 12, R_S.std() * math.sqrt(12)
 
     # --- inputs of the DDM (§3)
-    close = frame(snap["close"])[t].dropna()
+    close = frame(snap["close"])[t].dropna().loc[:as_of]       # the download may hold later closes
     P0, src_p = given("P0", float(close.iloc[-1]), f"Close {as_of:%d.%m.%y}, not adjusted")
     divs = pd.Series(snap["dividends"], dtype=float)
     divs.index = pd.to_datetime(divs.index)
@@ -406,8 +463,12 @@ def analyse(cfg, snap):
 
     beta, src_b = given("beta", float(est[t].cov(est["SPY"]) / est["SPY"].var()), f"Slope on SPY, {len(est)} months")
     rf10, src_rf = given("rf10", float(rates["DGS10"].dropna().iloc[-1]), f"FRED DGS10, {rates['DGS10'].dropna().index[-1]:%d.%m.%y}")
-    erp = float(v.get("erp", ERP_DEFAULT))
-    src_erp = v.get("erp_source", "Bloomberg CRP, Class 5")
+    erp, src_erp, cells = ddm_workbook(t)
+    if "erp" in v and abs(float(v["erp"]) - erp) > 1e-9:
+        raise SystemExit(f"{t}.yaml has erp {float(v['erp']):.3%}, the workbook {erp:.3%} (Inputs C8). "
+                         "Delete erp from the YAML: the report takes it from the workbook")
+    if cells is not None:
+        check_workbook(t, v, cells, as_of, rf10, flags)
     k = rf10 + beta * erp
 
     method = v.get("method", "two_stage")

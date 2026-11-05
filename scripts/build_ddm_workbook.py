@@ -18,6 +18,8 @@ A stock already in the workbook gets new data (blue cells) only: your assumption
 The formulas follow the Round 2 cheat sheet (§3-§4) and scripts/build_stock_report.py:
 k = rf10 + beta x ERP, beta on SPY over 60 complete months, D0 = dividends of the last 12 months,
 MoS = V0 / P0 - 1.
+Payout discounted, a switch in each sheet: Dividends, or Dividends + buybacks (cheat sheet p. 2), where
+D0 used = D0 + last fiscal year's buybacks / its diluted average shares, as dividend_basis in the report script.
 """
 
 import argparse
@@ -27,25 +29,30 @@ from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+import numpy as np
 import pandas as pd
 from openpyxl import Workbook, load_workbook
 from openpyxl.formatting.rule import FormulaRule
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+from openpyxl.utils import get_column_letter
 from openpyxl.workbook.properties import CalcProperties
 from openpyxl.worksheet.datavalidation import DataValidation
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from build_stock_report import (ERP_DEFAULT, HISTORY_YEARS, WINDOW, complete_month_end,  # noqa: E402
-                                fred_series, gordon, retry, two_stage)
+from build_stock_report import (HISTORY_YEARS, WINDOW, complete_month_end,  # noqa: E402
+                                fred_series, gordon, retry, statements_of, two_stage)
 
 REPO = Path(__file__).resolve().parent.parent
 WORKBOOK = REPO / "runs" / "round2" / "inputs" / "DDM_valuation.xlsx"
 
 G1_DEFAULT, T_DEFAULT, G2_DEFAULT = 0.05, 5, 0.02   # as in runs/round2/inputs/_TEMPLATE.yaml
+ERP_DEFAULT = 0.0446       # Damodaran, United States, country risk premiums of 5 Jan 2026 (ctryprem.html)
 G1_BOUNDS = (0.0, 0.15)                             # the 5-year dividend CAGR used as default g1 is clipped to this
 T_MAX = 20                                          # rows of the two-stage schedule
 HIST_YEARS = 6                                      # calendar years in the dividend table
 SUMMARY_ROWS = 20                                   # rows prepared in Summary; more are added when needed
+DIVS, DIVS_BB = "Dividends", "Dividends + buybacks"  # the payout discounted, chosen in each stock sheet
+GROWTH_YEARS = 3                                    # fiscal years for the buyback average and the growth checks
 
 # ---------------------------------------------------------------- style
 
@@ -151,7 +158,7 @@ def build_inputs(ws):
         ("as_of", "Price date", "data", None, DATE, "Set by the script: the latest close it used"),
         ("rf", "Risk-free rate rf, 10-year Treasury", "data", None, PCT, "FRED DGS10, set by the script"),
         ("erp", "Equity risk premium ERP", "input", ERP_DEFAULT, PCT,
-         "Bloomberg CRP, Class 5: the same for all stocks. Refresh it before the final run"),
+         "Damodaran, United States, 5 Jan 2026. Country risk premiums page, the same for all stocks"),
         ("buy", "Buy threshold: margin of safety at least", "input", 0.25, PCT1,
          "Class 5: buy below 80% of value, i.e. V0 / P0 − 1 ≥ 25%"),
         ("flag_up", "Red flag: upside above", "input", 0.50, PCT1,
@@ -182,7 +189,8 @@ def build_inputs(ws):
         "    It adds one sheet per ticker and a row in Summary. Run it again for a stock already here and only the blue cells change.",
         "2. Or by hand: right-click Template > Move or Copy > Create a copy, rename it to the ticker, type the blue cells,",
         "    then type the sheet name in the Ticker column of Summary.",
-        "3. In each stock sheet, set the yellow cells: g1 (Bloomberg BDVD or EE), T, g2, the method, and the β override if you use Bloomberg BETA.",
+        "3. In each stock sheet, set the yellow cells: the payout discounted, g1 (Bloomberg BDVD or EE), T, g2, the method,",
+        "    and the β override if you use Bloomberg BETA.",
         "4. Final numbers: run the script again with --as-of 2026-11-06 (the challenge uses the close of Friday 6 November).",
         "5. Don't insert rows or columns in the stock sheets: Summary reads fixed cells.",
     ]
@@ -197,6 +205,7 @@ def build_inputs(ws):
         "    For a company not yet in its normal state. g1 can be above k; g2 must be below k",
         "Margin of safety:  MoS = V0 / P0 − 1 (cheat sheet). Discount to value = 1 − P0 / V0 (Class 5, Graham)",
         "D0: dividends per share paid over the last 12 months. The first dividend discounted is D1 = D0 (1 + g)",
+        "With buybacks (cheat sheet p. 2): D0 used = D0 + last fiscal year's buybacks per share. g1, g2 are then total growth, not per share",
     ]
     for i, text in enumerate(formulas):
         label(ws, f"B{31 + i}", text)
@@ -222,21 +231,38 @@ LEFT = [
     ("yield_", "Dividend yield D0 / P0", "formula", '=IF(N({P0})>0,{D0}/{P0},"")', PCT, ""),
     ("eps_ttm", "EPS, last 12 months", "data", None, PRICE, ""),
     ("eps_fwd", "EPS, next 12 months (consensus)", "data", None, PRICE, ""),
-    ("payout", "Payout D0 / EPS", "formula", '=IF(N({eps_ttm})>0,{D0}/{eps_ttm},"")', PCT1,
+    ("payout", "Dividend payout D0 / EPS", "formula", '=IF(N({eps_ttm})>0,{D0}/{eps_ttm},"")', PCT1,
      "Above 100%: earnings don't cover the dividend"),
     ("roe", "ROE", "data", None, PCT1, ""),
-    ("g_sust", "Sustainable growth ROE × (1 − payout)", "formula",
-     '=IF(AND(ISNUMBER({roe}),ISNUMBER({payout})),{roe}*(1-{payout}),"")', PCT, "A ceiling for long-run growth"),
     ("dps_cagr", "Dividend growth, last 5 years (CAGR)", "data", None, PCT, "Calendar years: see the table below"),
     ("eps_growth", "EPS growth next year (consensus)", "data", None, PCT, ""),
     ("beta_calc", "β, 60 months on SPY", "data", None, BETA, "Monthly excess returns, as in the cheat sheet"),
     ("beta_yahoo", "β, Yahoo", "data", None, BETA, "Reference only"),
+    ("section", "Buybacks (Yahoo, fiscal years)"),
+    ("buyback_fy", "Buybacks, last fiscal year (USD m)", "data", None, "#,##0", "Repurchase Of Capital Stock, cash flow statement"),
+    ("shares_fy", "Diluted average shares, same year (m)", "data", None, "#,##0.0", ""),
+    ("bps", "Buybacks per share", "formula", '=IF(N({shares_fy})>0,N({buyback_fy})/{shares_fy},"")', PRICE3,
+     "Added to D0 with Dividends + buybacks, as in the report script"),
+    ("bps_avg", f"Buybacks per share, {GROWTH_YEARS}-year average", "data", None, PRICE3,
+     "A check: buybacks are lumpy and cut first in a downturn"),
+    ("shares_chg", f"Share count change per year, {GROWTH_YEARS} years", "data", None, PCT,
+     "Negative: buybacks shrink the share count"),
+    ("ni_growth", f"Net income growth per year, {GROWTH_YEARS} years", "data", None, PCT,
+     "Total growth: compare g1 with it when buybacks are in"),
     ("section", "Cost of equity (CAPM)"),
     ("rf", "Risk-free rate rf, 10-year Treasury", "link", "=" + inp("rf"), PCT, "From Inputs"),
     ("erp", "Equity risk premium ERP", "link", "=" + inp("erp"), PCT, "From Inputs"),
     ("beta_over", "β override (optional)", "input", None, BETA, "e.g. Bloomberg BETA. Leave empty to use the 60-month β"),
     ("beta", "β used", "formula", "=IF(ISNUMBER({beta_over}),{beta_over},N({beta_calc}))", BETA, ""),
     ("k", "Cost of equity k = rf + β × ERP", "formula", "={rf}+{beta}*{erp}", PCT, ""),
+    ("section", "Payout discounted"),
+    ("basis", "Dividends, or dividends + buybacks", "input", DIVS, None, f"{DIVS_BB} if buybacks are large (cheat sheet p. 2)"),
+    ("D0u", "D0 used, per share", "formula", f'=IF({{basis}}="{DIVS_BB}",{{D0}}+N({{bps}}),{{D0}})', PRICE3,
+     "With buybacks, g1 and g2 are total growth, not per share"),
+    ("payout_u", "Payout used: D0 used / EPS", "formula", '=IF(N({eps_ttm})>0,{D0u}/{eps_ttm},"")', PCT1,
+     "Above 100%: earnings don't cover the payout"),
+    ("g_sust", "Sustainable growth ROE × (1 − payout used)", "formula",
+     '=IF(AND(ISNUMBER({roe}),ISNUMBER({payout_u})),{roe}*(1-{payout_u}),"")', PCT, "A ceiling for long-run growth"),
     ("section", "Growth assumptions"),
     ("g1", "g1, growth in stage 1", "input", G1_DEFAULT, PCT, "Bloomberg BDVD or EE (consensus)"),
     ("T", f"T, years in stage 1 (1–{T_MAX})", "input", T_DEFAULT, INT, "Years the company needs to reach its normal state"),
@@ -245,23 +271,23 @@ LEFT = [
     ("method", "Method for the fair value", "input", "Two-stage", None,
      "Two-stage: not yet in its normal state. GGM: mature, stable growth"),
     ("section", "Gordon Growth Model"),
-    ("D1", "D1 = D0 × (1 + g)", "formula", "={D0}*(1+{g})", PRICE3, ""),
+    ("D1", "D1 = D0 used × (1 + g)", "formula", "={D0u}*(1+{g})", PRICE3, ""),
     ("V_ggm", "Value V0 = D1 / (k − g)", "formula",
-     '=IF(N({D0})<=0,"n/a: no dividend",IF({k}>{g},{D1}/({k}-{g}),"n/a: k ≤ g"))', PRICE, ""),
+     '=IF(N({D0u})<=0,"n/a: no payout",IF({k}>{g},{D1}/({k}-{g}),"n/a: k ≤ g"))', PRICE, ""),
     ("mos_ggm", "Margin of safety V0 / P0 − 1", "formula",
      '=IF(AND(ISNUMBER({V_ggm}),N({P0})>0),{V_ggm}/{P0}-1,"")', PCT1, ""),
     ("disc_ggm", "Discount to value 1 − P0 / V0", "formula",
      '=IF(AND(ISNUMBER({V_ggm}),N({V_ggm})>0),1-{P0}/{V_ggm},"")', PCT1, "Class 5: buy below 80% of value = at least 20% here"),
     ("implied_g", "Growth implied by the price", "formula",
-     '=IF(N({P0})>0,({k}*{P0}-{D0})/({P0}+{D0}),"")', PCT, "Reverse Gordon: the constant g that gives V0 = P0"),
+     '=IF(N({P0})>0,({k}*{P0}-{D0u})/({P0}+{D0u}),"")', PCT, "Reverse Gordon: the constant g that gives V0 = P0"),
     ("section", "Two-stage DDM"),
-    ("pv1", "PV of the dividends of years 1 to T", "formula", "=SUM({pv_col})", PRICE, "Schedule on the right"),
-    ("DT", "D_T, dividend in year T", "formula", "={D0}*(1+{g1})^{T}", PRICE3, ""),
+    ("pv1", "PV of the payouts of years 1 to T", "formula", "=SUM({pv_col})", PRICE, "Schedule on the right"),
+    ("DT", "D_T, payout in year T", "formula", "={D0u}*(1+{g1})^{T}", PRICE3, ""),
     ("TV", "Terminal value at T = D_T (1 + g2) / (k − g2)", "formula",
      '=IF({k}>{g2},{DT}*(1+{g2})/({k}-{g2}),"n/a: k ≤ g2")', PRICE, ""),
     ("pv_tv", "PV of the terminal value", "formula", '=IF(ISNUMBER({TV}),{TV}/(1+{k})^{T},"")', PRICE, ""),
     ("V_2s", "Value V0", "formula",
-     '=IF(N({D0})<=0,"n/a: no dividend",IF(ISNUMBER({pv_tv}),{pv1}+{pv_tv},"n/a: k ≤ g2"))', PRICE, ""),
+     '=IF(N({D0u})<=0,"n/a: no payout",IF(ISNUMBER({pv_tv}),{pv1}+{pv_tv},"n/a: k ≤ g2"))', PRICE, ""),
     ("tv_share", "Terminal value, share of V0", "formula",
      '=IF(AND(ISNUMBER({V_2s}),N({V_2s})>0),{pv_tv}/{V_2s},"")', PCT1, "A high share means the value rests on g2 and k"),
     ("mos_2s", "Margin of safety V0 / P0 − 1", "formula",
@@ -271,6 +297,8 @@ LEFT = [
     ("section", "Fair value"),
     ("fv_method", "Method", "formula", "={method}", None, "Chosen in Growth assumptions"),
     ("V0", "Fair value V0", "result", '=IF({method}="GGM",{V_ggm},{V_2s})', PRICE, ""),
+    ("V0_div", "Fair value on dividends only", "formula", None, PRICE,
+     "Reference: the same method without buybacks"),     # formula built in v0_div_formula()
     ("fv_P0", "Price P0", "formula", "={P0}", PRICE, ""),
     ("mos", "Margin of safety V0 / P0 − 1", "result", '=IF(AND(ISNUMBER({V0}),N({P0})>0),{V0}/{P0}-1,"")', PCT1, ""),
     ("buy", "Buy threshold", "link", "=" + inp("buy"), PCT1, "From Inputs"),
@@ -303,28 +331,57 @@ A = {key: f"$C${r}" for key, r in ROWS.items()}          # absolute addresses fo
 CELL = {key: f"C{r}" for key, r in ROWS.items()}         # plain addresses, for Summary and the script
 A["pv_col"] = f"$J${SCHED_ROW}:$J${SCHED_ROW + T_MAX - 1}"
 HIST_ROW = END + 2                                       # header of the dividend table
+ALPHA_ROW = HIST_ROW + HIST_YEARS + 5                    # title of the alpha block, below the dividend table
 GRID1_ROW = SCHED_ROW + T_MAX + 4                        # title of the first sensitivity grid
 GRID2_ROW = GRID1_ROW + 9
+
+# Annual alpha, read by Summary: (key, label, formula, note)
+ALPHA = [
+    ("alpha_close", "Alpha: closes in one year",
+     '=IF(AND(ISNUMBER({V0}),N({P0})>0,ISNUMBER({k})),(1+{k})*({V0}/{P0}-1),"")',
+     "(1 + k) × (V0 / P0 − 1); selected fair value"),
+    ("alpha_never", "Alpha: never closes",
+     '=IF(AND(N({P0})>0,N({D0u})>0,ISNUMBER({g2}),ISNUMBER({k})),{D0u}*(1+{g2})/{P0}+{g2}-{k},"")',
+     "D0 used × (1 + g2) / P0 + g2 − k; course convention"),
+]
+for _i, (_key, *_rest) in enumerate(ALPHA):
+    CELL[_key] = f"C{ALPHA_ROW + 1 + _i}"
 
 
 def flags_formula():
     a = A
-    parts = (f'IF(N({a["D0"]})<=0,"No dividend: DDM not applicable. ","")'
+    parts = (f'IF(N({a["D0u"]})<=0,"No payout: DDM not applicable. ","")'
+             f'&IF(AND({a["basis"]}="{DIVS}",N({a["bps"]})>N({a["D0"]})),'
+             f'"Buybacks exceed dividends: the DDM on dividends undervalues. ","")'
+             f'&IF(AND({a["basis"]}="{DIVS_BB}",NOT(ISNUMBER({a["bps"]}))),"No buyback data: D0 used is dividends. ","")'
              f'&IF(AND(ISNUMBER({a["mos"]}),N({a["mos"]})>{inp("flag_up")}),'
              f'"Upside above "&TEXT({inp("flag_up")},"0%")&": check the inputs (value trap?). ","")'
              f'&IF({a["k"]}-{a["g2"]}<{inp("spread")},"k − g2 below "&TEXT({inp("spread")},"0%")&". ","")'
-             f'&IF(AND(ISNUMBER({a["payout"]}),N({a["payout"]})>1),"Payout above 100%. ","")'
+             f'&IF(AND(ISNUMBER({a["payout_u"]}),N({a["payout_u"]})>1),"Payout above 100% of EPS. ","")'
              f'&IF({a["g"]}>={a["k"]},"GGM not valid: g ≥ k. ","")'
              f'&IF(AND({a["currency"]}<>"",{a["currency"]}<>"USD"),"In "&{a["currency"]}&": rf and ERP are US figures. ","")')
     return f'=IF(N({a["P0"]})<=0,"",IF(({parts})="","None",TRIM({parts})))'
 
 
+def two_stage_expr(D, k, g2):
+    """Closed-form two-stage value of payout D; k and g2 are cell references. Needs k > g2."""
+    g1, T = A["g1"], A["T"]
+    stage1 = f"IF(ABS({k}-{g1})<1E-9,{D}*{T},{D}*(1+{g1})/({k}-{g1})*(1-((1+{g1})/(1+{k}))^{T}))"
+    terminal = f"{D}*(1+{g1})^{T}*(1+{g2})/(({k}-{g2})*(1+{k})^{T})"
+    return f"{stage1}+{terminal}"
+
+
 def two_stage_cell(k, g2):
-    """Closed-form two-stage value for one cell of the grid; k and g2 are cell references."""
-    D0, g1, T = A["D0"], A["g1"], A["T"]
-    stage1 = f"IF(ABS({k}-{g1})<1E-9,{D0}*{T},{D0}*(1+{g1})/({k}-{g1})*(1-((1+{g1})/(1+{k}))^{T}))"
-    terminal = f"{D0}*(1+{g1})^{T}*(1+{g2})/(({k}-{g2})*(1+{k})^{T})"
-    return f'=IF({k}<={g2},"n/a",{stage1}+{terminal})'
+    """One cell of the two-stage grid, on D0 used."""
+    return f'=IF({k}<={g2},"n/a",{two_stage_expr(A["D0u"], k, g2)})'
+
+
+def v0_div_formula():
+    """The fair value with the chosen method on dividends alone: what the buybacks add."""
+    a = A
+    ggm = f'IF({a["k"]}>{a["g"]},{a["D0"]}*(1+{a["g"]})/({a["k"]}-{a["g"]}),"n/a: k ≤ g")'
+    two = f'IF({a["k"]}>{a["g2"]},{two_stage_expr(a["D0"], a["k"], a["g2"])},"n/a: k ≤ g2")'
+    return f'=IF(N({a["D0"]})<=0,"n/a: no dividend",IF({a["method"]}="GGM",{ggm},{two}))'
 
 
 def grid(ws, top, heading, g_key, g_label, cell_formula):
@@ -372,6 +429,8 @@ def build_stock(ws):
         label(ws, f"B{r}", text, bold=kind == "result")
         if key == "flags":
             content = flags_formula()
+        elif key == "V0_div":
+            content = v0_div_formula()
         elif isinstance(content, str) and content.startswith("="):
             content = content.format(**A)
         bold = key in ("V_ggm", "V_2s")
@@ -386,8 +445,11 @@ def build_stock(ws):
     dvt = DataValidation(type="whole", operator="between", formula1="1", formula2=str(T_MAX), showErrorMessage=True,
                          errorTitle="T", error=f"T is a whole number of years from 1 to {T_MAX}")
     dvt.add(CELL["T"])
-    ws.add_data_validation(dv)
-    ws.add_data_validation(dvt)
+    dvb = DataValidation(type="list", formula1=f'"{DIVS},{DIVS_BB}"', allow_blank=False, showErrorMessage=True,
+                         errorTitle="Payout", error=f"Choose {DIVS} or {DIVS_BB}")
+    dvb.add(CELL["basis"])
+    for v in (dv, dvt, dvb):
+        ws.add_data_validation(v)
     for key in ("mos_ggm", "mos_2s", "mos"):
         cf_mos(ws, CELL[key], A["buy"])
     cf_signal(ws, CELL["signal"])
@@ -408,16 +470,24 @@ def build_stock(ws):
             put(ws, f"D{r}", f'=IF(AND(N(C{r - 1})>0,ISNUMBER(C{r})),C{r}/C{r - 1}-1,"")', "formula", PCT1)
             ws[f"D{r}"].alignment = Alignment(horizontal="left")
 
+    # annual alpha
+    section(ws, ALPHA_ROW, "Alpha, annual")
+    for key, text, formula, why in ALPHA:
+        r = int(CELL[key][1:])
+        label(ws, f"B{r}", text, bold=True)
+        put(ws, CELL[key], formula.format(**A), "result", PCT)
+        note(ws, f"D{r}", why)
+
     # two-stage schedule
     section(ws, ROW0, "Two-stage schedule (stage 1)", cols="FGHIJ")
-    for col, text in zip("FGHIJ", ("Year t", "Stage", "Dividend D_t", "Discount factor", "PV of D_t")):
+    for col, text in zip("FGHIJ", ("Year t", "Stage", "Payout D_t", "Discount factor", "PV of D_t")):
         c = put(ws, f"{col}{SCHED_ROW - 1}", text, "formula", bold=True)
         c.alignment = Alignment(horizontal="center")
     for t in range(1, T_MAX + 1):
         r = SCHED_ROW + t - 1
         put(ws, f"F{r}", t, "formula", INT).alignment = Alignment(horizontal="center")
         put(ws, f"G{r}", f'=IF(F{r}<={A["T"]},"Stage 1","")', "formula").alignment = Alignment(horizontal="center")
-        put(ws, f"H{r}", f'=IF(F{r}<={A["T"]},{A["D0"]}*(1+{A["g1"]})^F{r},"")', "formula", PRICE3)
+        put(ws, f"H{r}", f'=IF(F{r}<={A["T"]},{A["D0u"]}*(1+{A["g1"]})^F{r},"")', "formula", PRICE3)
         put(ws, f"I{r}", f'=IF(F{r}<={A["T"]},1/(1+{A["k"]})^F{r},"")', "formula", "0.0000")
         put(ws, f"J{r}", f'=IF(F{r}<={A["T"]},H{r}*I{r},"")', "formula", PRICE)
     r = SCHED_ROW + T_MAX
@@ -434,7 +504,7 @@ def build_stock(ws):
 
     grid(ws, GRID1_ROW, "Sensitivity: two-stage V0 (k down, g2 across)", "g2", "g2", two_stage_cell)
     grid(ws, GRID2_ROW, "Sensitivity: Gordon V0 (k down, g across)", "g", "g",
-         lambda k, g: f'=IF({k}<={g},"n/a",{A["D0"]}*(1+{g})/({k}-{g}))')
+         lambda k, g: f'=IF({k}<={g},"n/a",{A["D0u"]}*(1+{g})/({k}-{g}))')
 
     ws.freeze_panes = "A5"
     ws.sheet_view.showGridLines = False
@@ -461,14 +531,15 @@ def fill_example(ws):
 # ---------------------------------------------------------------- Summary sheet
 
 SUMMARY_COLS = [   # header, key in the stock sheet, number format, width
-    ("Ticker", None, None, 10), ("Company", "name", None, 26), ("Price P0", "P0", PRICE, 10), ("D0", "D0", PRICE3, 9),
-    ("Yield", "yield_", PCT, 8), ("β", "beta", BETA, 7), ("k", "k", PCT, 8), ("g1", "g1", PCT, 8), ("T", "T", INT, 5),
+    ("Ticker", None, None, 10), ("Company", "name", None, 26), ("Price P0", "P0", PRICE, 10),
+    ("Payout discounted", "basis", None, 20), ("D0 used", "D0u", PRICE3, 9), ("Div. yield", "yield_", PCT, 9), ("β", "beta", BETA, 7), ("k", "k", PCT, 8), ("g1", "g1", PCT, 8), ("T", "T", INT, 5),
     ("g2", "g2", PCT, 8), ("GGM V0", "V_ggm", PRICE, 10), ("GGM MoS", "mos_ggm", PCT1, 9),
     ("Two-stage V0", "V_2s", PRICE, 12), ("Two-stage MoS", "mos_2s", PCT1, 12), ("Method", "method", None, 10),
     ("Fair value", "V0", PRICE, 10), ("MoS", "mos", PCT1, 9), ("Signal", "signal", None, 11), ("Flags", "flags", None, 70),
+    ("Alpha: closes in one year", "alpha_close", PCT, 27), ("Alpha: never closes", "alpha_never", PCT, 13),
 ]
 SUM_HDR, SUM_ROW0 = 5, 6
-SUM_COLS = "BCDEFGHIJKLMNOPQRST"
+SUM_COLS = [get_column_letter(2 + i) for i in range(len(SUMMARY_COLS))]
 
 
 def summary_row(ws, r):
@@ -477,7 +548,7 @@ def summary_row(ws, r):
             put(ws, f"{col}{r}", None, "input")
             continue
         formula = f'=IF($B{r}="","",IFERROR(INDIRECT("\'"&$B{r}&"\'!{CELL[key]}"),""))'
-        bold = key in ("V0", "mos")
+        bold = key in ("V0", "mos", "alpha_close", "alpha_never")
         put(ws, f"{col}{r}", formula, "formula", fmt, bold=bold)
 
 
@@ -488,7 +559,7 @@ def build_summary(ws):
     for (head, key, fmt, width), col in zip(SUMMARY_COLS, SUM_COLS):
         c = put(ws, f"{col}{SUM_HDR}", head, "formula", bold=True)
         c.fill, c.border = fill(HEAD), Border(bottom=THIN)
-        c.alignment = Alignment(horizontal="left" if key in (None, "name", "flags") else "center")
+        c.alignment = Alignment(horizontal="left" if key in (None, "name", "basis", "flags") else "center")
         ws.column_dimensions[col].width = width
     ws.column_dimensions["A"].width = 2
     for r in range(SUM_ROW0, SUM_ROW0 + SUMMARY_ROWS):
@@ -518,6 +589,34 @@ def add_to_summary(ws, ticker):
 
 
 # ---------------------------------------------------------------- data
+
+def buybacks(tk, t, info):
+    """Last fiscal year's buybacks and diluted shares, as dividend_basis in build_stock_report.py, plus checks."""
+    st = retry(lambda: statements_of(tk), f"{t} statements")
+    out = {"buyback_fy": None, "shares_fy": None, "bps_avg": None, "shares_chg": None, "ni_growth": None, "fy": None}
+    if st.empty:
+        print(f"  {t}: no financial statements on Yahoo, so no buyback data")
+        return out
+    buy = -st["Repurchase Of Capital Stock"].fillna(0.0)          # no line: no buybacks, as in the report script
+    shares = st["Diluted Average Shares"].where(st["Diluted Average Shares"] > 0)
+    out["fy"] = [d.year for d in st.index]
+    if np.isfinite(shares.iloc[-1]):
+        out["buyback_fy"], out["shares_fy"] = float(buy.iloc[-1]) / 1e6, float(shares.iloc[-1]) / 1e6
+    per_share = (buy / shares).iloc[-GROWTH_YEARS:].dropna()
+    if len(per_share) == GROWTH_YEARS:
+        out["bps_avg"] = float(per_share.mean())
+    if len(st) > GROWTH_YEARS:
+        cagr = lambda s: (s.iloc[-1] / s.iloc[-1 - GROWTH_YEARS]) ** (1 / GROWTH_YEARS) - 1   # noqa: E731
+        sh, ni = shares, st["Net Income"]
+        if sh.iloc[-1] > 0 and sh.iloc[-1 - GROWTH_YEARS] > 0:
+            out["shares_chg"] = float(cagr(sh))
+        if ni.iloc[-1] > 0 and ni.iloc[-1 - GROWTH_YEARS] > 0:
+            out["ni_growth"] = float(cagr(ni))
+    fin = info.get("financialCurrency")
+    if fin and fin != info.get("currency"):
+        print(f"  {t}: statements in {fin}, price in {info.get('currency')}: buybacks per share are not comparable")
+    return out
+
 
 def download(tickers, as_of_arg):
     """Prices, dividends and Yahoo fields for each ticker, beta on SPY, and the 10-year yield."""
@@ -573,7 +672,7 @@ def download(tickers, as_of_arg):
             "div_rate": num("dividendRate"), "eps_ttm": num("trailingEps"), "eps_fwd": num("forwardEps"),
             "roe": num("returnOnEquity"), "dps_cagr": cagr, "eps_growth": eps_growth, "beta_calc": beta,
             "beta_yahoo": num("beta"), "dps": dps, "months": len(Re), "beta_end": Re.index[-1] if len(Re) else None,
-            "cagr_years": (first, last),
+            "cagr_years": (first, last), **buybacks(tk, t, info),
         }
         if D0 <= 0:
             print(f"  {t}: no dividend in the last 12 months, so the DDM does not apply")
@@ -588,7 +687,8 @@ def download(tickers, as_of_arg):
 def fill_data(ws, d, downloaded):
     """Write the blue cells of a stock sheet. Assumptions (yellow) are not touched."""
     for key in ("ticker", "name", "sector", "currency", "as_of", "P0", "D0", "div_rate", "eps_ttm", "eps_fwd", "roe",
-                "dps_cagr", "eps_growth", "beta_calc", "beta_yahoo"):
+                "dps_cagr", "eps_growth", "beta_calc", "beta_yahoo", "buyback_fy", "shares_fy", "bps_avg", "shares_chg",
+                "ni_growth"):
         ws[CELL[key]].value = d[key]
     ws[CELL["source"]].value = f"Yahoo Finance and FRED, downloaded {downloaded}"
     note(ws, f"D{ROWS['P0']}", f"Close of {d['as_of']:%d %b %Y}, not adjusted")
@@ -596,6 +696,15 @@ def fill_data(ws, d, downloaded):
     note(ws, f"D{ROWS['dps_cagr']}", f"{first}–{last}, calendar years: see the table below")
     if d["beta_end"] is not None:
         note(ws, f"D{ROWS['beta_calc']}", f"{d['months']} complete months to {d['beta_end']:%b %Y}, excess of the 1-month T-bill")
+    if d["fy"]:
+        fy = d["fy"]
+        note(ws, f"D{ROWS['buyback_fy']}", f"FY{fy[-1]}, Repurchase Of Capital Stock, cash flow statement")
+        note(ws, f"D{ROWS['bps_avg']}", f"FY{fy[-GROWTH_YEARS] if len(fy) >= GROWTH_YEARS else '?'}–FY{fy[-1]}: "
+                                        "a check, buybacks are lumpy and cut first in a downturn")
+        if len(fy) > GROWTH_YEARS:
+            span = f"FY{fy[-1 - GROWTH_YEARS]}–FY{fy[-1]}"
+            note(ws, f"D{ROWS['shares_chg']}", f"{span}, diluted average shares. Negative: buybacks shrink it")
+            note(ws, f"D{ROWS['ni_growth']}", f"{span}: total growth, compare g1 with it when buybacks are in")
     for i, (year, value) in enumerate(d["dps"].items()):
         r = HIST_ROW + 2 + i
         ws[f"B{r}"].value = str(year)
@@ -621,6 +730,7 @@ def default_g1(ws, d):
 def set_market(wsi, market):
     wsi[INP["as_of"]].value = market["as_of"]
     wsi[INP["rf"]].value = market["rf"]
+    note(wsi, f"D{INP['as_of'][1:]}", "Set by the script: the latest close it used. Final run: --as-of 2026-11-06")
     note(wsi, f"D{INP['rf'][1:]}", f"FRED DGS10 on {market['rf_date']:%d %b %Y}, set by the script")
 
 
@@ -655,7 +765,7 @@ def add_stocks(wb, tickers, as_of_arg):
     set_market(wsi, market)
     erp = wsi[INP["erp"]].value if isinstance(wsi[INP["erp"]].value, (int, float)) else ERP_DEFAULT
 
-    print(f"\n{'':6}{'P0':>9}{'D0':>8}{'beta':>7}{'k':>8}{'g1':>7}{'GGM':>9}{'2-stage':>9}   (rf {market['rf']:.2%})")
+    print(f"\n{'':6}{'P0':>9}{'D0 used':>9}{'beta':>7}{'k':>8}{'g1':>7}{'GGM':>9}{'2-stage':>9}   (rf {market['rf']:.2%})")
     for t, d in data.items():
         if t in wb.sheetnames:
             ws, status = wb[t], "refreshed, assumptions kept"
@@ -673,9 +783,15 @@ def add_stocks(wb, tickers, as_of_arg):
         k = market["rf"] + beta * erp
         g1, g2, T = num("g1", G1_DEFAULT), num("g2", G2_DEFAULT), int(num("T", T_DEFAULT))
         g = num("g", g2)
-        ggm = f"{gordon(d['D0'], k, g):9.2f}" if d["D0"] > 0 and k > g else f"{'n/a':>9}"
-        two = f"{two_stage(d['D0'], k, g1, g2, T):9.2f}" if d["D0"] > 0 and k > g2 else f"{'n/a':>9}"
-        print(f"{t:6}{d['P0']:9.2f}{d['D0']:8.3f}{beta:7.3f}{k:8.2%}{g1:7.1%}{ggm}{two}   {status}")
+        with_bb = ws[CELL["basis"]].value == DIVS_BB and d["buyback_fy"] is not None and d["shares_fy"]
+        D = d["D0"] + (d["buyback_fy"] / d["shares_fy"] if with_bb else 0.0)
+        ggm = f"{gordon(D, k, g):9.2f}" if D > 0 and k > g else f"{'n/a':>9}"
+        two = f"{two_stage(D, k, g1, g2, T):9.2f}" if D > 0 and k > g2 else f"{'n/a':>9}"
+        basis = "with buybacks" if with_bb else "dividends"
+        print(f"{t:6}{d['P0']:9.2f}{D:9.3f}{beta:7.3f}{k:8.2%}{g1:7.1%}{ggm}{two}   {basis}, {status}")
+        if not with_bb and d["buyback_fy"] and d["shares_fy"] and d["buyback_fy"] / d["shares_fy"] > d["D0"]:
+            print(f"{'':6}buybacks ({d['buyback_fy'] / d['shares_fy']:.2f} a share) exceed dividends: "
+                  f"consider {DIVS_BB} in the sheet")
 
 
 def main():

@@ -10,8 +10,6 @@ peer_names: {CCEP: Coca-Cola Europacific}
 valuation:
   method: two_stage              # two_stage | gordon | none
   dividend_basis: dividends      # buybacks are small: USD 0.9bn in nine months against USD 6.8bn of dividends
-  erp: 0.06114
-  erp_source: "Bloomberg CRP, Class 5: refresh"
   g1: 0.06
   g1_source: "Near consensus EPS growth of {eps_growth}"
   T: 5
