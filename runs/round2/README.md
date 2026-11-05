@@ -15,6 +15,16 @@ If the text is too long, the build stops and says which page and by how many pix
 
 **Final numbers:** on 7–8 November, re-run with `--as-of 2026-11-06`, as the challenge uses the close of Friday 6 November. Text written with `{tokens}` updates by itself, but typed facts do not, so re-read them. Then promote the final pages into the report: `python3 scripts/promote.py runs/round2/2026-11-06/<TICKER>.dc.html` (see *The Round 2 report* below).
 
+## Screen candidates
+
+Before writing a YAML, value the candidates from the Bloomberg screen (`EQS`) in `runs/round2/inputs/DDM_valuation.xlsx`. It has one sheet per stock, with the Gordon Growth Model and the two-stage DDM as Excel formulas, and a Summary with fair value, margin of safety (V0 / P0 − 1) and signal.
+
+1. **Add the stocks:** `python3 scripts/build_ddm_workbook.py KO PEP` (with the workbook closed in Excel). It downloads the price, D0, β on SPY and the 10-year yield, and adds one sheet and one Summary row per ticker.
+2. **Set the yellow cells** in each sheet: g1 (Bloomberg `BDVD` or `EE`), T, g2, the method, and the β override if you use Bloomberg `BETA`. ERP and the buy threshold are on `Inputs`.
+3. **Refresh:** run the same command again, with `--as-of 2026-11-06` for the final numbers. Only the data cells change: your assumptions stay.
+
+The `Example NKE` sheet reproduces the TA notebook's Nike case (GGM 23.24, two-stage 29.78). `--new` starts a blank workbook and loses your edits. The stocks you keep then go through *Add a stock* above.
+
 ## The Round 2 report
 
 `report/round2-equity.dc.html`: the cover, the Round 1 results (2 pages), six stock slots (2 pages each), Treynor-Black and the
@@ -65,6 +75,7 @@ Yahoo can't supply these, so they need Bloomberg:
 | File | What it is |
 |---|---|
 | `scripts/build_stock_report.py` | The whole pipeline. `--selftest` checks it against the TA's numbers; `--refresh` downloads again |
+| `scripts/build_ddm_workbook.py` | The screening workbook `runs/round2/inputs/DDM_valuation.xlsx`: builds it, adds stocks, refreshes their data |
 | `report/templates/stock-report.dc.html` | The page layout. Change section order and page structure here |
 | `runs/round2/inputs/` | One YAML per stock, plus the blank. Edit these |
 | `runs/round2/<as-of>/` | One run: for each stock, a copy of the YAML it used, the saved download (`<TICKER>_data.json`, because Yahoo's ratios have no history) and the generated HTML, PDF and figures |
