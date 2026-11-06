@@ -77,7 +77,7 @@ INFO_KEYS = ["longName", "shortName", "sector", "industry", "currency", "financi
              "sharesOutstanding", "trailingPE", "forwardPE", "priceToBook", "priceToSalesTrailing12Months",
              "enterpriseToEbitda", "enterpriseToRevenue", "forwardEps", "trailingEps", "bookValue", "ebitda",
              "totalRevenue", "dividendRate", "dividendYield", "targetMeanPrice", "targetLowPrice", "targetHighPrice",
-             "numberOfAnalystOpinions"]
+             "numberOfAnalystOpinions", "totalDebt", "totalCash"]
 STATEMENT_ITEMS = ["Total Revenue", "Gross Profit", "Net Income", "Diluted EPS", "Diluted Average Shares", "EBITDA",
                    "Stockholders Equity", "Total Assets", "Total Debt", "Free Cash Flow",
                    "Cash Dividends Paid", "Repurchase Of Capital Stock"]
@@ -87,6 +87,13 @@ MULTIPLES = [("forward_pe", "Fwd P/E", "earnings"), ("trailing_pe", "Trail. P/E"
              ("p_fcf", "P/FCF", "earnings"), ("ev_ebitda", "EV/EBITDA", "earnings"), ("pb", "P/B", "positive"),
              ("ps", "P/S", "positive"), ("ev_sales", "EV/Sales", "positive"), ("yield", "Div. yield", "yield")]
 SHOWN = ("forward_pe", "p_fcf", "ev_ebitda")   # the multiples printed in the report; the others stay in figures.json
+# Labels of the comps block in a stock sheet of DDM_valuation.xlsx (column B; the value is in C). check_workbook() reads them
+COMPS_STAT_LABEL = "Comps statistic"
+COMPS_STATS = {"Median": "median", "Average": "mean"}
+COMPS_USE_LABELS = {"forward_pe": "In the comps value: Fwd P/E", "p_fcf": "In the comps value: P/FCF",
+                    "ev_ebitda": "In the comps value: EV/EBITDA"}
+N_PEERS = 6
+PEER_LABELS = [f"Peer {i}" for i in range(1, N_PEERS + 1)]
 
 # metric, characteristic of Class 5, higher is better, percent format
 TRAP_METRICS = [("ROE", "Profitability", True, True), ("ROA", "Profitability", True, True),
@@ -275,11 +282,20 @@ def download(cfg, as_of_arg):
         "latest_close": close[t].dropna().index[-1].strftime("%Y-%m-%d"),
         "adj": to_records(adj), "close": to_records(close[[t]]),
         "rates": to_records(pd.concat([fred_series("DGS1MO"), fred_series("DGS10")], axis=1)),
+        "fx": fetch_fx(fx_pairs(infos.values()), as_of),     # statements' currency -> trading currency, for the comps
     }
     path = RUNS / snap["as_of"] / f"{t}_data.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(snap, indent=1))
     print(f"Saved {path.name}")
+    return snap
+
+
+def with_fx(snap):
+    """A snapshot saved before the comps converted currencies has no rates: download those of its as-of date."""
+    if "fx" not in snap:
+        pairs = fx_pairs(snap["info"].values())
+        snap["fx"] = fetch_fx(pairs, snap["as_of"]) if pairs else {}
     return snap
 
 
@@ -290,7 +306,7 @@ def load_or_download(cfg, as_of_arg, refresh):
             snap = json.loads(path.read_text())
             if sorted(snap["peers"]) == sorted(cfg["peers"]):
                 print(f"Using saved data {path.name} (downloaded {snap['downloaded_at']})")
-                return snap
+                return with_fx(snap)
     return download(cfg, as_of_arg)
 
 
@@ -337,6 +353,181 @@ def peer_multiples(i, fcf):
             "ev_ebitda": i.get("enterpriseToEbitda"),
             "pb": i.get("priceToBook"), "ps": i.get("priceToSalesTrailing12Months"), "ev_sales": i.get("enterpriseToRevenue"),
             "yield": y}
+
+
+# ---------------------------------------------------------------- comparables (shared with build_ddm_workbook.py)
+# One definition of the comps, used by the report and by the DDM workbook, so that both give the same numbers.
+# Statements are in the company's financialCurrency; its price, market cap and Yahoo's ratios in its trading currency.
+# A peer's FCF is converted before P/FCF; a stock's EBITDA, revenue, FCF and net debt are converted too.
+
+def fx_rate(yf, base, quote, as_of):
+    """Units of the price currency (quote) per unit of the statements' currency (base), at the price date."""
+    as_of = pd.Timestamp(as_of)
+    for pair, power in ((f"{base}{quote}=X", 1), (f"{quote}{base}=X", -1)):
+        try:
+            px = yf.download(pair, start=as_of - pd.Timedelta(days=10), end=as_of + pd.Timedelta(days=1),
+                             auto_adjust=False, progress=False)["Close"].squeeze().dropna()
+            if len(px):
+                return float(px.iloc[-1]) ** power, f"{pair} on {px.index[-1]:%d %b %Y}"
+        except Exception:
+            pass
+    return None, None
+
+
+def fx_pairs(infos):
+    """The currency pairs (statements, trading) the comps need, e.g. {"EURUSD"}."""
+    return sorted({f"{i['financialCurrency']}{i['currency']}" for i in infos
+                   if i.get("financialCurrency") and i.get("currency") and i["financialCurrency"] != i["currency"]})
+
+
+def fetch_fx(pairs, as_of):
+    """{pair: [rate, source]} for each pair, at the price date."""
+    import yfinance as yf
+    out = {}
+    for pair in pairs:
+        rate, src = fx_rate(yf, pair[:3], pair[3:], as_of)
+        out[pair] = [rate, src]
+        if rate is None:
+            print(f"WARNING: no exchange rate {pair} on Yahoo: the comps leave that company's statement figures out")
+    return out
+
+
+def fx_of(info, fx):
+    """Rate from the statements' currency to the trading currency: 1.0 if they are the same, None if unknown."""
+    fin, cur = info.get("financialCurrency"), info.get("currency")
+    if not fin or not cur or fin == cur:
+        return 1.0
+    return ((fx or {}).get(f"{fin}{cur}") or [None])[0]
+
+
+def fcf_year(statements):
+    fcf = statements.get("Free Cash Flow") or {}
+    return pd.Timestamp(max(fcf)).year if fcf else None
+
+
+def peer_row(p, info, statements, fx, name=None):
+    """One peer: its multiples as in the report (n/m as None), and the raw inputs behind them (for the workbook)."""
+    rate = fx_of(info, fx)
+    fcf = last_fcf(statements)
+    fcf_t = fcf * rate if fcf is not None and rate else None
+    m = peer_multiples(info, fcf_t)
+    row = {"ticker": p, "name": name or short_name(info.get("longName")), "market_cap": info.get("marketCap"),
+           **{mid: sane(m[mid], kind) for mid, _, kind in MULTIPLES}}
+    fin = info.get("financialCurrency")
+    foreign = bool(fin and info.get("currency") and fin != info.get("currency"))
+    raw = {"ticker": p, "name": row["name"], "market_cap": info.get("marketCap"), "fcf": fcf_t, "fcf_fy": fcf_year(statements),
+           "dividend_rate": info.get("dividendRate"), "price": info.get("currentPrice"),
+           "forward_pe": info.get("forwardPE"), "trailing_pe": info.get("trailingPE"), "ev_ebitda": info.get("enterpriseToEbitda"),
+           "pb": info.get("priceToBook"), "ps": info.get("priceToSalesTrailing12Months"), "ev_sales": info.get("enterpriseToRevenue"),
+           "fin": fin if foreign else None, "fx": rate if foreign else None}
+    note = None
+    if foreign:
+        conv = f"FCF converted at {rate:.4f} {fin}{info.get('currency')}" if rate else "no exchange rate, so no P/FCF"
+        note = f"{p} reports in {fin}: {conv}; Yahoo's ratios as given, check it on Bloomberg RV"
+    return row, raw, note
+
+
+def unit_check(value, reference, rate, tol):
+    """value in the trading currency if it agrees with reference (already in it), as it is or converted at rate."""
+    if value is None or reference is None or not np.isfinite(value) or not np.isfinite(reference) or reference == 0:
+        return None, "no reference to check it"
+    if abs(value / reference - 1) <= tol:
+        return float(value), "as on Yahoo"
+    if rate and abs(value * rate / reference - 1) <= tol:
+        return float(value * rate), f"converted at {rate:.4f}"
+    return None, "unit unclear on Yahoo"
+
+
+def stock_inputs(info, statements, eps_fwd, P0, D0, fx):
+    """The stock's figures for the comps, in its trading currency (the report's definitions), and notes on them.
+    A company that reports in another currency: EBITDA, revenue and FCF converted, net debt from total debt − cash
+    (Yahoo's EV mixes currencies), and forward EPS and book value checked against Yahoo's own per-share figures."""
+    rate, notes = fx_of(info, fx), []
+    fin, cur = info.get("financialCurrency"), info.get("currency")
+    foreign = bool(fin and cur and fin != cur)
+    price_now = info.get("currentPrice") or P0
+    shares = (info.get("marketCap") or 0) / price_now or info.get("sharesOutstanding")
+    market_cap = P0 * shares
+    fcf = last_fcf(statements)
+    ebitda, revenue, bvps = info.get("ebitda"), info.get("totalRevenue"), info.get("bookValue")
+    if not foreign:
+        net_debt = (info.get("enterpriseValue") or market_cap) - (info.get("marketCap") or market_cap)
+    elif rate is None:
+        net_debt = ebitda = revenue = fcf = bvps = None
+        notes.append(f"Reports in {fin}, no {fin}{cur} rate: EBITDA, revenue, FCF and book value left out")
+    else:
+        debt, cash = info.get("totalDebt"), info.get("totalCash")
+        net_debt = (debt - cash) * rate if debt is not None and cash is not None else None
+        ebitda = ebitda * rate if ebitda is not None else None
+        revenue = revenue * rate if revenue is not None else None
+        fcf = fcf * rate if fcf is not None else None
+        eps_fwd, how = unit_check(eps_fwd, info.get("forwardEps"), rate, 0.15)
+        eq = (statements.get("Stockholders Equity") or {})
+        book_ref = eq[max(eq)] * rate / shares if eq and shares else None
+        bvps, how_b = unit_check(bvps, book_ref, rate, 0.25)
+        notes.append(f"Reports in {fin}: EBITDA, revenue, FCF and net debt (total debt − cash) converted at {rate:.4f} "
+                     f"{fin}{cur}; forward EPS {how}; book value {how_b}")
+    return {"P0": P0, "D0": D0, "shares": shares, "market_cap": market_cap, "net_debt": net_debt,
+            "ev": market_cap + net_debt if net_debt is not None else None, "eps_fwd": eps_fwd,
+            "eps_ttm": info.get("trailingEps"), "ebitda": ebitda, "revenue": revenue, "bvps": bvps, "fcf": fcf,
+            "fcf_fy": fcf_year(statements), "fx": rate if foreign else None, "fin": fin if foreign else None, "notes": notes}
+
+
+def comparables(s, rows, primary, stat):
+    """Peer statistics, the implied price at each, the stock's own multiples and the comps value (the report's)."""
+    pos = lambda x: x is not None and x > 0                                             # noqa: E731
+    shares, fcf, ebitda, net_debt, revenue = s["shares"], s["fcf"], s["ebitda"], s["net_debt"], s["revenue"]
+    implied = {        # price at a given multiple, for each multiple
+        "forward_pe": lambda m: s["eps_fwd"] * m if pos(s["eps_fwd"]) else None,
+        "trailing_pe": lambda m: s["eps_ttm"] * m if pos(s["eps_ttm"]) else None,
+        "p_fcf": lambda m: m * fcf / shares if pos(fcf) else None,
+        "ev_ebitda": lambda m: (m * ebitda - net_debt) / shares if pos(ebitda) and net_debt is not None else None,
+        "pb": lambda m: s["bvps"] * m if pos(s["bvps"]) else None,
+        "ps": lambda m: revenue * m / shares if revenue else None,
+        "ev_sales": lambda m: (m * revenue - net_debt) / shares if revenue and net_debt is not None else None,
+        "yield": lambda m: s["D0"] / (m / 100) if s["D0"] > 0 else None,
+    }
+    P0, cap, ev = s["P0"], s["market_cap"], s["ev"]
+    own = {"forward_pe": P0 / s["eps_fwd"] if pos(s["eps_fwd"]) else None,
+           "trailing_pe": P0 / s["eps_ttm"] if pos(s["eps_ttm"]) else None,
+           "p_fcf": cap / fcf if pos(fcf) else None,
+           "ev_ebitda": ev / ebitda if pos(ebitda) and ev is not None else None,
+           "pb": P0 / s["bvps"] if pos(s["bvps"]) else None,
+           "ps": cap / revenue if revenue else None,
+           "ev_sales": ev / revenue if revenue and ev is not None else None,
+           "yield": s["D0"] / P0 * 100 if s["D0"] > 0 else None}
+    own = {mid: sane(own[mid], kind) for mid, _, kind in MULTIPLES}
+    comps = {}
+    for mid, _, kind in MULTIPLES:
+        st = stats_of([r[mid] for r in rows])
+        for key in ("mean", "median", "min", "max"):
+            st[f"price_{key}"] = implied[mid](st[key]) if st[key] is not None else None
+        st["own"] = own[mid]
+        comps[mid] = st
+    prices = [comps[mid][f"price_{stat}"] for mid in primary if comps[mid][f"price_{stat}"] is not None]
+    return comps, (float(np.mean(prices)) if prices else None)
+
+
+def methods_verdict(mos_ddm, mos_comp):
+    """The TA's check: both methods say cheap, both say dear, or they disagree."""
+    if mos_ddm is None or mos_comp is None:
+        return "one method only"
+    return "undervalued" if mos_ddm > 0 and mos_comp > 0 else "overvalued" if mos_ddm < 0 and mos_comp < 0 else "mixed: check"
+
+
+def comps_from_snapshot(snap, P0, D0, eps_fwd, primary, stat, peer_names=None):
+    """The comparables of a snapshot (a _data.json, or the same dicts downloaded by the workbook script)."""
+    t, fx = snap["ticker"], snap.get("fx") or {}
+    rows, raw, notes = [], [], []
+    for p in snap["peers"]:
+        row, r, note = peer_row(p, snap["info"][p], snap["statements"][p], fx, (peer_names or {}).get(p))
+        rows.append(row)
+        raw.append(r)
+        if note:
+            notes.append(note)
+    stock = stock_inputs(snap["info"][t], snap["statements"][t], eps_fwd, P0, D0, fx)
+    comps, V_comp = comparables(stock, rows, primary, stat)
+    return {"rows": rows, "raw": raw, "peer_notes": notes, "stock": stock, "comps": comps, "V_comp": V_comp}
 
 
 def short_name(s):
@@ -386,8 +577,9 @@ def ddm_workbook(t):
     return erp, source, cells
 
 
-def check_workbook(t, v, cells, as_of, rf10, flags):
-    """Stop if the YAML's assumptions differ from sheet t of the DDM workbook; flag older workbook data."""
+def check_workbook(t, v, cells, as_of, rf10, flags, peers=None):
+    """Stop if the YAML's assumptions (and its peers and comps choices) differ from sheet t of the DDM workbook;
+    flag older workbook data."""
     def cell(prefix):
         return next((x for label, x in cells.items() if label.startswith(prefix)), None)
 
@@ -407,6 +599,13 @@ def check_workbook(t, v, cells, as_of, rf10, flags):
     g = cell("g, Gordon growth")
     if isinstance(g, (int, float)):            # typed over the default link to g2; the report's Gordon uses g2
         pairs.append(("g2 (workbook g, Gordon growth)", float(v.get("g2", 0.02)), float(g), "{:.2%}"))
+    if COMPS_STAT_LABEL in cells:              # the sheet has the comps block: same peers and choices as the YAML
+        listed = lambda xs: ", ".join(sorted(xs)) or "none"                   # noqa: E731
+        sheet_peers = {str(cells.get(lb)).strip().upper() for lb in PEER_LABELS if str(cells.get(lb) or "").strip()}
+        pairs.append(("peers", listed({str(p).upper() for p in (peers or [])}), listed(sheet_peers), "{}"))
+        pairs.append(("comps_stat", v.get("comps_stat", "median"), COMPS_STATS.get(cells.get(COMPS_STAT_LABEL)), "{}"))
+        used = {mid for mid, lb in COMPS_USE_LABELS.items() if cells.get(lb) == "Yes"}
+        pairs.append(("comps_primary", listed(v.get("comps_primary") or ["forward_pe", "ev_ebitda"]), listed(used), "{}"))
     show = lambda x, f: "empty" if x is None else f.format(x)                # noqa: E731
     diff = [f"{name}: YAML {show(a, f)}, workbook {show(b, f)}" for name, a, b, f in pairs
             if not (a == b or (isinstance(a, (int, float)) and isinstance(b, (int, float)) and abs(a - b) < 1e-9))]
@@ -473,7 +672,7 @@ def analyse(cfg, snap):
         raise SystemExit(f"{t}.yaml has erp {float(v['erp']):.3%}, the workbook {erp:.3%} ({src_erp}). "
                          "Delete erp from the YAML: the report takes it from the workbook")
     if cells is not None:
-        check_workbook(t, v, cells, as_of, rf10, flags)
+        check_workbook(t, v, cells, as_of, rf10, flags, cfg.get("peers"))
     k = rf10 + beta * erp
 
     method = v.get("method", "two_stage")
@@ -497,63 +696,21 @@ def analyse(cfg, snap):
     g_grid = [g2 + d for d in (-0.01, -0.005, 0, 0.005, 0.01)]
     grid = [[ddm(kk, gg) for gg in g_grid] for kk in k_grid]
 
-    # --- comparables
-    rows = []
-    for p in snap["peers"]:
-        m = peer_multiples(snap["info"][p], last_fcf(snap["statements"][p]))
-        rows.append({"ticker": p, "name": (cfg.get("peer_names") or {}).get(p) or short_name(snap["info"][p].get("longName")),
-                     "market_cap": snap["info"][p].get("marketCap"),
-                     **{mid: sane(m[mid], kind) for mid, _, kind in MULTIPLES}})
-        cur = snap["info"][p].get("financialCurrency")
-        if cur and cur != "USD":
-            flags.append((f"{p} reports in {cur}: its ratios are fine, but check it on Bloomberg RV", False))
-
-    price_now = info.get("currentPrice") or P0
-    shares = (info.get("marketCap") or 0) / price_now or info.get("sharesOutstanding")
-    market_cap = P0 * shares
-    net_debt = (info.get("enterpriseValue") or market_cap) - (info.get("marketCap") or market_cap)
-    ev = market_cap + net_debt
+    # --- comparables (shared with the DDM workbook: comps_from_snapshot)
     eps_fwd, src_fe = given("forward_eps", snap["estimates"]["eps_next"], "Yahoo consensus")
     eps_ttm = info.get("trailingEps")
-    bvps, ebitda, revenue = info.get("bookValue"), info.get("ebitda"), info.get("totalRevenue")
-    fcf = last_fcf(snap["statements"][t])
-
-    per_share = lambda x: x / shares
-    implied = {        # price at a given multiple, for each multiple
-        "forward_pe": lambda m: eps_fwd * m,
-        "trailing_pe": lambda m: eps_ttm * m if eps_ttm and eps_ttm > 0 else None,
-        "p_fcf": lambda m: per_share(m * fcf) if fcf and fcf > 0 else None,
-        "ev_ebitda": lambda m: per_share(m * ebitda - net_debt) if ebitda and ebitda > 0 else None,
-        "pb": lambda m: bvps * m if bvps and bvps > 0 else None,
-        "ps": lambda m: per_share(revenue * m) if revenue else None,
-        "ev_sales": lambda m: per_share(m * revenue - net_debt) if revenue else None,
-        "yield": lambda m: D0 / (m / 100) if D0 > 0 else None,
-    }
-    own = {"forward_pe": P0 / eps_fwd if eps_fwd and eps_fwd > 0 else None,
-           "trailing_pe": P0 / eps_ttm if eps_ttm and eps_ttm > 0 else None,
-           "p_fcf": market_cap / fcf if fcf and fcf > 0 else None,
-           "ev_ebitda": ev / ebitda if ebitda and ebitda > 0 else None,
-           "pb": P0 / bvps if bvps and bvps > 0 else None,
-           "ps": market_cap / revenue if revenue else None,
-           "ev_sales": ev / revenue if revenue else None,
-           "yield": D0 / P0 * 100 if D0 > 0 else None}
-    own = {mid: sane(own[mid], kind) for mid, _, kind in MULTIPLES}
-
-    comps = {}
-    for mid, _, kind in MULTIPLES:
-        st = stats_of([r[mid] for r in rows])
-        for key in ("mean", "median", "min", "max"):
-            st[f"price_{key}"] = implied[mid](st[key]) if st[key] is not None else None
-        st["own"] = own[mid]
-        comps[mid] = st
-
+    bvps = info.get("bookValue")
     primary = list(v.get("comps_primary") or ["forward_pe", "ev_ebitda"])
     outside = [mid for mid in primary if mid not in SHOWN]
     if outside:
         raise SystemExit(f"comps_primary can only use the multiples in the report ({', '.join(SHOWN)}), not {', '.join(outside)}")
     stat = v.get("comps_stat", "median")
-    prices = [comps[mid][f"price_{stat}"] for mid in primary if comps[mid][f"price_{stat}"] is not None]
-    V_comp = float(np.mean(prices)) if prices else None
+    cp = comps_from_snapshot(snap, P0, D0, eps_fwd, primary, stat, cfg.get("peer_names"))
+    rows, comps, V_comp, s = cp["rows"], cp["comps"], cp["V_comp"], cp["stock"]
+    flags.extend((x, False) for x in cp["peer_notes"])
+    flags.extend((x, True) for x in s["notes"])
+    market_cap, net_debt, ev, shares = s["market_cap"], s["net_debt"], s["ev"], s["shares"]
+    ebitda, revenue, fcf = s["ebitda"], s["revenue"], s["fcf"]
     if len(snap["peers"]) < 5:
         flags.append((f"Only {len(snap['peers'])} peers: the template asks for 5 or 6", True))
 
@@ -566,10 +723,7 @@ def analyse(cfg, snap):
     mos = V0 / P0 - 1
     mos_ddm = V_ddm / P0 - 1 if V_ddm else None
     mos_comp = V_comp / P0 - 1 if V_comp else None
-    if mos_ddm is not None and mos_comp is not None:
-        methods = "undervalued" if mos_ddm > 0 and mos_comp > 0 else "overvalued" if mos_ddm < 0 and mos_comp < 0 else "mixed: check"
-    else:
-        methods = "one method only"
+    methods = methods_verdict(mos_ddm, mos_comp)
     if methods == "mixed: check":
         flags.append(("DDM and comparables disagree (the TA's \"mixed: check\")", True))
     if mos_ddm is not None and mos_ddm > 0.5:
@@ -665,7 +819,7 @@ def analyse(cfg, snap):
         "trap": {name: {k1: (None if (isinstance(x, float) and np.isnan(x)) else (bool(x) if isinstance(x, (bool, np.bool_)) else x))
                         for k1, x in row.items()} for name, row in vt.to_dict("index").items()},
         "red_flags": red, "earnings_falling": falling, "trap_verdict": verdict,
-        "roe_fwd": roe_fwd, "payout_fwd": payout_fwd, "g_sust": g_sust, "pb_just": pb_just, "pb": own["pb"],
+        "roe_fwd": roe_fwd, "payout_fwd": payout_fwd, "g_sust": g_sust, "pb_just": pb_just, "pb": comps["pb"]["own"],
         "beta_S": beta_S, "sigma2_eps": s2_eps, "sigma_eps": sig_eps, "vol": float(est[t].std() * math.sqrt(12)),
         "te_per_unit": float((est[t] - R_S).std() * math.sqrt(12)), "score": alpha / s2_eps,
         "window": [est.index[0].strftime("%Y-%m"), est.index[-1].strftime("%Y-%m")], "saa_vol": float(sigma_S), "saa_excess": float(mu_S),
@@ -1233,6 +1387,25 @@ def selftest():
     verdict = trap_verdict(list(vt.index[vt["red_flag"]]), 3.15 < 3.55)
     ok &= verdict == "Fail"
     print(f"  {'ok  ' if verdict == 'Fail' else 'FAIL'} GIS verdict: {verdict} (TA: value-trap risk)")
+
+    print("Comparables, notebook 'Relative valuation' cell (NKE: forward EPS × average forward P/E of LULU, DECK, ADDYY)")
+    mult = pd.read_csv(TA / "r2_multiples.csv", index_col=0)
+    peers = mult[(mult["group"] == "NKE") & (mult["role"] == "peer")]
+    rows = [{"ticker": p, "name": p, "market_cap": None, **dict.fromkeys(m[0] for m in MULTIPLES),
+             "forward_pe": sane(float(x), "earnings")} for p, x in peers["forwardPE"].items()]
+    nke = dict.fromkeys(("shares", "market_cap", "net_debt", "ev", "eps_ttm", "ebitda", "revenue", "bvps", "fcf"))
+    nke.update(P0=37.545, D0=1.64, eps_fwd=float(mult.loc["NKE", "forwardEps"]))
+    _, v_nke = comparables(nke, rows, ["forward_pe"], "mean")
+    close_to("NKE comps value, the TA's method on r2_multiples.csv", v_nke,
+             round(float(mult.loc["NKE", "forwardEps"]) * peers["forwardPE"].mean(), 4), 0.0001)
+    print("Comparables, HRL report of 30 Oct (runs/round2/2026-10-30, all peers report in USD)")
+    run = RUNS / "2026-10-30"
+    snap, fig = (json.loads((run / f"HRL_{x}.json").read_text()) for x in ("data", "figures"))
+    cp = comps_from_snapshot(with_fx(snap), fig["P0"], fig["D0"], fig["eps_fwd"], fig["comps_primary"], fig["comps_stat"])
+    close_to("HRL comps value", cp["V_comp"], round(fig["V_comp"], 4), 0.0001)
+    for mid in SHOWN:
+        close_to(f"HRL {mid}, implied price at the peer median", cp["comps"][mid]["price_median"],
+                 round(fig["comps"][mid]["price_median"], 4), 0.0001)
 
     print("Index model on the TA's SAA and the TA's CSV (notebook §6; its data ended on 28 Oct, the CSV one day later)")
     W = pd.Series({"SPY": 0.086, "EFA": 0.074, "EEM": 0.070, "IEF": 0.177, "LQD": 0.124, "TIP": 0.200, "GLD": 0.097, "DBC": 0.159})

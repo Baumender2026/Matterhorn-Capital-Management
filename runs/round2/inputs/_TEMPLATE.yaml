@@ -17,7 +17,8 @@
 # Keep the text short: shorten it rather than shrinking the type.
 
 name:                          # short company name; leave empty to use Yahoo's
-peers: []                      # 5 or 6 tickers from Bloomberg RV: same industry, US-listed if possible
+peers: []                      # 5 or 6 tickers from Bloomberg RV: same industry, US-listed if possible. The same as the
+                               # peer cells of the stock's sheet in DDM_valuation.xlsx (row 122 on): the report stops if they differ
 
 valuation:                     # the fair value is the DDM value; the comparables are only a double check
   method: two_stage            # gordon: mature, stable growth. two_stage: not in its normal state today
@@ -31,8 +32,9 @@ valuation:                     # the fair value is the DDM value; the comparable
   T_source: ""
   g2: 0.03                     # terminal growth: below k and close to long-run economic growth (3% for every stock)
   g2_source: ""
-  comps_primary: [forward_pe, ev_ebitda]   # the multiples averaged into the comps value; p_fcf is the other choice
-  comps_stat: median           # median or mean of the peers
+  comps_primary: [forward_pe, ev_ebitda]   # the multiples averaged into the comps value; p_fcf is the other choice.
+                               # As "In the comps value" (Yes) in the stock's sheet: the report stops if they differ
+  comps_stat: median           # median or mean of the peers: "Comps statistic" Median or Average in the sheet
   overrides: {}                # any computed input, with its source. Keys: P0, D0, beta, rf10, forward_eps
                                # e.g. beta: {value: 0.30, source: "Bloomberg BETA"}
 

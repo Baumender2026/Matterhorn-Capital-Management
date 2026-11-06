@@ -7,7 +7,7 @@ The files you fill in for Round 2. Everything else (downloads, numbers, pages) i
 | `_TEMPLATE.yaml` | The blank for one stock: peers, growth inputs, case, catalysts, issues, sources |
 | `<TICKER>.yaml` | One per stock, copied from the blank |
 | `portfolio.yaml` | The 20% sleeve, how it is raised (`funding`), and the six stocks in report order |
-| `DDM_valuation.xlsx` | The screening workbook: GGM and two-stage DDM for each candidate, with the assumptions in yellow cells. See `runs/round2/README.md` (*Screen candidates*) |
+| `DDM_valuation.xlsx` | The screening workbook: GGM and two-stage DDM for each candidate, and from row 101 the comparables of the stock report, with the assumptions and peers in yellow cells. See `runs/round2/README.md` (*Screen candidates*) |
 
 ## Add a stock
 

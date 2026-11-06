@@ -13,7 +13,13 @@ The workbook does the valuation with Excel formulas, so every assumption can be 
   Inputs       shared by all stocks: rf (10-year Treasury), ERP, buy threshold, flag levels
   <TICKER>     data, CAPM, growth assumptions, GGM, two-stage DDM with its schedule, sensitivity grids
   Template     a blank stock sheet, to duplicate by hand
-  Example NKE  the TA notebook's Nike case, which checks the formulas (GGM 23.24, two-stage 29.78)
+  Example NKE  the TA notebook's Nike case, which checks the formulas (GGM 23.24, two-stage 29.78; comps 19.33 on the CSV)
+
+Each stock sheet also has the comparables from row 101, with the stock report's metrics and code (comps_from_snapshot in
+build_stock_report.py): forward P/E, P/FCF and EV/EBITDA (plus five more), the n/m rule, the peer median (or average),
+the implied prices and the comps value, against the DDM (the TA's undervalued / overvalued / mixed: check). A double check:
+it does not change V0, the MoS or the signal. Peers (yellow) come from the stock's YAML, else PEERS below, else Yahoo's
+industry list; typed peers are kept. The stock report stops if the YAML's peers, comps_stat or comps_primary differ.
 
 A stock already in the workbook gets new data (blue cells) only: your assumptions (yellow) stay.
 The formulas follow the Round 2 cheat sheet (§3-§4) and scripts/build_stock_report.py:
@@ -43,8 +49,10 @@ from openpyxl.workbook.properties import CalcProperties
 from openpyxl.worksheet.datavalidation import DataValidation
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from build_stock_report import (HISTORY_YEARS, WINDOW, complete_month_end,  # noqa: E402
-                                fred_series, gordon, retry, statements_of, two_stage)
+from build_stock_report import (COMPS_STAT_LABEL, COMPS_STATS, COMPS_USE_LABELS, HISTORY_YEARS,  # noqa: E402
+                                INFO_KEYS, MULTIPLES, N_PEERS, PEER_LABELS, TA, WINDOW, comps_from_snapshot,
+                                complete_month_end, fetch_fx, fred_series, fx_pairs, fx_rate, gordon,
+                                methods_verdict, retry, short_name, statements_of, to_records, two_stage)
 
 REPO = Path(__file__).resolve().parent.parent
 WORKBOOK = REPO / "runs" / "round2" / "inputs" / "DDM_valuation.xlsx"
@@ -72,6 +80,27 @@ MISSING_DIVIDENDS = {
 MIN_ANALYSTS = 10                                   # fewer on the page used: a warning
 # Ordinary shares per ADR, so that a foreign company's buybacks per share are per ADR, like its price and dividends
 ADR_SHARES = {"TSM": 5, "RHHBY": 0.125, "TCEHY": 1}
+# Peers of the comparables, for a stock without runs/round2/inputs/<TICKER>.yaml. Proposed by Claude on 6 Nov 2026 from
+# Yahoo's industry and the business, without Bloomberg RV: the team checks them on RV and types over them in the sheet.
+# Left out because Yahoo's ratios are broken: Chinese ADRs (BABA, BIDU, JD, PDD, TME, NTES: EV/EBITDA of -3x to 6x, a USD EV
+# over a CNY EBITDA), UMC and ASX (EV/EBITDA -0.3x and 2.4x), SAP (EV/EBITDA 322x, P/B 76x), MU (forward P/E 3.2x), ARM (155x).
+PEERS = {
+    "NVDA": ["AVGO", "AMD", "QCOM", "MRVL", "TXN", "ADI"],     # listed US chip designers and makers, AI and data centre first
+    "MSFT": ["ORCL", "CRM", "ADBE", "NOW", "INTU", "GOOGL"],   # large US software and cloud platforms
+    "GOOG": ["META", "MSFT", "AMZN", "NFLX", "RDDT", "PINS"],  # online advertising, cloud and media platforms
+    "TSM":  ["INTC", "GFS", "AVGO", "TXN", "ADI", "NXPI"],     # chip makers with fabs; foundry peers on US lines (GFS, INTC)
+    "META": ["GOOGL", "PINS", "RDDT", "NFLX", "AMZN", "MSFT"], # online advertising and social media
+    "TCEHY": ["META", "GOOGL", "NFLX", "SE", "EA"],            # social, games, ads and payments; Chinese peers left out (above)
+    "PG":   ["CL", "KMB", "CHD", "CLX", "KVUE", "UL"],         # household and personal products
+    "RHHBY": ["NVS", "AZN", "MRK", "PFE", "JNJ", "SNY"],       # large pharma, Europe and US
+    "ORCL": ["MSFT", "CRM", "IBM", "ADBE", "NOW", "INTU"],     # enterprise software, databases and cloud
+    "AZN":  ["NVS", "MRK", "PFE", "GSK", "SNY", "ABBV"],       # large pharma, Europe and US
+    "GS":   ["MS", "JPM", "BAC", "C", "JEF", "EVR"],           # investment banks and the large banks with markets arms
+    "IBM":  ["ACN", "ORCL", "MSFT", "CSCO", "HPE", "CTSH"],    # IT services, software and infrastructure
+    "AXP":  ["COF", "SYF", "V", "MA", "PYPL", "ALLY"],         # card issuers, networks and consumer lenders
+    "QCOM": ["AVGO", "TXN", "ADI", "NXPI", "MRVL", "AMD"],     # chip designers: mobile, connectivity, auto
+}
+PEERS_DATE = "6 Nov 2026"
 G1_BOUNDS = (0.0, 0.15)            # the 5-year dividend CAGR, g1 when Yahoo has no growth estimate, is clipped to this
 T_MAX = 20                                          # rows of the two-stage schedule
 HIST_YEARS = 6                                      # calendar years in the dividend table
@@ -182,7 +211,7 @@ STEPS = [
     "2. Or by hand: right-click Template > Move or Copy > Create a copy, rename it to the ticker, type the blue cells,",
     "    then type the sheet name in the Ticker column of Summary.",
     "3. In each stock sheet, check the yellow cells: the payout discounted, g1 (set to Yahoo's average earnings growth",
-    "    estimate), T, g2, the method, the β override if you use Bloomberg BETA, and the ERP of a non-US company.",
+    "    estimate), T, g2, the method, the β override, the ERP of a non-US company, and the peers of the comps (row 101 on).",
     "4. Final numbers: run the script again with --as-of 2026-11-06 (the challenge uses the close of Friday 6 November).",
     "5. Don't insert rows or columns in the stock sheets: Summary reads fixed cells.",
 ]
@@ -197,6 +226,7 @@ FORMULAS = [
     "    growth, which already contains the buybacks, so they count twice and V0 is too high: see the note next to g1",
     "Non-US companies: the tickers are US lines (price and dividends in USD), so rf stays the US 10-year and the sheet",
     f"    types its country's ERP: Damodaran, {ERP_DATE}, mature market 4.23% + country risk premium",
+    "Comparables (row 101 on): price = peer median multiple × the stock's EPS, FCF or EBITDA, as the stock report. A check, not in V0",
 ]
 
 
@@ -597,6 +627,326 @@ def fill_example(ws):
     note(ws, f"D{ROWS['V_2s']}", "TA notebook: 29.78")
 
 
+# ---------------------------------------------------------------- comparables block (rows 101 on of each stock sheet)
+# The stock report's comps (build_stock_report.comps_from_snapshot) as Excel formulas: same multiples, n/m rule, statistic,
+# implied prices and comps value. A double check: it does not feed V0, the MoS or the signal. Fixed cells, like the DDM rows.
+
+COMPS_ROW = 101
+CR = {"title": 101, "note": 102, "stat": 104, "forward_pe": 105, "p_fcf": 106, "ev_ebitda": 107, "source": 108,
+      "data_head": 110, "eps_fwd": 111, "shares": 112, "mcap": 113, "net_debt": 114, "ev": 115, "ebitda": 116, "fcf": 117,
+      "revenue": 118, "bvps": 119, "head": 121, "peer0": 122, "n": 128, "avg": 129, "med": 130, "own": 131,
+      "imp_avg": 132, "imp_med": 133, "imp_use": 134, "value": 136, "mos": 137, "verdict": 138, "peers": 139,
+      "flags": 140, "notes": 141, "raw_title": 143, "raw_head": 144, "raw0": 145}
+MCOL = {"forward_pe": "G", "p_fcf": "H", "ev_ebitda": "I", "trailing_pe": "J", "pb": "K", "ps": "L", "ev_sales": "M",
+        "yield": "N"}                                       # columns of the peer table, in the report's order first
+RAW = {"mcap": "F", "fcf": "G", "fy": "H", "rate": "I", "price": "J", "forward_pe": "K", "trailing_pe": "L",
+       "ev_ebitda": "M", "pb": "N", "ps": "O", "ev_sales": "P", "fin": "Q", "fx": "R"}     # raw inputs, one row per peer
+CA = {k: f"$C${r}" for k, r in CR.items()}
+for _k, _r in (("V_comp", "value"), ("mos_comp", "mos"), ("verdict", "verdict"), ("peers_c", "peers"), ("flags_c", "flags")):
+    CELL[_k] = f"C{CR[_r]}"
+SHADE = "F3EFEB"                                            # the report's shading of the columns in the comps value
+MULT, YES_NO = '0.0"x"', '"Yes,No"'
+STOCK_DATA = [   # key, label, kind, number format, note
+    ("eps_fwd", "Forward EPS, next fiscal year (consensus)", "data", PRICE,
+     "Yahoo, Analysis, Earnings Estimate, next year: the stock report's forward EPS"),
+    ("shares", "Shares: Yahoo market cap ÷ price (m)", "data", "#,##0.0", "As the report: not row 29"),
+    ("mcap", "Market cap at P0 (USD m)", "formula", "#,##0", "P0 × shares"),
+    ("net_debt", "Net debt (USD m)", "data", "#,##0", "Yahoo enterprise value − market cap, as the report"),
+    ("ev", "Enterprise value at P0 (USD m)", "formula", "#,##0", "Market cap + net debt"),
+    ("ebitda", "EBITDA, last 12 months (USD m)", "data", "#,##0", "Yahoo"),
+    ("fcf", "Free cash flow, last fiscal year (USD m)", "data", "#,##0", "Cash flow statement"),
+    ("revenue", "Revenue, last 12 months (USD m)", "data", "#,##0", "Yahoo"),
+    ("bvps", "Book value per share", "data", PRICE, "Yahoo"),
+]
+
+
+def rule(expr, kind):
+    """The report's n/m rule (sane) on an expression: P/E-type multiples in (0, 100], the others above 0."""
+    test = f"AND({expr}>0,{expr}<=100)" if kind == "earnings" else f"{expr}>0"
+    return f'IF({test},{expr},"n/m")'
+
+
+def comps_formulas():
+    """{cell: formula} of the block, for the peer table, the stock's multiples, the implied prices and the results."""
+    f, kind = {}, {mid: k for mid, _, k in MULTIPLES}
+    P0, eps_ttm, D0 = A["P0"], A["eps_ttm"], A["D0u"]
+    eps, sh, mc, nd, ev, eb, fcf, rev, bv = (CA[k] for k in ("eps_fwd", "shares", "mcap", "net_debt", "ev", "ebitda", "fcf",
+                                                            "revenue", "bvps"))
+    f[CELL_C("mcap")] = f'=IF(AND(N({P0})>0,ISNUMBER({sh})),{P0}*{sh},"")'
+    f[CELL_C("ev")] = f'=IF(AND(ISNUMBER({mc}),ISNUMBER({nd})),{mc}+{nd},"")'
+    first, last = CR["peer0"], CR["peer0"] + N_PEERS - 1
+    for i in range(N_PEERS):                                   # peer rows: the raw inputs through the n/m rule
+        r, q = first + i, CR["raw0"] + i
+        raw = lambda key: f"{RAW[key]}{q}"                     # noqa: E731
+        blank = f'IF($C{r}="","",'
+        f[f"F{r}"] = f'={blank}IF(ISNUMBER({raw("mcap")}),{raw("mcap")}/1000,""))'
+        for mid in ("forward_pe", "trailing_pe", "ev_ebitda", "pb", "ps", "ev_sales"):
+            x = raw(mid)
+            f[f"{MCOL[mid]}{r}"] = f'={blank}IF(ISNUMBER({x}),{rule(x, kind[mid])},"n/m"))'
+        pf = f'{raw("mcap")}/{raw("fcf")}'
+        f[f"H{r}"] = (f'={blank}IF(AND(ISNUMBER({raw("mcap")}),ISNUMBER({raw("fcf")}),N({raw("fcf")})<>0),'
+                      f'{rule(pf, "earnings")},"n/m"))')
+        f[f"N{r}"] = f'={blank}IF(AND(N({raw("rate")})>0,N({raw("price")})>0),{raw("rate")}/{raw("price")},"n/m"))'
+        f[f"C{q}"] = f'=IF($C{r}="","",$C{r})'
+    for mid, col in MCOL.items():                             # statistics over the peers
+        rng = f"{col}{first}:{col}{last}"
+        f[f"{col}{CR['n']}"] = f"=COUNT({rng})"
+        f[f"{col}{CR['avg']}"] = f'=IF({col}{CR["n"]}>0,AVERAGE({rng}),"n/m")'
+        f[f"{col}{CR['med']}"] = f'=IF({col}{CR["n"]}>0,MEDIAN({rng}),"n/m")'
+    own = {   # the stock's own multiples at P0: (guard, expression)
+        "forward_pe": (f"N({eps})>0", f"{P0}/{eps}"), "p_fcf": (f"AND(N({fcf})>0,ISNUMBER({mc}))", f"{mc}/{fcf}"),
+        "ev_ebitda": (f"AND(N({eb})>0,ISNUMBER({ev}))", f"{ev}/{eb}"), "trailing_pe": (f"N({eps_ttm})>0", f"{P0}/{eps_ttm}"),
+        "pb": (f"N({bv})>0", f"{P0}/{bv}"), "ps": (f"AND(N({rev})<>0,ISNUMBER({mc}))", f"{mc}/{rev}"),
+        "ev_sales": (f"AND(N({rev})<>0,ISNUMBER({ev}))", f"{ev}/{rev}"), "yield": (f"N({D0})>0", f"{D0}/{P0}"),
+    }
+    r = CR["own"]
+    f[f"C{r}"], f[f"D{r}"] = f"={A['ticker']}", f"={A['name']}"
+    f[f"F{r}"] = f'=IF(ISNUMBER({mc}),{mc}/1000,"")'
+    for mid, (guard, expr) in own.items():
+        f[f"{MCOL[mid]}{r}"] = f'=IF(AND(N({P0})>0,{guard}),{rule(expr, kind[mid])},"n/m")'
+    implied = {   # price at a peer statistic m: (guard, expression), as comparables() in the report script
+        "forward_pe": (f"N({eps})>0", "{eps}*{m}"), "p_fcf": (f"N({fcf})>0,N({sh})>0", "{m}*{fcf}/{sh}"),
+        "ev_ebitda": (f"N({eb})>0,ISNUMBER({nd}),N({sh})>0", "({m}*{eb}-{nd})/{sh}"),
+        "trailing_pe": (f"N({eps_ttm})>0", "{eps_ttm}*{m}"), "pb": (f"N({bv})>0", "{bv}*{m}"),
+        "ps": (f"N({rev})<>0,N({sh})>0", "{rev}*{m}/{sh}"),
+        "ev_sales": (f"N({rev})<>0,ISNUMBER({nd}),N({sh})>0", "({m}*{rev}-{nd})/{sh}"), "yield": (f"N({D0})>0", "{D0}/{m}"),
+    }
+    names = dict(eps=eps, fcf=fcf, sh=sh, eb=eb, nd=nd, eps_ttm=eps_ttm, bv=bv, rev=rev, D0=D0)
+    for key, stat_row in (("imp_avg", CR["avg"]), ("imp_med", CR["med"])):
+        for mid, (guard, expr) in implied.items():
+            col = MCOL[mid]
+            m = f"{col}${stat_row}"
+            f[f"{col}{CR[key]}"] = f'=IF(AND(ISNUMBER({m}),{guard}),{expr.format(m=m, **names)},"n/m")'
+    for mid in COMPS_USE_LABELS:                              # the implied prices that enter the comps value
+        col = MCOL[mid]
+        pick = f'IF({CA["stat"]}="Average",{col}{CR["imp_avg"]},{col}{CR["imp_med"]})'
+        f[f"{col}{CR['imp_use']}"] = f'=IF(AND({CA[mid]}="Yes",ISNUMBER({pick})),{pick},"")'
+    use = f"G{CR['imp_use']}:I{CR['imp_use']}"
+    f[CELL_C("value")] = f'=IF(COUNT({use})>0,AVERAGE({use}),"n/a")'
+    f[CELL_C("mos")] = f'=IF(AND(ISNUMBER({CA["value"]}),N({P0})>0),{CA["value"]}/{P0}-1,"")'
+    mos_d, mos_c = A["mos"], CA["mos"]
+    f[CELL_C("verdict")] = (f'=IF(N({P0})<=0,"",IF(AND(ISNUMBER({mos_d}),ISNUMBER({mos_c})),'
+                            f'IF(AND({mos_d}>0,{mos_c}>0),"undervalued",IF(AND({mos_d}<0,{mos_c}<0),"overvalued","mixed: check")),'
+                            f'IF(OR(ISNUMBER({mos_d}),ISNUMBER({mos_c})),"one method only","n/a")))')
+    f[CELL_C("peers")] = "=TRIM(" + '&" "&'.join(f"C{first + i}" for i in range(N_PEERS)) + ")"
+    n_peers = f"SUMPRODUCT(--(LEN(C{first}:C{last})>0))"
+    chosen = f'COUNTIF({CA["forward_pe"]}:{CA["ev_ebitda"]},"Yes")'
+    parts = (f'IF({n_peers}<5,"Only "&{n_peers}&" peers: the template asks for 5 or 6. ","")'
+             f'&IF({CA["verdict"]}="mixed: check","DDM and comps disagree (the TA\'s mixed: check). ","")'
+             f'&IF(LEFT({CA["source"]},8)="Proposed","Peers proposed, not yet checked on Bloomberg RV. ","")'
+             f'&IF(AND({n_peers}>0,{chosen}>COUNT({use})),"Only "&COUNT({use})&" of the "&{chosen}&'
+             f'" chosen multiples give a price (EV/EBITDA and P/FCF are n/m for a bank). ","")'
+             f'&IF(NOT(ISNUMBER({A["V0"]})),"No DDM: the report would use the comps value as the fair value. ","")'
+             f'&IF({CA["notes"]}<>"",{CA["notes"]}&". ","")')
+    f[CELL_C("flags")] = f'=IF(N({P0})<=0,"",IF(({parts})="","None",TRIM({parts})))'
+    return f
+
+
+def CELL_C(key):  # noqa: N802
+    return f"C{CR[key]}"
+
+
+def clear_comps_rules(ws):
+    """Drop the validations and conditional formats of rows 101 on, so that a run does not stack copies of them."""
+    keep = [dv for dv in ws.data_validations.dataValidation
+            if all(rg.min_row < COMPS_ROW for rg in dv.sqref.ranges)]
+    ws.data_validations.dataValidation = keep
+    for cf in list(ws.conditional_formatting._cf_rules):
+        if all(rg.min_row >= COMPS_ROW for rg in cf.sqref.ranges):
+            del ws.conditional_formatting._cf_rules[cf]
+
+
+def cf_verdict(ws, ref):
+    for word, (bg, fg) in (("undervalued", GOOD), ("mixed: check", NEUTRAL), ("overvalued", BAD)):
+        ws.conditional_formatting.add(ref, FormulaRule(formula=[f'{ref.split(":")[0].replace("$", "")}="{word}"'],
+                                                       fill=fill(bg), font=Font(color=fg)))
+
+
+def build_comps(ws):
+    """Write (or rewrite) the layout and formulas of the comps block. Yellow cells keep what is typed in them."""
+    clear_comps_rules(ws)
+    section(ws, CR["title"], "Comparables: a double check (as in the stock report)", cols="BCDEFGHIJKLMN")
+    note(ws, f"B{CR['note']}", "Not in the fair value: the DDM is V0, the comps are a check (stock report, Round 2 README). "
+                               "Peers: 5–6 from Bloomberg RV, same industry. n/m: negative, or above 100x for P/E, P/FCF "
+                               "and EV/EBITDA. Blue cells are rewritten by every refresh: type a Bloomberg figure again after one.")
+    choices = [("stat", COMPS_STAT_LABEL, "Median", "comps_stat in the stock YAML: Median = median, Average = mean"),
+               ("forward_pe", COMPS_USE_LABELS["forward_pe"], "Yes", "comps_primary in the YAML: forward_pe"),
+               ("p_fcf", COMPS_USE_LABELS["p_fcf"], "No", "comps_primary: p_fcf"),
+               ("ev_ebitda", COMPS_USE_LABELS["ev_ebitda"], "Yes", "comps_primary: ev_ebitda"),
+               ("source", "Peers: source", None, "Change it once the peers are checked on Bloomberg RV")]
+    for key, text, default, why in choices:
+        ref = CELL_C(key)
+        label(ws, f"B{CR[key]}", text)
+        put(ws, ref, ws[ref].value if ws[ref].value not in (None, "") else default, "input")
+        note(ws, f"D{CR[key]}", why)
+    dv = DataValidation(type="list", formula1='"Median,Average"', allow_blank=False, showErrorMessage=True,
+                        errorTitle="Statistic", error="Choose Median or Average")
+    dv.add(CELL_C("stat"))
+    dvy = DataValidation(type="list", formula1=YES_NO, allow_blank=False, showErrorMessage=True,
+                         errorTitle="Comps value", error="Choose Yes or No")
+    dvy.add(f"{CELL_C('forward_pe')}:{CELL_C('ev_ebitda')}")
+    ws.add_data_validation(dv)
+    ws.add_data_validation(dvy)
+
+    label(ws, f"B{CR['data_head']}", "The stock's data for the comps (Yahoo, in USD)", bold=True)
+    for key, text, kind, fmt, why in STOCK_DATA:
+        label(ws, f"B{CR[key]}", text)
+        c = ws[CELL_C(key)]
+        put(ws, CELL_C(key), c.value if kind == "data" else None, kind, fmt)
+        if ws[f"D{CR[key]}"].value is None:
+            note(ws, f"D{CR[key]}", why)
+
+    # peer table, as on page 2 of the report
+    hr = CR["head"]
+    heads = {"B": "Peer", "C": "Ticker", "D": "Company", "F": "Cap, USD bn", "G": "Fwd P/E", "H": "P/FCF",
+             "I": "EV/EBITDA", "J": "Trail. P/E", "K": "P/B", "L": "P/S", "M": "EV/Sales", "N": "Div. yield"}
+    for col, text in heads.items():
+        c = put(ws, f"{col}{hr}", text, "formula", bold=True)
+        c.fill, c.border = fill(HEAD), Border(bottom=THIN)
+        c.alignment = Alignment(horizontal="left" if col in "BCD" else "center")
+    for i, lb in enumerate(PEER_LABELS):
+        r = CR["peer0"] + i
+        label(ws, f"B{r}", lb)
+        put(ws, f"C{r}", ws[f"C{r}"].value, "input")
+        put(ws, f"D{r}", ws[f"D{r}"].value, "data")
+    rows = [("n", "Peers used (n)", INT), ("avg", "Peer average", MULT), ("med", "Peer median", MULT),
+            ("own", "Own multiples at P0", MULT), ("imp_avg", "Implied price at peer average", PRICE),
+            ("imp_med", "Implied price at peer median", PRICE), ("imp_use", "Implied price in the comps value", PRICE)]
+    for key, text, _ in rows:
+        label(ws, f"B{CR[key]}", text, bold=key in ("med", "own"))
+    form = comps_formulas()
+    for ref, formula in form.items():
+        col, r = ref[0], int(ref[1:])
+        fmt = None
+        if CR["peer0"] <= r <= CR["own"] and col in "GHIJKLM":
+            fmt = MULT if r != CR["n"] else INT
+        elif CR["peer0"] <= r <= CR["own"] and col == "N":
+            fmt = PCT if r != CR["n"] else INT
+        elif r in (CR["imp_avg"], CR["imp_med"], CR["imp_use"]) or ref in (CELL_C("value"),):
+            fmt = PRICE
+        elif col == "F" and r <= CR["own"]:
+            fmt = "#,##0.0"
+        elif ref == CELL_C("mos"):
+            fmt = PCT1
+        kind = "result" if ref in (CELL_C("value"), CELL_C("mos")) else "formula"
+        c = put(ws, ref, formula, kind, fmt, bold=(r == CR["own"] and col != "C") or r == CR["med"])
+        if col in "FGHIJKLMN":
+            c.alignment = Alignment(horizontal="right")
+    for col in "BCDFGHIJKLMN":
+        ws[f"{col}{CR['own']}"].border = Border(top=THIN)
+        ws[f"{col}{CR['n']}"].border = Border(top=THIN)
+    for mid, col in (("forward_pe", "G"), ("p_fcf", "H"), ("ev_ebitda", "I")):    # shade the columns in the comps value
+        ws.conditional_formatting.add(f"{col}{hr}:{col}{CR['imp_use']}",
+                                      FormulaRule(formula=[f'{CA[mid]}="Yes"'], fill=fill(SHADE)))
+
+    results = [("value", "Comps value", "Average of the implied prices in the shaded columns, at the chosen statistic"),
+               ("mos", "Comps margin of safety V comps / P0 − 1", "Compare with the DDM margin of safety (row 77)"),
+               ("verdict", "DDM vs comps", "The TA's check: both above 0 undervalued, both below 0 overvalued"),
+               ("peers", "Peers in the comps", ""), ("flags", "Comps flags", "")]
+    for key, text, why in results:
+        label(ws, f"B{CR[key]}", text, bold=key in ("value", "mos"))
+        if key not in ("value", "mos"):
+            put(ws, CELL_C(key), form[CELL_C(key)], "formula")
+        if why:
+            note(ws, f"D{CR[key]}", why)
+    ws[CELL_C("flags")].alignment = Alignment(wrap_text=False)
+    label(ws, f"B{CR['notes']}", "Currency notes")
+    put(ws, CELL_C("notes"), ws[CELL_C("notes")].value, "data")
+    cf_mos(ws, CELL_C("mos"), A["buy"])
+    cf_verdict(ws, CELL_C("verdict"))
+
+    # raw inputs behind the peer table
+    section(ws, CR["raw_title"], "Data for the peer table (Yahoo; a blue cell can be typed over with Bloomberg RV)",
+            cols="BCDEFGHIJKLMNOPQR")
+    rh = CR["raw_head"]
+    raw_heads = {"B": "Raw inputs", "C": "Ticker", "F": "Mkt cap, USD m", "G": "FCF, USD m", "H": "FCF year",
+                 "I": "Div. rate", "J": "Price", "K": "Fwd P/E", "L": "Trail. P/E", "M": "EV/EBITDA", "N": "P/B",
+                 "O": "P/S", "P": "EV/Sales", "Q": "Reports in", "R": "FX rate"}
+    for col, text in raw_heads.items():
+        c = put(ws, f"{col}{rh}", text, "formula", bold=True)
+        c.fill, c.border = fill(HEAD), Border(bottom=THIN)
+    fmts = {"F": "#,##0", "G": "#,##0", "H": "0", "I": PRICE3, "J": PRICE, "K": "0.00", "L": "0.00", "M": "0.00",
+            "N": "0.00", "O": "0.00", "P": "0.00", "Q": None, "R": "0.0000"}
+    for i in range(N_PEERS):
+        q = CR["raw0"] + i
+        label(ws, f"B{q}", f"Data, peer {i + 1}")
+        put(ws, f"C{q}", form[f"C{q}"], "formula")
+        for col, fmt in fmts.items():
+            put(ws, f"{col}{q}", ws[f"{col}{q}"].value, "data", fmt)
+    note(ws, f"B{CR['raw0'] + N_PEERS}", "Yahoo's ratios as given (forwardPE, trailingPE, enterpriseToEbitda, priceToBook, "
+                                         "priceToSalesTrailing12Months, enterpriseToRevenue). FCF of the last fiscal year, "
+                                         "converted to USD when the company reports in another currency.")
+    for col in "LMNOPQR":
+        ws.column_dimensions[col].width = 11
+
+
+def fill_comps(ws, c, source=None):
+    """Write the blue cells of the comps block from comps_from_snapshot() output; peers only into empty yellow cells."""
+    s = c["stock"]
+    m = lambda x: x / 1e6 if x is not None else None           # noqa: E731
+    vals = {"eps_fwd": s["eps_fwd"], "shares": m(s["shares"]), "net_debt": m(s["net_debt"]), "ebitda": m(s["ebitda"]),
+            "fcf": m(s["fcf"]), "revenue": m(s["revenue"]), "bvps": s["bvps"]}
+    for key, v in vals.items():
+        ws[CELL_C(key)].value = v
+    fy = f"FY{s['fcf_fy']}, " if s["fcf_fy"] else ""
+    note(ws, f"D{CR['fcf']}", f"{fy}cash flow statement" + (f", converted at {s['fx']:.4f} from {s['fin']}" if s["fin"] else ""))
+    if s["fin"]:
+        conv = f"converted at {s['fx']:.4f} from {s['fin']}" if s["fx"] else f"left out: in {s['fin']}, no exchange rate"
+        note(ws, f"D{CR['net_debt']}", f"Total debt − cash, {conv} (Yahoo's EV mixes currencies)")
+        for key in ("ebitda", "revenue"):
+            note(ws, f"D{CR[key]}", f"Yahoo, {conv}")
+        parts = s["notes"][-1].split("; ")
+        if len(parts) >= 3:                    # "...converted ...; forward EPS <how>; book value <how>"
+            note(ws, f"D{CR['eps_fwd']}", "Yahoo, Earnings Estimate, next year; " + parts[-2])
+            note(ws, f"D{CR['bvps']}", "Yahoo; " + parts[-1])
+    else:
+        note(ws, f"D{CR['net_debt']}", "Yahoo enterprise value − market cap, as the report")
+        for key in ("ebitda", "revenue", "eps_fwd", "bvps"):
+            note(ws, f"D{CR[key]}", next(x[4] for x in STOCK_DATA if x[0] == key))
+    raws = {r["ticker"]: r for r in c["raw"]}
+    for i in range(N_PEERS):
+        r, q = CR["peer0"] + i, CR["raw0"] + i
+        t = str(ws[f"C{r}"].value or "").strip().upper()
+        raw = raws.get(t)
+        ws[f"D{r}"].value = (raw["name"] + (f" · reports in {raw['fin']}" if raw["fin"] else "")) if raw else None
+        for key, col in RAW.items():
+            v = None
+            if raw:
+                v = {"mcap": m(raw["market_cap"]), "fcf": m(raw["fcf"]), "fy": raw["fcf_fy"], "rate": raw["dividend_rate"],
+                     "fin": raw["fin"]}.get(key, raw.get(key))
+            ws[f"{col}{q}"].value = v
+    ws[CELL_C("notes")].value = "; ".join(c["peer_notes"] + s["notes"]) or None
+    if source and not ws[CELL_C("source")].value:
+        ws[CELL_C("source")].value = source
+
+
+def sheet_peers(ws):
+    return [str(ws[f"C{CR['peer0'] + i}"].value).strip().upper() for i in range(N_PEERS)
+            if str(ws[f"C{CR['peer0'] + i}"].value or "").strip()]
+
+
+def comps_choices(ws):
+    """comps_primary and comps_stat of a sheet, in the report's terms."""
+    primary = [mid for mid in COMPS_USE_LABELS if ws[CELL_C(mid)].value == "Yes"]
+    return primary, COMPS_STATS.get(ws[CELL_C("stat")].value, "median")
+
+
+def fill_example_comps(ws):
+    """Example NKE: the TA notebook's comparables (forward EPS × average forward P/E of LULU, DECK, ADDYY), on the CSV."""
+    mult = pd.read_csv(TA / "r2_multiples.csv", index_col=0)
+    peers = mult[(mult["group"] == "NKE") & (mult["role"] == "peer")]
+    for i, (p, row) in enumerate(peers.iterrows()):
+        ws[f"C{CR['peer0'] + i}"].value = p
+        ws[f"K{CR['raw0'] + i}"].value = float(row["forwardPE"])
+        ws[f"D{CR['peer0'] + i}"].value = {"ADDYY": "Adidas ADR (reports in EUR)"}.get(p, p)
+    ws[CELL_C("eps_fwd")].value = float(mult.loc["NKE", "forwardEps"])
+    for key, v in (("stat", "Average"), ("forward_pe", "Yes"), ("p_fcf", "No"), ("ev_ebitda", "No"),
+                   ("source", "TA notebook, course/ta-code/r2_multiples.csv")):
+        ws[CELL_C(key)].value = v
+    v = float(mult.loc["NKE", "forwardEps"]) * peers["forwardPE"].mean()
+    note(ws, f"D{CR['value']}", f"TA's method on r2_multiples.csv: {v:.2f} (the notebook printed 18.80 on an older download)")
+
+
 # ---------------------------------------------------------------- Summary sheet
 
 SUMMARY_COLS = [   # header, key in the stock sheet, number format, width
@@ -609,6 +959,11 @@ SUMMARY_COLS = [   # header, key in the stock sheet, number format, width
 ]
 SUM_HDR, SUM_ROW0 = 5, 6
 SUM_COLS = [get_column_letter(2 + i) for i in range(len(SUMMARY_COLS))]
+# The comparables, from column Y: X is typed by hand by the team ("Analysts_Estimate_avg") and left alone
+SUMMARY_COMPS = [("Comps value", "V_comp", PRICE, 12), ("Comps MoS", "mos_comp", PCT1, 11),
+                 ("DDM vs comps", "verdict", None, 15), ("Peers", "peers_c", None, 34), ("Comps flags", "flags_c", None, 70)]
+COMPS_COL0 = 25                                            # column Y
+SUM_COMPS_COLS = [get_column_letter(COMPS_COL0 + i) for i in range(len(SUMMARY_COMPS))]
 
 
 def summary_row(ws, r):
@@ -619,6 +974,34 @@ def summary_row(ws, r):
         formula = f'=IF($B{r}="","",IFERROR(INDIRECT("\'"&$B{r}&"\'!{CELL[key]}"),""))'
         bold = key in ("V0", "mos", "alpha_close", "alpha_never")
         put(ws, f"{col}{r}", formula, "formula", fmt, bold=bold)
+    summary_comps_row(ws, r)
+
+
+def summary_comps_row(ws, r):
+    for (head, key, fmt, _), col in zip(SUMMARY_COMPS, SUM_COMPS_COLS):
+        formula = f'=IF($B{r}="","",IFERROR(INDIRECT("\'"&$B{r}&"\'!{CELL[key]}"),""))'
+        put(ws, f"{col}{r}", formula, "formula", fmt, bold=key == "V_comp")
+
+
+def summary_comps(ws):
+    """The comps columns of Summary, written (or rewritten) for every prepared row: also upgrades an older workbook."""
+    for (head, key, fmt, width), col in zip(SUMMARY_COMPS, SUM_COMPS_COLS):
+        c = put(ws, f"{col}{SUM_HDR}", head, "formula", bold=True)
+        c.fill, c.border = fill(HEAD), Border(bottom=THIN)
+        c.alignment = Alignment(horizontal="left" if key in ("peers_c", "flags_c") else "center")
+        ws.column_dimensions[col].width = width
+    last = SUM_ROW0
+    while ws[f"C{last + 1}"].value is not None:
+        last += 1
+    for r in range(SUM_ROW0, last + 1):
+        summary_comps_row(ws, r)
+    first_col = COMPS_COL0
+    for cf in list(ws.conditional_formatting._cf_rules):   # no stacked copies of the comps rules
+        if all(rg.min_col >= first_col for rg in cf.sqref.ranges):
+            del ws.conditional_formatting._cf_rules[cf]
+    col = dict((key, c) for (_, key, _, _), c in zip(SUMMARY_COMPS, SUM_COMPS_COLS))
+    cf_mos(ws, f"{col['mos_comp']}{SUM_ROW0}:{col['mos_comp']}{last}", "$D$4")
+    cf_verdict(ws, f"{col['verdict']}{SUM_ROW0}:{col['verdict']}{last}")
 
 
 def build_summary(ws):
@@ -634,6 +1017,7 @@ def build_summary(ws):
     for r in range(SUM_ROW0, SUM_ROW0 + SUMMARY_ROWS):
         summary_row(ws, r)
     format_summary(ws, SUM_ROW0 + SUMMARY_ROWS - 1)
+    summary_comps(ws)
     ws.freeze_panes = f"C{SUM_ROW0}"
     ws.sheet_view.showGridLines = False
 
@@ -659,24 +1043,11 @@ def add_to_summary(ws, ticker):
 
 # ---------------------------------------------------------------- data
 
-def fx_rate(yf, base, quote, as_of):
-    """Units of the price currency (quote) per unit of the statements' currency (base), at the price date."""
-    for pair, power in ((f"{base}{quote}=X", 1), (f"{quote}{base}=X", -1)):
-        try:
-            px = yf.download(pair, start=as_of - pd.Timedelta(days=10), end=as_of + pd.Timedelta(days=1),
-                             auto_adjust=False, progress=False)["Close"].squeeze().dropna()
-            if len(px):
-                return float(px.iloc[-1]) ** power, f"{pair} on {px.index[-1]:%d %b %Y}"
-        except Exception:
-            pass
-    return None, None
-
-
-def buybacks(yf, tk, t, info, as_of):
+def buybacks(yf, tk, t, info, as_of, st=None):
     """Last fiscal year's buybacks and diluted shares, as dividend_basis in build_stock_report.py, plus checks.
     A foreign company's statements are in its own currency: buybacks are converted to the price currency at the
     price date, and shares are counted in ADRs (ADR_SHARES), so buybacks per share are per ADR like the price."""
-    st = retry(lambda: statements_of(tk), f"{t} statements")
+    st = st if st is not None else retry(lambda: statements_of(tk), f"{t} statements")
     out = {"buyback_fy": None, "shares_fy": None, "bps_avg": None, "shares_chg": None, "ni_growth": None, "fy": None,
            "fx": None, "fx_src": None, "fin": None, "adr": None}
     if st.empty:
@@ -787,6 +1158,12 @@ def download(tickers, as_of_arg):
 
         info = retry(lambda: tk.info, f"{t} info")
         growth = growth_estimate(yf, t, info)
+        st = retry(lambda: statements_of(tk), f"{t} statements")
+        try:                                   # the stock report's forward EPS: this line's own consensus, next year
+            eps_next = float(retry(lambda: tk.earnings_estimate, f"{t} earnings estimates").loc["+1y", "avg"])
+        except Exception:
+            eps_next = None
+        eps_next = eps_next if eps_next is not None and np.isfinite(eps_next) else None
 
         a = adj[[t, "SPY"]].loc[:as_of].ffill()
         R = a.resample("ME").last().pct_change().loc[:complete_month_end(as_of)]
@@ -802,7 +1179,9 @@ def download(tickers, as_of_arg):
             "div_rate": num("dividendRate"), "eps_ttm": num("trailingEps"), "eps_fwd": num("forwardEps"),
             "roe": num("returnOnEquity"), "dps_cagr": cagr, "beta_calc": beta,
             "beta_yahoo": num("beta"), "dps": dps, "months": len(Re), "beta_end": Re.index[-1] if len(Re) else None,
-            "cagr_years": (first, last), "country": info.get("country"), **growth, **buybacks(yf, tk, t, info, as_of),
+            "cagr_years": (first, last), "country": info.get("country"), **growth, **buybacks(yf, tk, t, info, as_of, st),
+            "comps_info": {k: info.get(k) for k in INFO_KEYS + ["industryKey"]}, "comps_st": to_records(st),
+            "eps_next": eps_next,
         }
         out[t]["typed_divs"] = typed
         if D0 <= 0:
@@ -919,9 +1298,12 @@ def new_workbook():
     set_market(wb["Inputs"], {"as_of": dgs10.index[-1].to_pydatetime(), "rf": float(dgs10.iloc[-1]),
                               "rf_date": dgs10.index[-1]})
     build_stock(wb.create_sheet("Template"))
+    build_comps(wb["Template"])
     ex = wb.create_sheet("Example NKE")
     build_stock(ex)
     fill_example(ex)
+    build_comps(ex)
+    fill_example_comps(ex)
     return wb
 
 
@@ -932,7 +1314,68 @@ def save(wb, path):
     wb.save(path)
 
 
+def yaml_peers(t):
+    """The peers of runs/round2/inputs/<TICKER>.yaml, if the stock has a report."""
+    import yaml
+    path = REPO / "runs" / "round2" / "inputs" / f"{t}.yaml"
+    if not path.exists():
+        return []
+    return [str(p).upper() for p in (yaml.safe_load(path.read_text()) or {}).get("peers") or []]
+
+
+def propose_peers(yf, t, info):
+    """A later ticker without peers: the largest US-listed companies of its Yahoo industry. To check on Bloomberg RV."""
+    key = info.get("industryKey")
+    try:
+        top = yf.Industry(key).top_companies if key else None
+    except Exception:
+        top = None
+    if top is None or len(top) == 0:
+        return [], key
+    same = {t.upper(), *(x.upper() for x in ESTIMATES_FROM.get(t, "").split()), "GOOGL" if t == "GOOG" else "GOOG"}
+    return [x.upper() for x in top.index if "." not in x and x.upper() not in same][:N_PEERS], key
+
+
+def choose_peers(yf, ws, t, d):
+    """The peers of a sheet: typed in it; else the stock's YAML; else PEERS; else proposed from Yahoo's industry."""
+    typed = sheet_peers(ws)
+    if typed:
+        return typed, None if ws[CELL_C("source")].value else "Typed in the sheet"
+    for peers, source in ((yaml_peers(t), f"From {t}.yaml (the stock report's peers)"),
+                          (PEERS.get(t, []), f"Proposed by Claude, {PEERS_DATE}: check on Bloomberg RV")):
+        if peers:
+            break
+    else:
+        peers, key = propose_peers(yf, t, d["comps_info"])
+        source = f"Proposed from Yahoo's industry list ({key}), {PEERS_DATE}: check on Bloomberg RV"
+        print(f"  {t}: peers proposed from Yahoo's industry ({key}): {', '.join(peers) or 'none found'}")
+    for i in range(N_PEERS):
+        ws[f"C{CR['peer0'] + i}"].value = peers[i] if i < len(peers) else None
+    return peers, source
+
+
+def download_peers(peers):
+    """Yahoo info and statements of each peer, once even when several stocks share it, as the stock report."""
+    import yfinance as yf
+    out = {}
+    print(f"Downloading {len(peers)} peers for the comparables ...")
+    for p in sorted(peers):
+        tk = yf.Ticker(p)
+        try:
+            i = retry(lambda: tk.info, f"{p} info")
+            st = retry(lambda: statements_of(tk), f"{p} statements")
+        except SystemExit as e:
+            print(f"  {p}: {e}. Left out of the comps")
+            continue
+        if not i.get("marketCap"):
+            print(f"  {p}: Yahoo has no market data. Check the ticker; left out of the comps")
+            continue
+        out[p] = ({k: i.get(k) for k in INFO_KEYS}, to_records(st))
+    return out
+
+
 def add_stocks(wb, tickers, as_of_arg, g1_yahoo=False):
+    import yfinance as yf
     data, market = download(tickers, as_of_arg)
     if not data:
         raise SystemExit("Nothing downloaded: no workbook written")
@@ -943,10 +1386,13 @@ def add_stocks(wb, tickers, as_of_arg, g1_yahoo=False):
     for name in wb.sheetnames:            # sheets from an older version of the script, the Template included
         if name not in ("Summary", "Inputs", "Example NKE"):
             update_layout(wb[name])
+        if name not in ("Summary", "Inputs"):
+            build_comps(wb[name])          # every stock sheet has the comps block from row 101
+    if "Example NKE" in wb.sheetnames and wb["Example NKE"][CELL_C("eps_fwd")].value is None:
+        fill_example_comps(wb["Example NKE"])
     erp_us = wsi[INP["erp"]].value if isinstance(wsi[INP["erp"]].value, (int, float)) else ERP_DEFAULT
 
-    print(f"\n{'':6}{'P0':>9}{'D0 used':>9}{'beta':>7}{'ERP':>7}{'k':>8}{'g1':>7}{'T':>3}{'GGM':>9}{'2-stage':>9}"
-          f"   (rf {market['rf']:.2%})")
+    sheets, peers_of, sources = {}, {}, {}
     for t, d in data.items():
         if t in wb.sheetnames:
             ws, status = wb[t], "refreshed, assumptions kept"
@@ -958,9 +1404,21 @@ def add_stocks(wb, tickers, as_of_arg, g1_yahoo=False):
             ws, status = wb.create_sheet(t, at), "added"
             build_stock(ws)
             new_sheet_assumptions(ws, d)
+            build_comps(ws)
         fill_data(ws, d, downloaded)
         add_to_summary(wb["Summary"], t)
+        sheets[t] = (ws, status)
+        peers_of[t], sources[t] = choose_peers(yf, ws, t, d)
+    summary_comps(wb["Summary"])
 
+    peer_data = download_peers({p for ps in peers_of.values() for p in ps})
+    infos = [d["comps_info"] for d in data.values()] + [i for i, _ in peer_data.values()]
+    fx = fetch_fx(fx_pairs(infos), market["as_of"])
+
+    print(f"\n{'':6}{'P0':>9}{'D0 used':>9}{'beta':>7}{'ERP':>7}{'k':>8}{'g1':>7}{'T':>3}{'GGM':>9}{'2-stage':>9}"
+          f"{'comps':>9}{'MoS':>8}{'comps MoS':>10}  DDM vs comps   (rf {market['rf']:.2%})")
+    for t, d in data.items():
+        ws, status = sheets[t]
         # the values Excel will show, for a quick read in the terminal
         num = lambda key, dflt: ws[CELL[key]].value if isinstance(ws[CELL[key]].value, (int, float)) else dflt  # noqa: E731
         beta = num("beta_over", d["beta_calc"] or 0.0)
@@ -970,13 +1428,32 @@ def add_stocks(wb, tickers, as_of_arg, g1_yahoo=False):
         g = num("g", g2)
         with_bb = ws[CELL["basis"]].value == DIVS_BB and d["buyback_fy"] is not None and d["shares_fy"]
         D = d["D0"] + (d["buyback_fy"] / d["shares_fy"] if with_bb else 0.0)
-        ggm = f"{gordon(D, k, g):9.2f}" if D > 0 and k > g else f"{'n/a':>9}"
-        two = f"{two_stage(D, k, g1, g2, T):9.2f}" if D > 0 and k > g2 else f"{'n/a':>9}"
+        v_ggm = gordon(D, k, g) if D > 0 and k > g else None
+        v_two = two_stage(D, k, g1, g2, T) if D > 0 and k > g2 else None
+        v0 = v_ggm if ws[CELL["method"]].value == "GGM" else v_two
+        mos = v0 / d["P0"] - 1 if v0 is not None else None
+
+        # the comparables, with the stock report's code on the same data as the sheet
+        peers = [p for p in peers_of[t] if p in peer_data]
+        snap = {"ticker": t, "peers": peers, "fx": fx, "info": {t: d["comps_info"], **{p: peer_data[p][0] for p in peers}},
+                "statements": {t: d["comps_st"], **{p: peer_data[p][1] for p in peers}}}
+        primary, stat = comps_choices(ws)
+        cp = comps_from_snapshot(snap, d["P0"], D, d["eps_next"], primary, stat)
+        fill_comps(ws, cp, sources[t])
+        v_c = cp["V_comp"]
+        mos_c = v_c / d["P0"] - 1 if v_c is not None else None
+        verdict = methods_verdict(mos, mos_c)
+
+        f = lambda x, w=9, fmt="{:.2f}": (fmt.format(x) if x is not None else "n/a").rjust(w)   # noqa: E731
         basis = "with buybacks" if with_bb else "dividends"
-        print(f"{t:6}{d['P0']:9.2f}{D:9.3f}{beta:7.3f}{erp:7.2%}{k:8.2%}{g1:7.1%}{T:3d}{ggm}{two}   {basis}, {status}")
+        print(f"{t:6}{d['P0']:9.2f}{D:9.3f}{beta:7.3f}{erp:7.2%}{k:8.2%}{g1:7.1%}{T:3d}{f(v_ggm)}{f(v_two)}"
+              f"{f(v_c)}{f(mos, 8, '{:+.1%}')}{f(mos_c, 10, '{:+.1%}')}  {verdict:14} {basis}, {status}")
         if not with_bb and d["buyback_fy"] and d["shares_fy"] and d["buyback_fy"] / d["shares_fy"] > d["D0"]:
             print(f"{'':6}buybacks ({d['buyback_fy'] / d['shares_fy']:.2f} a share) exceed dividends: "
                   f"consider {DIVS_BB} in the sheet")
+        missing = [p for p in peers_of[t] if p not in peer_data]
+        if len(peers_of[t]) < 5 or missing:
+            print(f"{'':6}comps: {len(peers)} peers with data" + (f", no data for {', '.join(missing)}" if missing else ""))
 
 
 def main():
