@@ -19,10 +19,12 @@ If the text is too long, the build stops and says which page and by how many pix
 
 Before writing a YAML, value the candidates from the Bloomberg screen (`EQS`) in `runs/round2/inputs/DDM_valuation.xlsx`. It has one sheet per stock, with the Gordon Growth Model and the two-stage DDM as Excel formulas, and a Summary with fair value, margin of safety (V0 / P0 − 1) and signal.
 
-1. **Add the stocks:** `python3 scripts/build_ddm_workbook.py KO PEP` (with the workbook closed in Excel). It downloads the price, D0, β on SPY and the 10-year yield, and adds one sheet and one Summary row per ticker.
-2. **Set the yellow cells** in each sheet: the payout discounted, g1 (Bloomberg `BDVD` or `EE`), T, g2, the method, and the β override if you use Bloomberg `BETA`. ERP and the buy threshold are on `Inputs`: the stock reports read the ERP from there too.
-   The payout is *Dividends* or *Dividends + buybacks* (cheat sheet p. 2): the second adds the last fiscal year's buybacks per share to D0, as `dividend_basis: dividends_plus_buybacks` does in the stock YAML, so use the same choice in both. With buybacks, g1 and g2 are total growth (compare with the sheet's net income growth), not per-share growth, which would count the buybacks twice. A flag says when buybacks exceed dividends.
-3. **Refresh:** run the same command again, with `--as-of 2026-11-06` for the final numbers. Only the data cells change: your assumptions stay.
+1. **Add the stocks:** `python3 scripts/build_ddm_workbook.py KO PEP` (with the workbook closed in Excel). It downloads the price, D0, β on SPY, the 10-year yield and Yahoo's growth estimates, and adds one sheet and one Summary row per ticker.
+2. **Check the yellow cells** in each sheet. A new sheet starts with g1 = Yahoo's average earnings growth estimate (the current and next fiscal year, *Analysis > Growth Estimates*), g2 = 3%, T = 5, the two-stage method, and *Dividends + buybacks* when buybacks exceed dividends. Set T for the stock, and the β override if you use Bloomberg `BETA`. ERP and the buy threshold are on `Inputs`: the stock reports read the ERP from there too.
+   **Non-US companies:** the tickers are US lines (ADRs, or AZN on the NYSE), so price and dividends are in USD and rf stays the US 10-year. Only the ERP changes: the script types the country's ERP in the sheet (Damodaran, 5 Jan 2026: mature market 4.23% + country risk premium), and the report takes it from there. A foreign company's buybacks are converted to USD per ADR. Yahoo's estimates come from the home listing when the US line has few analysts (AZN.L for AZN, 0700.HK for TCEHY, GOOGL for GOOG).
+   The payout is *Dividends* or *Dividends + buybacks* (cheat sheet p. 2): the second adds the last fiscal year's buybacks per share to D0, as `dividend_basis: dividends_plus_buybacks` does in the stock YAML, so use the same choice in both. **Limitation:** Yahoo's growth is per share, so with buybacks in they count twice (in the payout and in the falling share count) and V0 is too high. The note next to g1 says so and gives the total growth without that effect; a flag repeats it in Summary.
+3. **Refresh:** run the same command again, with `--as-of 2026-11-06` for the final numbers. Only the data cells change: your assumptions stay. Add `--g1-yahoo` to also reset g1 to the latest Yahoo estimate (then update the YAMLs).
+   A dividend missing from Yahoo's history goes in `MISSING_DIVIDENDS` in the script, with its source (now AZN's interim of Aug 2026).
 
 The `Example NKE` sheet reproduces the TA notebook's Nike case (GGM 23.24, two-stage 29.78). `--new` starts a blank workbook and loses your edits. The stocks you keep then go through *Add a stock* above.
 
@@ -34,7 +36,8 @@ new portfolio, the team. Write its text by hand; the numbers come from the runs.
 1. **Round 1 results:** `python3 scripts/round1_performance.py --end 2026-11-06`. It writes `runs/round2/2026-11-06/round1_performance.json`
    with the website's calculations, and stops if they do not match `data/portfolio.json` or if the contributions do not add up.
 2. **The workbook first:** `python3 scripts/build_ddm_workbook.py <TICKERS> --as-of 2026-11-06` (workbook closed in Excel), then set
-   the yellow cells, save and close. The stock reports take the ERP from `Inputs` C8, and stop if a YAML's g1, T, g2, method,
+   the yellow cells, save and close. The stock reports take the ERP from the workbook (`Inputs` C8, or the stock's sheet for a
+   non-US company), and stop if a YAML's g1, T, g2, method,
    payout or β override differ from the stock's sheet, so both give the same numbers. Run steps 2 and 3 in one sitting: a
    report flags a workbook with other prices or another rf (FRED posts Friday's 10-year yield on Monday).
 3. **The stocks:** for each, `python3 scripts/build_stock_report.py <TICKER> --as-of 2026-11-06` (see *Add a stock*).
@@ -57,7 +60,8 @@ Yahoo can't supply these, so they are typed by hand:
 | Input | Where | Source |
 |---|---|---|
 | Equity risk premium, now 4.46% | `Inputs` C8 of `DDM_valuation.xlsx`: the reports read it | Damodaran, United States, 5 Jan 2026 (country risk premiums page) |
-| First-stage growth g1 | `valuation.g1`, and the stock's sheet in the workbook | Bloomberg `EE` or `BDVD` |
+| ERP of a non-US company | The stock's sheet (typed by the script from `COUNTRY_ERP`) | Damodaran, same page: Switzerland 4.23%, UK, Taiwan and Hong Kong 5.01%, China 5.14% |
+| First-stage growth g1 | The stock's sheet (set by the script), and `valuation.g1` | Yahoo's average earnings growth estimate; Bloomberg `EE` or `BDVD` to check |
 | Peer set | `peers` | Bloomberg `RV` |
 | Optional: beta, forward EPS | `valuation.overrides` (beta also in the workbook) | Bloomberg `BETA`, `EE` |
 

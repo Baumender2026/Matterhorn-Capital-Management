@@ -4,6 +4,7 @@
     python3 scripts/build_ddm_workbook.py                          the blank template
     python3 scripts/build_ddm_workbook.py KO PEP JNJ               add stocks, or refresh their data
     python3 scripts/build_ddm_workbook.py KO --as-of 2026-11-06    prices of a given date (final numbers)
+    python3 scripts/build_ddm_workbook.py KO --g1-yahoo            also reset g1 to Yahoo's average growth estimate
 
 Writes runs/round2/inputs/DDM_valuation.xlsx (or --out). Close it in Excel first.
 
@@ -20,6 +21,9 @@ k = rf10 + beta x ERP, beta on SPY over 60 complete months, D0 = dividends of th
 MoS = V0 / P0 - 1.
 Payout discounted, a switch in each sheet: Dividends, or Dividends + buybacks (cheat sheet p. 2), where
 D0 used = D0 + last fiscal year's buybacks / its diluted average shares, as dividend_basis in the report script.
+A new sheet starts with g1 = Yahoo's average earnings growth estimate (current and next fiscal year), Dividends + buybacks
+when buybacks exceed dividends, and, for a company based outside the US, its country's ERP (Damodaran) typed in the
+sheet. rf is the US 10-year for every stock: the tickers are US lines, so price and dividends are in USD.
 """
 
 import argparse
@@ -45,9 +49,30 @@ from build_stock_report import (HISTORY_YEARS, WINDOW, complete_month_end,  # no
 REPO = Path(__file__).resolve().parent.parent
 WORKBOOK = REPO / "runs" / "round2" / "inputs" / "DDM_valuation.xlsx"
 
-G1_DEFAULT, T_DEFAULT, G2_DEFAULT = 0.05, 5, 0.02   # as in runs/round2/inputs/_TEMPLATE.yaml
+G1_DEFAULT, T_DEFAULT, G2_DEFAULT = 0.05, 5, 0.03   # as in runs/round2/inputs/_TEMPLATE.yaml
 ERP_DEFAULT = 0.0446       # Damodaran, United States, country risk premiums of 5 Jan 2026 (ctryprem.html)
-G1_BOUNDS = (0.0, 0.15)                             # the 5-year dividend CAGR used as default g1 is clipped to this
+# Damodaran, country risk premiums of 5 Jan 2026: (total ERP, Moody's rating, country risk premium). Total ERP = mature
+# market 4.23% + CRP. A new sheet of a company based in one of these countries gets its ERP in the sheet; Inputs keeps
+# the US one. Another non-US country: the script says so, type its ERP in the sheet.
+COUNTRY_ERP = {
+    "Switzerland": (0.0423, "Aaa", 0.0000), "Germany": (0.0423, "Aaa", 0.0000),
+    "United Kingdom": (0.0501, "Aa3", 0.0078), "Taiwan": (0.0501, "Aa3", 0.0078),
+    "Hong Kong": (0.0501, "Aa3", 0.0078), "China": (0.0514, "A1", 0.0091),
+}
+ERP_DATE = "5 Jan 2026"
+# Yahoo's growth estimates come from the home listing when the US line has few analysts: same company, same shares.
+ESTIMATES_FROM = {"AZN": "AZN.L", "TCEHY": "0700.HK",   # AZN's NYSE page: 2-3 analysts and a GAAP base year
+                  "GOOG": "GOOGL"}                      # the same estimates, 7 analysts on GOOG's current year
+# Dividends missing from Yahoo's history of a ticker, typed from the company: {ticker: [(ex-date, amount, source)]}.
+# Added only if Yahoo has no dividend within 20 days of that date, so a fixed history is not counted twice.
+MISSING_DIVIDENDS = {
+    "AZN": [("2026-08-06", 1.06, "AstraZeneca, H1 2026 results, 27 Jul 2026: interim USD 1.06 (79.5p), ex-dividend "
+                                 "6 Aug 2026 on AZN.L; missing on Yahoo's NYSE line since the listing change")],
+}
+MIN_ANALYSTS = 10                                   # fewer on the page used: a warning
+# Ordinary shares per ADR, so that a foreign company's buybacks per share are per ADR, like its price and dividends
+ADR_SHARES = {"TSM": 5, "RHHBY": 0.125, "TCEHY": 1}
+G1_BOUNDS = (0.0, 0.15)            # the 5-year dividend CAGR, g1 when Yahoo has no growth estimate, is clipped to this
 T_MAX = 20                                          # rows of the two-stage schedule
 HIST_YEARS = 6                                      # calendar years in the dividend table
 SUMMARY_ROWS = 20                                   # rows prepared in Summary; more are added when needed
@@ -149,6 +174,42 @@ def inp(key):
     return f"Inputs!${col}${row}"
 
 
+ERP_NOTE = (f"Damodaran, United States, {ERP_DATE}. Country risk premiums page. A sheet of a company based outside "
+            "the US types its country's ERP instead")
+STEPS = [
+    "1. Add stocks: python3 scripts/build_ddm_workbook.py KO PEP (from the repo root, with this file closed in Excel).",
+    "    It adds one sheet per ticker and a row in Summary. Run it again for a stock already here and only the blue cells change.",
+    "2. Or by hand: right-click Template > Move or Copy > Create a copy, rename it to the ticker, type the blue cells,",
+    "    then type the sheet name in the Ticker column of Summary.",
+    "3. In each stock sheet, check the yellow cells: the payout discounted, g1 (set to Yahoo's average earnings growth",
+    "    estimate), T, g2, the method, the β override if you use Bloomberg BETA, and the ERP of a non-US company.",
+    "4. Final numbers: run the script again with --as-of 2026-11-06 (the challenge uses the close of Friday 6 November).",
+    "5. Don't insert rows or columns in the stock sheets: Summary reads fixed cells.",
+]
+FORMULAS = [
+    "Cost of equity:  k = rf + β × ERP, with β the slope of 60 monthly excess returns on SPY",
+    "Gordon Growth Model:  V0 = D0 (1 + g) / (k − g), needs k > g. For a mature company with stable growth",
+    "Two-stage DDM:  V0 = Σ D0 (1 + g1)^t / (1 + k)^t for t = 1 … T  +  [D_T (1 + g2) / (k − g2)] / (1 + k)^T",
+    "    For a company not yet in its normal state. g1 can be above k; g2 must be below k",
+    "Margin of safety:  MoS = V0 / P0 − 1 (cheat sheet). Discount to value = 1 − P0 / V0 (Class 5, Graham)",
+    "D0: dividends per share paid over the last 12 months. The first dividend discounted is D1 = D0 (1 + g)",
+    "With buybacks (cheat sheet p. 2): D0 used = D0 + last fiscal year's buybacks per share. g1 is Yahoo's per-share",
+    "    growth, which already contains the buybacks, so they count twice and V0 is too high: see the note next to g1",
+    "Non-US companies: the tickers are US lines (price and dividends in USD), so rf stays the US 10-year and the sheet",
+    f"    types its country's ERP: Damodaran, {ERP_DATE}, mature market 4.23% + country risk premium",
+]
+
+
+def write_inputs_text(ws):
+    """The ERP note and the two blocks of instructions, also rewritten in an existing workbook."""
+    note(ws, f"D{INP['erp'][1:]}", ERP_NOTE)
+    for first, lines, n in ((22, STEPS, 8), (31, FORMULAS, 11)):
+        for i in range(n):
+            ws[f"B{first + i}"] = None
+        for i, text in enumerate(lines):
+            label(ws, f"B{first + i}", text)
+
+
 def build_inputs(ws):
     title(ws, "DDM valuation: inputs shared by all stocks",
           "Change the yellow cells. Every stock sheet and the Summary follow them.")
@@ -157,8 +218,7 @@ def build_inputs(ws):
     rows = [
         ("as_of", "Price date", "data", None, DATE, "Set by the script: the latest close it used"),
         ("rf", "Risk-free rate rf, 10-year Treasury", "data", None, PCT, "FRED DGS10, set by the script"),
-        ("erp", "Equity risk premium ERP", "input", ERP_DEFAULT, PCT,
-         "Damodaran, United States, 5 Jan 2026. Country risk premiums page, the same for all stocks"),
+        ("erp", "Equity risk premium ERP", "input", ERP_DEFAULT, PCT, ERP_NOTE),
         ("buy", "Buy threshold: margin of safety at least", "input", 0.25, PCT1,
          "Class 5: buy below 80% of value, i.e. V0 / P0 − 1 ≥ 25%"),
         ("flag_up", "Red flag: upside above", "input", 0.50, PCT1,
@@ -184,31 +244,8 @@ def build_inputs(ws):
         label(ws, f"D{r}", text)
 
     section(ws, 21, "How to use it")
-    steps = [
-        "1. Add stocks: python3 scripts/build_ddm_workbook.py KO PEP (from the repo root, with this file closed in Excel).",
-        "    It adds one sheet per ticker and a row in Summary. Run it again for a stock already here and only the blue cells change.",
-        "2. Or by hand: right-click Template > Move or Copy > Create a copy, rename it to the ticker, type the blue cells,",
-        "    then type the sheet name in the Ticker column of Summary.",
-        "3. In each stock sheet, set the yellow cells: the payout discounted, g1 (Bloomberg BDVD or EE), T, g2, the method,",
-        "    and the β override if you use Bloomberg BETA.",
-        "4. Final numbers: run the script again with --as-of 2026-11-06 (the challenge uses the close of Friday 6 November).",
-        "5. Don't insert rows or columns in the stock sheets: Summary reads fixed cells.",
-    ]
-    for i, text in enumerate(steps):
-        label(ws, f"B{22 + i}", text)
-
     section(ws, 30, "Formulas (Round 2 cheat sheet §3–§4)")
-    formulas = [
-        "Cost of equity:  k = rf + β × ERP, with β the slope of 60 monthly excess returns on SPY",
-        "Gordon Growth Model:  V0 = D0 (1 + g) / (k − g), needs k > g. For a mature company with stable growth",
-        "Two-stage DDM:  V0 = Σ D0 (1 + g1)^t / (1 + k)^t for t = 1 … T  +  [D_T (1 + g2) / (k − g2)] / (1 + k)^T",
-        "    For a company not yet in its normal state. g1 can be above k; g2 must be below k",
-        "Margin of safety:  MoS = V0 / P0 − 1 (cheat sheet). Discount to value = 1 − P0 / V0 (Class 5, Graham)",
-        "D0: dividends per share paid over the last 12 months. The first dividend discounted is D1 = D0 (1 + g)",
-        "With buybacks (cheat sheet p. 2): D0 used = D0 + last fiscal year's buybacks per share. g1, g2 are then total growth, not per share",
-    ]
-    for i, text in enumerate(formulas):
-        label(ws, f"B{31 + i}", text)
+    write_inputs_text(ws)
     ws.sheet_view.showGridLines = False
 
 
@@ -235,7 +272,8 @@ LEFT = [
      "Above 100%: earnings don't cover the dividend"),
     ("roe", "ROE", "data", None, PCT1, ""),
     ("dps_cagr", "Dividend growth, last 5 years (CAGR)", "data", None, PCT, "Calendar years: see the table below"),
-    ("eps_growth", "EPS growth next year (consensus)", "data", None, PCT, ""),
+    ("g_yahoo", "Earnings growth estimate, Yahoo average", "data", None, PCT,
+     "Average of the current and next fiscal year (Yahoo, Analysis, Growth Estimates)"),
     ("beta_calc", "β, 60 months on SPY", "data", None, BETA, "Monthly excess returns, as in the cheat sheet"),
     ("beta_yahoo", "β, Yahoo", "data", None, BETA, "Reference only"),
     ("section", "Buybacks (Yahoo, fiscal years)"),
@@ -258,13 +296,13 @@ LEFT = [
     ("section", "Payout discounted"),
     ("basis", "Dividends, or dividends + buybacks", "input", DIVS, None, f"{DIVS_BB} if buybacks are large (cheat sheet p. 2)"),
     ("D0u", "D0 used, per share", "formula", f'=IF({{basis}}="{DIVS_BB}",{{D0}}+N({{bps}}),{{D0}})', PRICE3,
-     "With buybacks, g1 and g2 are total growth, not per share"),
+     "With buybacks: see the limitation next to g1"),
     ("payout_u", "Payout used: D0 used / EPS", "formula", '=IF(N({eps_ttm})>0,{D0u}/{eps_ttm},"")', PCT1,
      "Above 100%: earnings don't cover the payout"),
     ("g_sust", "Sustainable growth ROE × (1 − payout used)", "formula",
      '=IF(AND(ISNUMBER({roe}),ISNUMBER({payout_u})),{roe}*(1-{payout_u}),"")', PCT, "A ceiling for long-run growth"),
     ("section", "Growth assumptions"),
-    ("g1", "g1, growth in stage 1", "input", G1_DEFAULT, PCT, "Bloomberg BDVD or EE (consensus)"),
+    ("g1", "g1, growth in stage 1", "input", G1_DEFAULT, PCT, None),     # note built in g1_note_formula()
     ("T", f"T, years in stage 1 (1–{T_MAX})", "input", T_DEFAULT, INT, "Years the company needs to reach its normal state"),
     ("g2", "g2, growth after T (terminal)", "input", G2_DEFAULT, PCT, "Below k, close to long-run economic growth"),
     ("g", "g, Gordon growth", "input", "={g2}", PCT, "Equal to g2 unless you type a number here"),
@@ -359,8 +397,38 @@ def flags_formula():
              f'&IF({a["k"]}-{a["g2"]}<{inp("spread")},"k − g2 below "&TEXT({inp("spread")},"0%")&". ","")'
              f'&IF(AND(ISNUMBER({a["payout_u"]}),N({a["payout_u"]})>1),"Payout above 100% of EPS. ","")'
              f'&IF({a["g"]}>={a["k"]},"GGM not valid: g ≥ k. ","")'
-             f'&IF(AND({a["currency"]}<>"",{a["currency"]}<>"USD"),"In "&{a["currency"]}&": rf and ERP are US figures. ","")')
+             f'&IF(AND({a["basis"]}="{DIVS_BB}",{yahoo_g1()}),'
+             f'"g1 is per-share growth with buybacks in: they count twice, V0 too high (note next to g1). ","")'
+             f'&IF(AND({a["currency"]}<>"",{a["currency"]}<>"USD"),"In "&{a["currency"]}&": rf is the US 10-year. ","")')
     return f'=IF(N({a["P0"]})<=0,"",IF(({parts})="","None",TRIM({parts})))'
+
+
+def yahoo_g1():
+    """True when g1 is Yahoo's average growth estimate, as rounded by the script."""
+    return f'ISNUMBER({A["g_yahoo"]}),ABS({A["g1"]}-{A["g_yahoo"]})<0.0006'
+
+
+def g1_note_formula():
+    """The note next to g1: where it comes from and, with buybacks in, the limitation of per-share growth."""
+    a = A
+    total = f'IF(ISNUMBER({a["shares_chg"]}),TEXT((1+{a["g1"]})*(1+{a["shares_chg"]})-1,"0.0%"),"n/a")'
+    limitation = ('"Limitation: Yahoo\'s growth is per share, and it already includes the buybacks (fewer shares lift EPS). '
+                  'The payout here counts them too, so they count twice and V0 is too high. Total growth, without that '
+                  f'effect: (1 + g1) × (1 + share count change) − 1 = "&{total}&"."')
+    source = f'"Yahoo average earnings growth estimate, row {ROWS["g_yahoo"]}"'
+    typed = f'"Typed. Yahoo average: "&IF(ISNUMBER({a["g_yahoo"]}),TEXT({a["g_yahoo"]},"0.0%"),"n/a")'
+    return f'=IF({a["basis"]}="{DIVS_BB}",{limitation},IF(AND({yahoo_g1()}),{source},{typed}))'
+
+
+def update_layout(ws):
+    """Bring a sheet built by an older version of this script up to date: labels, notes and formulas only."""
+    r = ROWS["g_yahoo"]
+    label(ws, f"B{r}", next(x[1] for x in LEFT if x[0] == "g_yahoo"))
+    ws[f"C{r}"].number_format = PCT
+    note(ws, f"D{r}", next(x[5] for x in LEFT if x[0] == "g_yahoo"))
+    note(ws, f"D{ROWS['D0u']}", next(x[5] for x in LEFT if x[0] == "D0u"))
+    note(ws, f"D{ROWS['g1']}", g1_note_formula())
+    ws[CELL["flags"]].value = flags_formula()
 
 
 def two_stage_expr(D, k, g2):
@@ -437,6 +505,7 @@ def build_stock(ws):
         put(ws, f"C{r}", content, kind, fmt, bold=bold)
         if why:
             note(ws, f"D{r}", why)
+    note(ws, f"D{ROWS['g1']}", g1_note_formula())
     ws[CELL["flags"]].alignment = Alignment(wrap_text=False)
 
     dv = DataValidation(type="list", formula1='"Two-stage,GGM"', allow_blank=False, showErrorMessage=True,
@@ -590,15 +659,43 @@ def add_to_summary(ws, ticker):
 
 # ---------------------------------------------------------------- data
 
-def buybacks(tk, t, info):
-    """Last fiscal year's buybacks and diluted shares, as dividend_basis in build_stock_report.py, plus checks."""
+def fx_rate(yf, base, quote, as_of):
+    """Units of the price currency (quote) per unit of the statements' currency (base), at the price date."""
+    for pair, power in ((f"{base}{quote}=X", 1), (f"{quote}{base}=X", -1)):
+        try:
+            px = yf.download(pair, start=as_of - pd.Timedelta(days=10), end=as_of + pd.Timedelta(days=1),
+                             auto_adjust=False, progress=False)["Close"].squeeze().dropna()
+            if len(px):
+                return float(px.iloc[-1]) ** power, f"{pair} on {px.index[-1]:%d %b %Y}"
+        except Exception:
+            pass
+    return None, None
+
+
+def buybacks(yf, tk, t, info, as_of):
+    """Last fiscal year's buybacks and diluted shares, as dividend_basis in build_stock_report.py, plus checks.
+    A foreign company's statements are in its own currency: buybacks are converted to the price currency at the
+    price date, and shares are counted in ADRs (ADR_SHARES), so buybacks per share are per ADR like the price."""
     st = retry(lambda: statements_of(tk), f"{t} statements")
-    out = {"buyback_fy": None, "shares_fy": None, "bps_avg": None, "shares_chg": None, "ni_growth": None, "fy": None}
+    out = {"buyback_fy": None, "shares_fy": None, "bps_avg": None, "shares_chg": None, "ni_growth": None, "fy": None,
+           "fx": None, "fx_src": None, "fin": None, "adr": None}
     if st.empty:
         print(f"  {t}: no financial statements on Yahoo, so no buyback data")
         return out
-    buy = -st["Repurchase Of Capital Stock"].fillna(0.0)          # no line: no buybacks, as in the report script
-    shares = st["Diluted Average Shares"].where(st["Diluted Average Shares"] > 0)
+    fin, cur = info.get("financialCurrency"), info.get("currency")
+    fx = 1.0
+    if fin and cur and fin != cur:
+        fx, out["fx_src"] = fx_rate(yf, fin, cur, as_of)
+        if fx is None:
+            print(f"  {t}: statements in {fin}, price in {cur}, and no exchange rate on Yahoo: no buyback data")
+            return out
+        out["fx"], out["fin"] = fx, fin
+        out["adr"] = ADR_SHARES.get(t)
+        if out["adr"] is None:
+            print(f"  {t}: statements in {fin}: add its shares per ADR to ADR_SHARES (1 assumed)")
+    ratio = out["adr"] or 1
+    buy = -st["Repurchase Of Capital Stock"].fillna(0.0) * fx      # no line: no buybacks, as in the report script
+    shares = st["Diluted Average Shares"].where(st["Diluted Average Shares"] > 0) / ratio
     out["fy"] = [d.year for d in st.index]
     if np.isfinite(shares.iloc[-1]):
         out["buyback_fy"], out["shares_fy"] = float(buy.iloc[-1]) / 1e6, float(shares.iloc[-1]) / 1e6
@@ -612,9 +709,39 @@ def buybacks(tk, t, info):
             out["shares_chg"] = float(cagr(sh))
         if ni.iloc[-1] > 0 and ni.iloc[-1 - GROWTH_YEARS] > 0:
             out["ni_growth"] = float(cagr(ni))
-    fin = info.get("financialCurrency")
-    if fin and fin != info.get("currency"):
-        print(f"  {t}: statements in {fin}, price in {info.get('currency')}: buybacks per share are not comparable")
+    return out
+
+
+def growth_estimate(yf, t, info):
+    """Yahoo's earnings growth estimates (Analysis, Growth Estimates) for the current and next fiscal year, and their
+    average: the default g1. From the home listing when the US line has few analysts (ESTIMATES_FROM)."""
+    src = ESTIMATES_FROM.get(t, t)
+    tk = yf.Ticker(src)
+    out = {"g_yahoo": None, "g_cy": None, "g_ny": None, "g_src": src, "g_analysts": None, "g_fy": None}
+    try:
+        ge = retry(lambda: tk.growth_estimates, f"{src} growth estimates")
+        cy, ny = (float(ge.loc[p, "stockTrend"]) if p in ge.index else np.nan for p in ("0y", "+1y"))
+    except Exception:
+        cy = ny = np.nan
+    try:
+        n = retry(lambda: tk.earnings_estimate, f"{src} earnings estimates").loc[["0y", "+1y"], "numberOfAnalysts"]
+        out["g_analysts"] = [int(x) if np.isfinite(x) else None for x in n]
+    except Exception:
+        pass
+    try:
+        end = (info if src == t else retry(lambda: tk.info, f"{src} info")).get("nextFiscalYearEnd")
+    except Exception:
+        end = None
+    vals = [x for x in (cy, ny) if np.isfinite(x)]
+    if not vals:
+        print(f"  {t}: no growth estimates on Yahoo ({src})")
+        return out
+    out.update(g_yahoo=float(np.mean(vals)), g_cy=cy if np.isfinite(cy) else None, g_ny=ny if np.isfinite(ny) else None)
+    if end:
+        out["g_fy"] = pd.Timestamp(end, unit="s").year
+    few = [x for x in (out["g_analysts"] or []) if x is not None and x < MIN_ANALYSTS]
+    if few:
+        print(f"  {t}: Yahoo growth estimates from {src} rest on only {min(few)} analysts")
     return out
 
 
@@ -645,7 +772,13 @@ def download(tickers, as_of_arg):
         if getattr(divs.index, "tz", None) is not None:
             divs.index = divs.index.tz_localize(None)
         divs.index = pd.DatetimeIndex(divs.index).normalize()
-        divs = divs.loc[:as_of]
+        typed = []
+        for date, amount, source in MISSING_DIVIDENDS.get(t, []):
+            date = pd.Timestamp(date)
+            if not (abs(divs.index - date) <= pd.Timedelta(days=20)).any():
+                divs.loc[date] = amount
+                typed.append(f"{amount:g} ex {date:%d %b %Y} typed in ({source})")
+        divs = divs.sort_index().loc[:as_of]
         D0 = float(divs.loc[divs.index > as_of - pd.Timedelta(days=365)].sum())
         years = list(range(as_of.year - HIST_YEARS, as_of.year))          # complete calendar years
         dps = {y: float(divs[divs.index.year == y].sum()) for y in years}
@@ -653,10 +786,7 @@ def download(tickers, as_of_arg):
         cagr = (dps[last] / dps[first]) ** (1 / 5) - 1 if dps.get(first, 0) > 0 and dps[last] > 0 else None
 
         info = retry(lambda: tk.info, f"{t} info")
-        try:
-            eps_growth = float(tk.earnings_estimate.loc["+1y", "growth"])
-        except Exception:                      # no estimates on Yahoo for this ticker
-            eps_growth = None
+        growth = growth_estimate(yf, t, info)
 
         a = adj[[t, "SPY"]].loc[:as_of].ffill()
         R = a.resample("ME").last().pct_change().loc[:complete_month_end(as_of)]
@@ -670,12 +800,18 @@ def download(tickers, as_of_arg):
             "sector": " / ".join(x for x in (info.get("sector"), info.get("industry")) if x),
             "currency": info.get("currency"), "as_of": as_of.to_pydatetime(), "P0": float(c.iloc[-1]), "D0": D0,
             "div_rate": num("dividendRate"), "eps_ttm": num("trailingEps"), "eps_fwd": num("forwardEps"),
-            "roe": num("returnOnEquity"), "dps_cagr": cagr, "eps_growth": eps_growth, "beta_calc": beta,
+            "roe": num("returnOnEquity"), "dps_cagr": cagr, "beta_calc": beta,
             "beta_yahoo": num("beta"), "dps": dps, "months": len(Re), "beta_end": Re.index[-1] if len(Re) else None,
-            "cagr_years": (first, last), **buybacks(tk, t, info),
+            "cagr_years": (first, last), "country": info.get("country"), **growth, **buybacks(yf, tk, t, info, as_of),
         }
+        out[t]["typed_divs"] = typed
         if D0 <= 0:
             print(f"  {t}: no dividend in the last 12 months, so the DDM does not apply")
+        elif out[t]["div_rate"] and D0 < 0.8 * out[t]["div_rate"]:
+            print(f"  {t}: D0 {D0:.3f} is well below Yahoo's dividend rate {out[t]['div_rate']:.3f}: a recent raise, or "
+                  "a payment missing from Yahoo's history? If missing, add it to MISSING_DIVIDENDS")
+        for x in typed:
+            print(f"  {t}: dividend of {x}")
         if len(Re) < WINDOW:
             print(f"  {t}: only {len(Re)} months of returns for beta, not {WINDOW}")
 
@@ -687,18 +823,30 @@ def download(tickers, as_of_arg):
 def fill_data(ws, d, downloaded):
     """Write the blue cells of a stock sheet. Assumptions (yellow) are not touched."""
     for key in ("ticker", "name", "sector", "currency", "as_of", "P0", "D0", "div_rate", "eps_ttm", "eps_fwd", "roe",
-                "dps_cagr", "eps_growth", "beta_calc", "beta_yahoo", "buyback_fy", "shares_fy", "bps_avg", "shares_chg",
+                "dps_cagr", "g_yahoo", "beta_calc", "beta_yahoo", "buyback_fy", "shares_fy", "bps_avg", "shares_chg",
                 "ni_growth"):
         ws[CELL[key]].value = d[key]
     ws[CELL["source"]].value = f"Yahoo Finance and FRED, downloaded {downloaded}"
     note(ws, f"D{ROWS['P0']}", f"Close of {d['as_of']:%d %b %Y}, not adjusted")
+    note(ws, f"D{ROWS['D0']}", "Dividends paid in the 12 months to the price date" +
+         ("".join(f". Includes {x}" for x in d["typed_divs"])))
+    if d["country"]:
+        fin = f", reports in {d['fin']}" if d["fin"] else ""
+        note(ws, f"D{ROWS['currency']}", f"Company based in {d['country']}{fin}" +
+             ("" if d["country"] == "United States" else ": this line trades in " + str(d["currency"])))
+    note(ws, f"D{ROWS['g_yahoo']}", growth_note(d))
     first, last = d["cagr_years"]
     note(ws, f"D{ROWS['dps_cagr']}", f"{first}–{last}, calendar years: see the table below")
     if d["beta_end"] is not None:
         note(ws, f"D{ROWS['beta_calc']}", f"{d['months']} complete months to {d['beta_end']:%b %Y}, excess of the 1-month T-bill")
     if d["fy"]:
         fy = d["fy"]
-        note(ws, f"D{ROWS['buyback_fy']}", f"FY{fy[-1]}, Repurchase Of Capital Stock, cash flow statement")
+        note(ws, f"D{ROWS['buyback_fy']}", f"FY{fy[-1]}, Repurchase Of Capital Stock, cash flow statement" +
+             (f", from {d['fin']} at {d['fx']:.4f} ({d['fx_src']})" if d["fx"] else ""))
+        if d["fx"]:
+            per = d["adr"] or 1
+            note(ws, f"D{ROWS['shares_fy']}", f"Per ADR: 1 ADR = {per:g} share{'s' if per != 1 else ''}"
+                                              f"{'' if d['adr'] else ' (assumed)'}, as the price and dividends")
         note(ws, f"D{ROWS['bps_avg']}", f"FY{fy[-GROWTH_YEARS] if len(fy) >= GROWTH_YEARS else '?'}–FY{fy[-1]}: "
                                         "a check, buybacks are lumpy and cut first in a downturn")
         if len(fy) > GROWTH_YEARS:
@@ -711,18 +859,46 @@ def fill_data(ws, d, downloaded):
         ws[f"C{r}"].value = value
 
 
-def default_g1(ws, d):
-    """New sheet: g1 starts at the 5-year dividend CAGR, clipped, until you type the Bloomberg figure."""
-    lo, hi = G1_BOUNDS
+def growth_note(d):
+    """Where row g_yahoo comes from: the two estimates, the analysts and the page."""
+    if d["g_yahoo"] is None:
+        return f"No growth estimates on Yahoo ({d['g_src']})"
+    fy = d["g_fy"]
+    years = [f"FY{fy}" if fy else "current fiscal year", f"FY{fy + 1}" if fy else "next"]
+    parts = [f"{y} {g:.1%}" for y, g in zip(years, (d["g_cy"], d["g_ny"])) if g is not None]
+    n = [x for x in (d["g_analysts"] or []) if x]
+    page = d["g_src"] + (f" (same company, more analysts than on {d['ticker']})" if d["g_src"] != d["ticker"] else "")
+    return (f"Average of {' and '.join(parts)}: Yahoo, Analysis, Growth Estimates, {page}"
+            + (f", {min(n)}–{max(n)} analysts" if n and min(n) != max(n) else f", {n[0]} analysts" if n else ""))
+
+
+def yahoo_g1_value(d):
+    """g1 from Yahoo's average growth estimate, rounded to 0.1%; else the 5-year dividend CAGR, clipped; else 5%."""
+    if d["g_yahoo"] is not None:
+        return round(d["g_yahoo"], 3)
+    print(f"  {d['ticker']}: no Yahoo growth estimate, so g1 starts at the dividend CAGR or {G1_DEFAULT:.0%}")
     if d["dps_cagr"] is None:
-        why = f"Default {G1_DEFAULT:.0%}: no 5-year dividend history. Replace with Bloomberg BDVD or EE"
-        g1 = G1_DEFAULT
-    else:
-        g1 = round(min(max(d["dps_cagr"], lo), hi), 3)
-        why = f"Default: 5-year dividend CAGR ({d['dps_cagr']:.1%}). Replace with Bloomberg BDVD or EE"
-    ws[CELL["g1"]].value = g1
-    note(ws, f"D{ROWS['g1']}", why)
-    return g1
+        return G1_DEFAULT
+    lo, hi = G1_BOUNDS
+    return round(min(max(d["dps_cagr"], lo), hi), 3)
+
+
+def new_sheet_assumptions(ws, d):
+    """A new sheet: g1 from Yahoo, the payout with buybacks when they exceed dividends, and a non-US company's ERP."""
+    ws[CELL["g1"]].value = yahoo_g1_value(d)
+    bps = d["buyback_fy"] / d["shares_fy"] if d["buyback_fy"] is not None and d["shares_fy"] else 0.0
+    ws[CELL["basis"]].value = DIVS_BB if bps > d["D0"] else DIVS
+    country = d["country"]
+    if country and country != "United States":
+        note(ws, f"D{ROWS['rf']}", "From Inputs: the US 10-year, as the price and dividends of this line are in "
+                                   f"{d['currency']}")
+        if country in COUNTRY_ERP:
+            erp, rating, crp = COUNTRY_ERP[country]
+            put(ws, CELL["erp"], erp, "input", PCT)
+            note(ws, f"D{ROWS['erp']}", f"Damodaran, {country}, {ERP_DATE}. Total ERP: mature market 4.23% + country "
+                                        f"risk premium {crp:.2%} (Moody's {rating}). Typed here, not on Inputs")
+        else:
+            print(f"  {d['ticker']}: based in {country}, not in COUNTRY_ERP: type its Damodaran ERP in the sheet")
 
 
 # ---------------------------------------------------------------- workbook
@@ -756,30 +932,39 @@ def save(wb, path):
     wb.save(path)
 
 
-def add_stocks(wb, tickers, as_of_arg):
+def add_stocks(wb, tickers, as_of_arg, g1_yahoo=False):
     data, market = download(tickers, as_of_arg)
     if not data:
         raise SystemExit("Nothing downloaded: no workbook written")
     downloaded = datetime.now(ZoneInfo("Europe/Zurich")).strftime("%d %b %Y %H:%M")
     wsi = wb["Inputs"]
     set_market(wsi, market)
-    erp = wsi[INP["erp"]].value if isinstance(wsi[INP["erp"]].value, (int, float)) else ERP_DEFAULT
+    write_inputs_text(wsi)
+    for name in wb.sheetnames:            # sheets from an older version of the script, the Template included
+        if name not in ("Summary", "Inputs", "Example NKE"):
+            update_layout(wb[name])
+    erp_us = wsi[INP["erp"]].value if isinstance(wsi[INP["erp"]].value, (int, float)) else ERP_DEFAULT
 
-    print(f"\n{'':6}{'P0':>9}{'D0 used':>9}{'beta':>7}{'k':>8}{'g1':>7}{'GGM':>9}{'2-stage':>9}   (rf {market['rf']:.2%})")
+    print(f"\n{'':6}{'P0':>9}{'D0 used':>9}{'beta':>7}{'ERP':>7}{'k':>8}{'g1':>7}{'T':>3}{'GGM':>9}{'2-stage':>9}"
+          f"   (rf {market['rf']:.2%})")
     for t, d in data.items():
         if t in wb.sheetnames:
             ws, status = wb[t], "refreshed, assumptions kept"
+            if g1_yahoo:
+                ws[CELL["g1"]].value = yahoo_g1_value(d)
+                status = "refreshed, g1 from Yahoo, other assumptions kept"
         else:
             at = wb.sheetnames.index("Template") if "Template" in wb.sheetnames else len(wb.sheetnames)
             ws, status = wb.create_sheet(t, at), "added"
             build_stock(ws)
-            default_g1(ws, d)
+            new_sheet_assumptions(ws, d)
         fill_data(ws, d, downloaded)
         add_to_summary(wb["Summary"], t)
 
         # the values Excel will show, for a quick read in the terminal
         num = lambda key, dflt: ws[CELL[key]].value if isinstance(ws[CELL[key]].value, (int, float)) else dflt  # noqa: E731
         beta = num("beta_over", d["beta_calc"] or 0.0)
+        erp = num("erp", erp_us)
         k = market["rf"] + beta * erp
         g1, g2, T = num("g1", G1_DEFAULT), num("g2", G2_DEFAULT), int(num("T", T_DEFAULT))
         g = num("g", g2)
@@ -788,7 +973,7 @@ def add_stocks(wb, tickers, as_of_arg):
         ggm = f"{gordon(D, k, g):9.2f}" if D > 0 and k > g else f"{'n/a':>9}"
         two = f"{two_stage(D, k, g1, g2, T):9.2f}" if D > 0 and k > g2 else f"{'n/a':>9}"
         basis = "with buybacks" if with_bb else "dividends"
-        print(f"{t:6}{d['P0']:9.2f}{D:9.3f}{beta:7.3f}{k:8.2%}{g1:7.1%}{ggm}{two}   {basis}, {status}")
+        print(f"{t:6}{d['P0']:9.2f}{D:9.3f}{beta:7.3f}{erp:7.2%}{k:8.2%}{g1:7.1%}{T:3d}{ggm}{two}   {basis}, {status}")
         if not with_bb and d["buyback_fy"] and d["shares_fy"] and d["buyback_fy"] / d["shares_fy"] > d["D0"]:
             print(f"{'':6}buybacks ({d['buyback_fy'] / d['shares_fy']:.2f} a share) exceed dividends: "
                   f"consider {DIVS_BB} in the sheet")
@@ -800,6 +985,9 @@ def main():
     ap.add_argument("--as-of", help="Price date, YYYY-MM-DD. The final numbers use 2026-11-06. Default: latest close")
     ap.add_argument("--out", type=Path, default=WORKBOOK, help=f"Workbook path (default {WORKBOOK.relative_to(REPO)})")
     ap.add_argument("--new", action="store_true", help="Start a new workbook even if one exists (loses your edits)")
+    ap.add_argument("--g1-yahoo", action="store_true",
+                    help="Also reset g1 of stocks already in the workbook to Yahoo's average earnings growth estimate "
+                         "(new sheets always start from it)")
     args = ap.parse_args()
 
     path = args.out.resolve()
@@ -814,7 +1002,7 @@ def main():
     else:
         wb = new_workbook()
     if tickers:
-        add_stocks(wb, tickers, args.as_of)
+        add_stocks(wb, tickers, args.as_of, args.g1_yahoo)
     save(wb, path)
     print(f"\nWrote {path.relative_to(REPO) if path.is_relative_to(REPO) else path}")
 

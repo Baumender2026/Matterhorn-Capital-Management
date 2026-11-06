@@ -361,8 +361,9 @@ def monthly_excess_returns(snap, t):
 
 
 def ddm_workbook(t):
-    """The ERP of the DDM workbook (Inputs C8) and its source (the first sentence of D8), so that the report and the
-    workbook discount at the same k; plus the cells of sheet t, if the workbook has one, keyed by their label."""
+    """The ERP of the DDM workbook and its source (the first sentence of its note), so that the report and the workbook
+    discount at the same k: Inputs C8, or the ERP typed in sheet t (a company based outside the US). Plus the cells of
+    sheet t, if the workbook has one, keyed by their label."""
     from openpyxl import load_workbook
     if not DDM_WORKBOOK.exists():
         raise SystemExit(f"{DDM_WORKBOOK.relative_to(REPO)} not found: the report takes the ERP from its Inputs sheet")
@@ -372,13 +373,17 @@ def ddm_workbook(t):
     wi = wb["Inputs"]
     if wi["B8"].value != "Equity risk premium ERP" or not isinstance(wi["C8"].value, (int, float)):
         raise SystemExit(f"No ERP in Inputs C8 of {DDM_WORKBOOK.name}: type it there")
-    source = str(wi["D8"].value or f"{DDM_WORKBOOK.name}, Inputs").split(". ")[0]
+    erp, source = float(wi["C8"].value), str(wi["D8"].value or f"{DDM_WORKBOOK.name}, Inputs").split(". ")[0]
     cells = None
     if t in wb.sheetnames:
         ws = wb[t]
         cells = {str(ws[f"B{r}"].value).strip(): ws[f"C{r}"].value for r in range(1, ws.max_row + 1) if ws[f"B{r}"].value}
         cells["rf"] = wi["C7"].value
-    return float(wi["C8"].value), source, cells
+        r = next((r for r in range(1, ws.max_row + 1) if ws[f"B{r}"].value == "Equity risk premium ERP"), None)
+        if r and isinstance(ws[f"C{r}"].value, (int, float)):        # typed in the sheet, not the link to Inputs
+            erp = float(ws[f"C{r}"].value)
+            source = str(ws[f"D{r}"].value or f"{DDM_WORKBOOK.name}, sheet {t}").split(". ")[0]
+    return erp, source, cells
 
 
 def check_workbook(t, v, cells, as_of, rf10, flags):
@@ -465,7 +470,7 @@ def analyse(cfg, snap):
     rf10, src_rf = given("rf10", float(rates["DGS10"].dropna().iloc[-1]), f"FRED DGS10, {rates['DGS10'].dropna().index[-1]:%d.%m.%y}")
     erp, src_erp, cells = ddm_workbook(t)
     if "erp" in v and abs(float(v["erp"]) - erp) > 1e-9:
-        raise SystemExit(f"{t}.yaml has erp {float(v['erp']):.3%}, the workbook {erp:.3%} (Inputs C8). "
+        raise SystemExit(f"{t}.yaml has erp {float(v['erp']):.3%}, the workbook {erp:.3%} ({src_erp}). "
                          "Delete erp from the YAML: the report takes it from the workbook")
     if cells is not None:
         check_workbook(t, v, cells, as_of, rf10, flags)

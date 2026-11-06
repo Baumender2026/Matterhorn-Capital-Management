@@ -23,12 +23,13 @@ valuation:                     # the fair value is the DDM value; the comparable
   method: two_stage            # gordon: mature, stable growth. two_stage: not in its normal state today
                                # (turnaround, cyclical low). none: no dividend, so the fair value falls back on the comps.
   dividend_basis: dividends    # dividends_plus_buybacks if buybacks are large: the DDM on dividends undervalues
-                               # ERP: from Inputs C8 of DDM_valuation.xlsx, so the report and the workbook match
-  g1: 0.05                     # first-stage growth: analysts' consensus (Bloomberg EE or BDVD)
+                               # ERP: from DDM_valuation.xlsx (Inputs C8, or the country ERP typed in the stock's sheet),
+                               # so the report and the workbook match
+  g1: 0.05                     # first-stage growth: the g1 of the stock's sheet in DDM_valuation.xlsx (Yahoo's average earnings growth estimate)
   g1_source: ""
   T: 5                         # years to reach the normal state: your assumption
   T_source: ""
-  g2: 0.02                     # terminal growth: below k and close to long-run economic growth
+  g2: 0.03                     # terminal growth: below k and close to long-run economic growth (3% for every stock)
   g2_source: ""
   comps_primary: [forward_pe, ev_ebitda]   # the multiples averaged into the comps value; p_fcf is the other choice
   comps_stat: median           # median or mean of the peers

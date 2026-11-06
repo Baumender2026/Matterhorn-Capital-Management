@@ -10,8 +10,8 @@ peer_names: {CCEP: Coca-Cola Europacific}
 valuation:
   method: two_stage              # two_stage | gordon | none
   dividend_basis: dividends      # buybacks are small: USD 0.9bn in nine months against USD 6.8bn of dividends
-  g1: 0.06
-  g1_source: "Near consensus EPS growth of {eps_growth}"
+  g1: 0.085
+  g1_source: "Yahoo consensus: average EPS growth, this and next year"
   T: 5
   T_source: "Years of above-trend growth; ours"
   g2: 0.03
