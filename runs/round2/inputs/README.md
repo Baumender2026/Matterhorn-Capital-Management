@@ -14,7 +14,7 @@ The files you fill in for Round 2. Everything else (downloads, numbers, pages) i
 From the repo root:
 
 1. **Copy** `_TEMPLATE.yaml` to `<TICKER>.yaml` in this folder, for example `KO.yaml`.
-2. **Fill it in.** The comments in the blank explain every field. Leave numbers to the script: write `{tokens}` such as `{V0}` or `{mos}` in the text instead.
+2. **Fill it in.** The comments in the blank explain every field. The DDM numbers and the peers are not here: the report takes them from the stock's sheet in `DDM_valuation.xlsx`, so set them there first. Leave numbers to the script: write `{tokens}` such as `{V0}` or `{mos}` in the text instead.
 3. **Build:** `python3 scripts/build_stock_report.py <TICKER> --as-of 2026-11-06`. It downloads the data and writes, in `runs/round2/2026-11-06/`, a copy of your YAML, the download (`<TICKER>_data.json`), the numbers (`<TICKER>_figures.json`) and the two pages (`<TICKER>.dc.html`, `<TICKER>.pdf`). Read the `FLAG` lines it prints.
 4. **Add it to the report:** list the ticker under `stocks` in `portfolio.yaml`, then promote the pages and rebuild the report, as in `runs/round2/README.md` (*The Round 2 report*).
 

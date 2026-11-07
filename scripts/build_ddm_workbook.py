@@ -27,8 +27,8 @@ k = rf10 + beta x ERP, beta on SPY over 60 complete months, D0 = dividends of th
 MoS = V0 / P0 - 1.
 Payout discounted, a switch in each sheet: Dividends, or Dividends + buybacks (cheat sheet p. 2), where
 D0 used = D0 + last fiscal year's buybacks / its diluted average shares, as dividend_basis in the report script.
-A new sheet starts with g1 = Yahoo's average earnings growth estimate (current and next fiscal year), Dividends + buybacks
-when buybacks exceed dividends, and, for a company based outside the US, its country's ERP (Damodaran) typed in the
+A new sheet starts with g1 = Yahoo's average earnings growth estimate (current and next fiscal year; next year alone for
+the tickers in G1_NEXT_YEAR), Dividends + buybacks and P/FCF in the comps value (the team's rule since 7 Nov 2026), and, for a company based outside the US, its country's ERP (Damodaran) typed in the
 sheet. rf is the US 10-year for every stock: the tickers are US lines, so price and dividends are in USD.
 """
 
@@ -63,14 +63,21 @@ ERP_DEFAULT = 0.0446       # Damodaran, United States, country risk premiums of 
 # market 4.23% + CRP. A new sheet of a company based in one of these countries gets its ERP in the sheet; Inputs keeps
 # the US one. Another non-US country: the script says so, type its ERP in the sheet.
 COUNTRY_ERP = {
-    "Switzerland": (0.0423, "Aaa", 0.0000), "Germany": (0.0423, "Aaa", 0.0000),
+    "Switzerland": (0.0423, "Aaa", 0.0000), "Germany": (0.0423, "Aaa", 0.0000), "Denmark": (0.0423, "Aaa", 0.0000),
     "United Kingdom": (0.0501, "Aa3", 0.0078), "Taiwan": (0.0501, "Aa3", 0.0078),
     "Hong Kong": (0.0501, "Aa3", 0.0078), "China": (0.0514, "A1", 0.0091),
 }
 ERP_DATE = "5 Jan 2026"
 # Yahoo's growth estimates come from the home listing when the US line has few analysts: same company, same shares.
 ESTIMATES_FROM = {"AZN": "AZN.L", "TCEHY": "0700.HK",   # AZN's NYSE page: 2-3 analysts and a GAAP base year
-                  "GOOG": "GOOGL"}                      # the same estimates, 7 analysts on GOOG's current year
+                  "GOOG": "GOOGL",                      # the same estimates, 7 analysts on GOOG's current year
+                  "NVO": "NOVO-B.CO",                   # 7-8 analysts on the ADR, 21-22 in Copenhagen
+                  "NSRGY": "NESN.SW"}                   # 3 analysts on the ADR, 15-20 in Zurich
+# g1 from Yahoo's next-year earnings growth estimate alone, not the average of the current and next year: the team's
+# choice of 7 Nov 2026 for the stocks added that day. Row g_yahoo of their sheets holds that estimate, so the checks on g1
+# (typed or from Yahoo, the buyback flag) work as for the others.
+G1_NEXT_YEAR = {"NVO", "PFE", "VZ", "PEP", "NSRGY"}
+G1_NEXT_YEAR_DATE = "7 Nov 2026"
 # Dividends missing from Yahoo's history of a ticker, typed from the company: {ticker: [(ex-date, amount, source)]}.
 # Added only if Yahoo has no dividend within 20 days of that date, so a fixed history is not counted twice.
 MISSING_DIVIDENDS = {
@@ -79,7 +86,7 @@ MISSING_DIVIDENDS = {
 }
 MIN_ANALYSTS = 10                                   # fewer on the page used: a warning
 # Ordinary shares per ADR, so that a foreign company's buybacks per share are per ADR, like its price and dividends
-ADR_SHARES = {"TSM": 5, "RHHBY": 0.125, "TCEHY": 1}
+ADR_SHARES = {"TSM": 5, "RHHBY": 0.125, "TCEHY": 1, "NVO": 1, "NSRGY": 1}
 # Peers of the comparables, for a stock without runs/round2/inputs/<TICKER>.yaml. Proposed by Claude on 6 Nov 2026 from
 # Yahoo's industry and the business, without Bloomberg RV: the team checks them on RV and types over them in the sheet.
 # Left out because Yahoo's ratios are broken: Chinese ADRs (BABA, BIDU, JD, PDD, TME, NTES: EV/EBITDA of -3x to 6x, a USD EV
@@ -99,8 +106,15 @@ PEERS = {
     "IBM":  ["ACN", "ORCL", "MSFT", "CSCO", "HPE", "CTSH"],    # IT services, software and infrastructure
     "AXP":  ["COF", "SYF", "V", "MA", "PYPL", "ALLY"],         # card issuers, networks and consumer lenders
     "QCOM": ["AVGO", "TXN", "ADI", "NXPI", "MRVL", "AMD"],     # chip designers: mobile, connectivity, auto
+    # added 7 Nov 2026, same approach
+    "NVO":  ["LLY", "NVS", "AZN", "SNY", "MRK", "PFE"],        # diabetes and obesity (LLY, SNY), large pharma
+    "PFE":  ["MRK", "BMY", "JNJ", "ABBV", "GSK", "AZN"],       # large pharma, US and Europe
+    "VZ":   ["T", "TMUS", "CMCSA", "CHTR", "BCE", "TU"],       # US telecom and cable; BCE and TU report in CAD
+    "PEP":  ["KO", "KDP", "MDLZ", "MNST", "GIS", "KHC"],       # drinks and snacks
+    "NSRGY": ["UL", "MDLZ", "PEP", "GIS", "KHC", "HSY"],       # packaged food; UL reports in EUR
 }
 PEERS_DATE = "6 Nov 2026"
+PEERS_DATES = {t: "7 Nov 2026" for t in ("NVO", "PFE", "VZ", "PEP", "NSRGY")}   # PEERS_DATE for the others
 G1_BOUNDS = (0.0, 0.15)            # the 5-year dividend CAGR, g1 when Yahoo has no growth estimate, is clipped to this
 T_MAX = 20                                          # rows of the two-stage schedule
 HIST_YEARS = 6                                      # calendar years in the dividend table
@@ -324,7 +338,7 @@ LEFT = [
     ("beta", "β used", "formula", "=IF(ISNUMBER({beta_over}),{beta_over},N({beta_calc}))", BETA, ""),
     ("k", "Cost of equity k = rf + β × ERP", "formula", "={rf}+{beta}*{erp}", PCT, ""),
     ("section", "Payout discounted"),
-    ("basis", "Dividends, or dividends + buybacks", "input", DIVS, None, f"{DIVS_BB} if buybacks are large (cheat sheet p. 2)"),
+    ("basis", "Dividends, or dividends + buybacks", "input", DIVS_BB, None, f"{DIVS_BB} for every stock: the team's rule (cheat sheet p. 2)"),
     ("D0u", "D0 used, per share", "formula", f'=IF({{basis}}="{DIVS_BB}",{{D0}}+N({{bps}}),{{D0}})', PRICE3,
      "With buybacks: see the limitation next to g1"),
     ("payout_u", "Payout used: D0 used / EPS", "formula", '=IF(N({eps_ttm})>0,{D0u}/{eps_ttm},"")', PCT1,
@@ -438,26 +452,36 @@ def yahoo_g1():
     return f'ISNUMBER({A["g_yahoo"]}),ABS({A["g1"]}-{A["g_yahoo"]})<0.0006'
 
 
-def g1_note_formula():
-    """The note next to g1: where it comes from and, with buybacks in, the limitation of per-share growth."""
+def g1_note_formula(next_year=False):
+    """The note next to g1: where it comes from and, with buybacks in, the limitation of per-share growth.
+    next_year: a sheet of G1_NEXT_YEAR, whose row g_yahoo is Yahoo's next-year estimate, not the average."""
     a = A
+    est = "next year" if next_year else "average"
     total = f'IF(ISNUMBER({a["shares_chg"]}),TEXT((1+{a["g1"]})*(1+{a["shares_chg"]})-1,"0.0%"),"n/a")'
     limitation = ('"Limitation: Yahoo\'s growth is per share, and it already includes the buybacks (fewer shares lift EPS). '
                   'The payout here counts them too, so they count twice and V0 is too high. Total growth, without that '
                   f'effect: (1 + g1) × (1 + share count change) − 1 = "&{total}&"."')
-    source = f'"Yahoo average earnings growth estimate, row {ROWS["g_yahoo"]}"'
-    typed = f'"Typed. Yahoo average: "&IF(ISNUMBER({a["g_yahoo"]}),TEXT({a["g_yahoo"]},"0.0%"),"n/a")'
+    source = (f'"Yahoo next-year earnings growth estimate, row {ROWS["g_yahoo"]} (the team\'s choice, {G1_NEXT_YEAR_DATE})"'
+              if next_year else f'"Yahoo average earnings growth estimate, row {ROWS["g_yahoo"]}"')
+    typed = f'"Typed. Yahoo {est}: "&IF(ISNUMBER({a["g_yahoo"]}),TEXT({a["g_yahoo"]},"0.0%"),"n/a")'
     return f'=IF({a["basis"]}="{DIVS_BB}",{limitation},IF(AND({yahoo_g1()}),{source},{typed}))'
+
+
+def g_yahoo_label(ws):
+    """Row g_yahoo holds the Yahoo estimate g1 starts from: the average, or next year alone for G1_NEXT_YEAR."""
+    return ("Earnings growth estimate, Yahoo next year" if ws.title in G1_NEXT_YEAR
+            else next(x[1] for x in LEFT if x[0] == "g_yahoo"))
 
 
 def update_layout(ws):
     """Bring a sheet built by an older version of this script up to date: labels, notes and formulas only."""
     r = ROWS["g_yahoo"]
-    label(ws, f"B{r}", next(x[1] for x in LEFT if x[0] == "g_yahoo"))
+    label(ws, f"B{r}", g_yahoo_label(ws))
     ws[f"C{r}"].number_format = PCT
-    note(ws, f"D{r}", next(x[5] for x in LEFT if x[0] == "g_yahoo"))
+    if not ws[f"D{r}"].value:       # a refresh writes the stock's own note (growth_note): keep it on the other sheets
+        note(ws, f"D{r}", next(x[5] for x in LEFT if x[0] == "g_yahoo"))
     note(ws, f"D{ROWS['D0u']}", next(x[5] for x in LEFT if x[0] == "D0u"))
-    note(ws, f"D{ROWS['g1']}", g1_note_formula())
+    note(ws, f"D{ROWS['g1']}", g1_note_formula(ws.title in G1_NEXT_YEAR))
     ws[CELL["flags"]].value = flags_formula()
 
 
@@ -535,7 +559,8 @@ def build_stock(ws):
         put(ws, f"C{r}", content, kind, fmt, bold=bold)
         if why:
             note(ws, f"D{r}", why)
-    note(ws, f"D{ROWS['g1']}", g1_note_formula())
+    label(ws, f"B{ROWS['g_yahoo']}", g_yahoo_label(ws))
+    note(ws, f"D{ROWS['g1']}", g1_note_formula(ws.title in G1_NEXT_YEAR))
     ws[CELL["flags"]].alignment = Alignment(wrap_text=False)
 
     dv = DataValidation(type="list", formula1='"Two-stage,GGM"', allow_blank=False, showErrorMessage=True,
@@ -769,10 +794,11 @@ def build_comps(ws):
     note(ws, f"B{CR['note']}", "Not in the fair value: the DDM is V0, the comps are a check (stock report, Round 2 README). "
                                "Peers: 5–6 from Bloomberg RV, same industry. n/m: negative, or above 100x for P/E, P/FCF "
                                "and EV/EBITDA. Blue cells are rewritten by every refresh: type a Bloomberg figure again after one.")
-    choices = [("stat", COMPS_STAT_LABEL, "Median", "comps_stat in the stock YAML: Median = median, Average = mean"),
-               ("forward_pe", COMPS_USE_LABELS["forward_pe"], "Yes", "comps_primary in the YAML: forward_pe"),
-               ("p_fcf", COMPS_USE_LABELS["p_fcf"], "No", "comps_primary: p_fcf"),
-               ("ev_ebitda", COMPS_USE_LABELS["ev_ebitda"], "Yes", "comps_primary: ev_ebitda"),
+    # a new sheet: the three multiples in, the team's rule for every stock (7 Nov 2026). The stock report uses these cells
+    choices = [("stat", COMPS_STAT_LABEL, "Median", "Median or Average of the peers. The stock report uses this choice"),
+               ("forward_pe", COMPS_USE_LABELS["forward_pe"], "Yes", "Yes: its implied price is in the comps value"),
+               ("p_fcf", COMPS_USE_LABELS["p_fcf"], "Yes", "Yes: in the comps value. New sheets start with Yes (team's rule); n/m for banks"),
+               ("ev_ebitda", COMPS_USE_LABELS["ev_ebitda"], "Yes", "Yes: its implied price is in the comps value"),
                ("source", "Peers: source", None, "Change it once the peers are checked on Bloomberg RV")]
     for key, text, default, why in choices:
         ref = CELL_C(key)
@@ -943,6 +969,13 @@ def fill_example_comps(ws):
     for key, v in (("stat", "Average"), ("forward_pe", "Yes"), ("p_fcf", "No"), ("ev_ebitda", "No"),
                    ("source", "TA notebook, course/ta-code/r2_multiples.csv")):
         ws[CELL_C(key)].value = v
+    example_comps_note(ws)
+
+
+def example_comps_note(ws):
+    """The note on Example NKE's comps value. build_comps resets it to the generic note, so a refresh writes it again."""
+    mult = pd.read_csv(TA / "r2_multiples.csv", index_col=0)
+    peers = mult[(mult["group"] == "NKE") & (mult["role"] == "peer")]
     v = float(mult.loc["NKE", "forwardEps"]) * peers["forwardPE"].mean()
     note(ws, f"D{CR['value']}", f"TA's method on r2_multiples.csv: {v:.2f} (the notebook printed 18.80 on an older download)")
 
@@ -1088,7 +1121,7 @@ def growth_estimate(yf, t, info):
     average: the default g1. From the home listing when the US line has few analysts (ESTIMATES_FROM)."""
     src = ESTIMATES_FROM.get(t, t)
     tk = yf.Ticker(src)
-    out = {"g_yahoo": None, "g_cy": None, "g_ny": None, "g_src": src, "g_analysts": None, "g_fy": None}
+    out = {"g_yahoo": None, "g_cy": None, "g_ny": None, "g_src": src, "g_analysts": None, "g_fy": None, "g_next": False}
     try:
         ge = retry(lambda: tk.growth_estimates, f"{src} growth estimates")
         cy, ny = (float(ge.loc[p, "stockTrend"]) if p in ge.index else np.nan for p in ("0y", "+1y"))
@@ -1108,6 +1141,11 @@ def growth_estimate(yf, t, info):
         print(f"  {t}: no growth estimates on Yahoo ({src})")
         return out
     out.update(g_yahoo=float(np.mean(vals)), g_cy=cy if np.isfinite(cy) else None, g_ny=ny if np.isfinite(ny) else None)
+    if t in G1_NEXT_YEAR:                      # next year alone, the team's choice for this stock
+        if np.isfinite(ny):
+            out.update(g_yahoo=float(ny), g_next=True)
+        else:
+            print(f"  {t}: no next-year growth estimate on Yahoo ({src}), so the average is used")
     if end:
         out["g_fy"] = pd.Timestamp(end, unit="s").year
     few = [x for x in (out["g_analysts"] or []) if x is not None and x < MIN_ANALYSTS]
@@ -1247,8 +1285,12 @@ def growth_note(d):
     parts = [f"{y} {g:.1%}" for y, g in zip(years, (d["g_cy"], d["g_ny"])) if g is not None]
     n = [x for x in (d["g_analysts"] or []) if x]
     page = d["g_src"] + (f" (same company, more analysts than on {d['ticker']})" if d["g_src"] != d["ticker"] else "")
-    return (f"Average of {' and '.join(parts)}: Yahoo, Analysis, Growth Estimates, {page}"
-            + (f", {min(n)}–{max(n)} analysts" if n and min(n) != max(n) else f", {n[0]} analysts" if n else ""))
+    analysts = f", {min(n)}–{max(n)} analysts" if n and min(n) != max(n) else f", {n[0]} analysts" if n else ""
+    if d.get("g_next"):
+        current = f"; {years[0]} {d['g_cy']:.1%} not used" if d["g_cy"] is not None else ""
+        return (f"Next fiscal year{f' FY{fy + 1}' if fy else ''} {d['g_ny']:.1%}{current}: Yahoo, Analysis, Growth "
+                f"Estimates, {page}{analysts}. Next year only, the team's choice of {G1_NEXT_YEAR_DATE}")
+    return f"Average of {' and '.join(parts)}: Yahoo, Analysis, Growth Estimates, {page}{analysts}"
 
 
 def yahoo_g1_value(d):
@@ -1263,10 +1305,10 @@ def yahoo_g1_value(d):
 
 
 def new_sheet_assumptions(ws, d):
-    """A new sheet: g1 from Yahoo, the payout with buybacks when they exceed dividends, and a non-US company's ERP."""
+    """A new sheet: g1 from Yahoo, the payout with buybacks (the team's rule for every stock, 7 Nov 2026; P/FCF in the
+    comps value is set in build_comps), and a non-US company's ERP. T stays at its default: the team sets it by hand."""
     ws[CELL["g1"]].value = yahoo_g1_value(d)
-    bps = d["buyback_fy"] / d["shares_fy"] if d["buyback_fy"] is not None and d["shares_fy"] else 0.0
-    ws[CELL["basis"]].value = DIVS_BB if bps > d["D0"] else DIVS
+    ws[CELL["basis"]].value = DIVS_BB
     country = d["country"]
     if country and country != "United States":
         note(ws, f"D{ROWS['rf']}", "From Inputs: the US 10-year, as the price and dividends of this line are in "
@@ -1342,7 +1384,7 @@ def choose_peers(yf, ws, t, d):
     if typed:
         return typed, None if ws[CELL_C("source")].value else "Typed in the sheet"
     for peers, source in ((yaml_peers(t), f"From {t}.yaml (the stock report's peers)"),
-                          (PEERS.get(t, []), f"Proposed by Claude, {PEERS_DATE}: check on Bloomberg RV")):
+                          (PEERS.get(t, []), f"Proposed by Claude, {PEERS_DATES.get(t, PEERS_DATE)}: check on Bloomberg RV")):
         if peers:
             break
     else:
@@ -1388,8 +1430,11 @@ def add_stocks(wb, tickers, as_of_arg, g1_yahoo=False):
             update_layout(wb[name])
         if name not in ("Summary", "Inputs"):
             build_comps(wb[name])          # every stock sheet has the comps block from row 101
-    if "Example NKE" in wb.sheetnames and wb["Example NKE"][CELL_C("eps_fwd")].value is None:
-        fill_example_comps(wb["Example NKE"])
+    if "Example NKE" in wb.sheetnames:
+        if wb["Example NKE"][CELL_C("eps_fwd")].value is None:
+            fill_example_comps(wb["Example NKE"])
+        else:
+            example_comps_note(wb["Example NKE"])     # build_comps above reset it
     erp_us = wsi[INP["erp"]].value if isinstance(wsi[INP["erp"]].value, (int, float)) else ERP_DEFAULT
 
     sheets, peers_of, sources = {}, {}, {}

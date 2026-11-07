@@ -6,7 +6,10 @@
     python3 scripts/build_stock_report.py --selftest               checks against the TA's numbers
 
 One run = one as-of date: everything goes to runs/round2/<as-of>/, next to the inputs it used.
-Reads   runs/round2/inputs/<TICKER>.yaml           peers, growth inputs, thesis, catalysts
+Reads   runs/round2/inputs/DDM_valuation.xlsx      sheet <TICKER>: P0, D0, beta, rf, ERP, g1, T, g2, method, payout,
+                                                   peers and comps choices. The workbook holds the assumptions, so
+                                                   the report gives its value; set them there first
+        runs/round2/inputs/<TICKER>.yaml           the text: thesis, catalysts, issues, sources of g1, T, g2
 Saves   runs/round2/<as-of>/<TICKER>_data.json     the download, so the report can be reproduced
 Writes  runs/round2/<as-of>/<TICKER>.yaml          a copy of the inputs this run used
         runs/round2/<as-of>/<TICKER>.dc.html       the two A4 pages
@@ -87,7 +90,7 @@ MULTIPLES = [("forward_pe", "Fwd P/E", "earnings"), ("trailing_pe", "Trail. P/E"
              ("p_fcf", "P/FCF", "earnings"), ("ev_ebitda", "EV/EBITDA", "earnings"), ("pb", "P/B", "positive"),
              ("ps", "P/S", "positive"), ("ev_sales", "EV/Sales", "positive"), ("yield", "Div. yield", "yield")]
 SHOWN = ("forward_pe", "p_fcf", "ev_ebitda")   # the multiples printed in the report; the others stay in figures.json
-# Labels of the comps block in a stock sheet of DDM_valuation.xlsx (column B; the value is in C). check_workbook() reads them
+# Labels of the comps block in a stock sheet of DDM_valuation.xlsx (column B; the value is in C). workbook_inputs() reads them
 COMPS_STAT_LABEL = "Comps statistic"
 COMPS_STATS = {"Median": "median", "Average": "mean"}
 COMPS_USE_LABELS = {"forward_pe": "In the comps value: Fwd P/E", "p_fcf": "In the comps value: P/FCF",
@@ -554,7 +557,7 @@ def monthly_excess_returns(snap, t):
 def ddm_workbook(t):
     """The ERP of the DDM workbook and its source (the first sentence of its note), so that the report and the workbook
     discount at the same k: Inputs C8, or the ERP typed in sheet t (a company based outside the US). Plus the cells of
-    sheet t, if the workbook has one, keyed by their label."""
+    sheet t, if the workbook has one, keyed by their label, and their notes (column D) under ("note", label)."""
     from openpyxl import load_workbook
     if not DDM_WORKBOOK.exists():
         raise SystemExit(f"{DDM_WORKBOOK.relative_to(REPO)} not found: the report takes the ERP from its Inputs sheet")
@@ -568,8 +571,12 @@ def ddm_workbook(t):
     cells = None
     if t in wb.sheetnames:
         ws = wb[t]
-        cells = {str(ws[f"B{r}"].value).strip(): ws[f"C{r}"].value for r in range(1, ws.max_row + 1) if ws[f"B{r}"].value}
-        cells["rf"] = wi["C7"].value
+        cells = {}
+        for r in range(1, ws.max_row + 1):    # the first row of a label: "Price P0" comes back as a link in Fair value
+            lb = str(ws[f"B{r}"].value or "").strip()
+            if lb and lb not in cells:
+                cells[lb], cells[("note", lb)] = ws[f"C{r}"].value, ws[f"D{r}"].value
+        cells["rf"], cells[("note", "rf")] = wi["C7"].value, wi["D7"].value
         r = next((r for r in range(1, ws.max_row + 1) if ws[f"B{r}"].value == "Equity risk premium ERP"), None)
         if r and isinstance(ws[f"C{r}"].value, (int, float)):        # typed in the sheet, not the link to Inputs
             erp = float(ws[f"C{r}"].value)
@@ -577,51 +584,106 @@ def ddm_workbook(t):
     return erp, source, cells
 
 
-def check_workbook(t, v, cells, as_of, rf10, flags, peers=None):
-    """Stop if the YAML's assumptions (and its peers and comps choices) differ from sheet t of the DDM workbook;
-    flag older workbook data."""
+def workbook_inputs(t):
+    """The DDM inputs of sheet t of the DDM workbook, used as they are: the workbook is the one place for the assumptions
+    (g1, T, g2, method, payout, β, ERP, peers and comps choices) and for the data they apply to (P0, D0, rf), so the report
+    gives the workbook's value. Stops if the stock has no sheet: set its assumptions in the workbook first."""
+    erp, src_erp, cells = ddm_workbook(t)
+    if cells is None:
+        raise SystemExit(f"{t} has no sheet in {DDM_WORKBOOK.name}: add it and set its assumptions first "
+                         f"(python3 scripts/build_ddm_workbook.py {t} --as-of 2026-11-06), then build the report")
+
     def cell(prefix):
-        return next((x for label, x in cells.items() if label.startswith(prefix)), None)
+        return next((x for label, x in cells.items() if isinstance(label, str) and label.startswith(prefix)), None)
 
-    num = lambda x: float(x) if isinstance(x, (int, float)) else None      # noqa: E731
-    beta_over = (v.get("overrides") or {}).get("beta")
-    method = v.get("method", "two_stage")
-    pairs = [   # name, YAML, workbook, format
-        ("g1", float(v.get("g1", 0.0)), num(cell("g1, growth in stage 1")), "{:.2%}"),
-        ("T", int(v.get("T", 5)), num(cell("T, years in stage 1")), "{:.0f}"),
-        ("g2", float(v.get("g2", 0.02)), num(cell("g2, growth after T")), "{:.2%}"),
-        ("dividend_basis", v.get("dividend_basis", "dividends"),
-         {"Dividends": "dividends", "Dividends + buybacks": "dividends_plus_buybacks"}.get(cell("Dividends, or dividends + buybacks")), "{}"),
-        ("beta override", float(beta_over["value"]) if beta_over else None, num(cell("β override")), "{:.3f}"),
-    ]
-    if method != "none":       # the workbook has no "none": a stock without dividends shows n/a there
-        pairs.append(("method", method, {"Two-stage": "two_stage", "GGM": "gordon"}.get(cell("Method for the fair value")), "{}"))
+    def note(prefix):
+        return str(next((x for key, x in cells.items() if isinstance(key, tuple) and key[1].startswith(prefix)), "") or "")
+
+    def number(prefix, required=True):
+        x = cell(prefix)
+        if isinstance(x, (int, float)) and not isinstance(x, bool):
+            return float(x)
+        if required:
+            raise SystemExit(f"Sheet {t} of {DDM_WORKBOOK.name} has no number in '{prefix}': type it there, or refresh the sheet")
+        return None
+
+    date = cell("Price date")
+    if not isinstance(date, datetime):
+        raise SystemExit(f"Sheet {t} of {DDM_WORKBOOK.name} has no price date: refresh it with build_ddm_workbook.py")
+    basis = {"Dividends": "dividends", "Dividends + buybacks": "dividends_plus_buybacks"}.get(cell("Dividends, or dividends + buybacks"))
+    method = {"Two-stage": "two_stage", "GGM": "gordon"}.get(cell("Method for the fair value"))
+    if basis is None or method is None:
+        raise SystemExit(f"Sheet {t} of {DDM_WORKBOOK.name}: choose the payout (Dividends or Dividends + buybacks) and the "
+                         "method (Two-stage or GGM) in their yellow cells")
+    g2 = number("g2, growth after T")
     g = cell("g, Gordon growth")
-    if isinstance(g, (int, float)):            # typed over the default link to g2; the report's Gordon uses g2
-        pairs.append(("g2 (workbook g, Gordon growth)", float(v.get("g2", 0.02)), float(g), "{:.2%}"))
-    if COMPS_STAT_LABEL in cells:              # the sheet has the comps block: same peers and choices as the YAML
-        listed = lambda xs: ", ".join(sorted(xs)) or "none"                   # noqa: E731
-        sheet_peers = {str(cells.get(lb)).strip().upper() for lb in PEER_LABELS if str(cells.get(lb) or "").strip()}
-        pairs.append(("peers", listed({str(p).upper() for p in (peers or [])}), listed(sheet_peers), "{}"))
-        pairs.append(("comps_stat", v.get("comps_stat", "median"), COMPS_STATS.get(cells.get(COMPS_STAT_LABEL)), "{}"))
-        used = {mid for mid, lb in COMPS_USE_LABELS.items() if cells.get(lb) == "Yes"}
-        pairs.append(("comps_primary", listed(v.get("comps_primary") or ["forward_pe", "ev_ebitda"]), listed(used), "{}"))
-    show = lambda x, f: "empty" if x is None else f.format(x)                # noqa: E731
-    diff = [f"{name}: YAML {show(a, f)}, workbook {show(b, f)}" for name, a, b, f in pairs
-            if not (a == b or (isinstance(a, (int, float)) and isinstance(b, (int, float)) and abs(a - b) < 1e-9))]
-    if diff:
-        raise SystemExit(f"{t}.yaml and sheet {t} of {DDM_WORKBOOK.name} differ, so the report and the workbook would "
-                         "give different numbers:\n  " + "\n  ".join(diff) + "\nMake them the same, then run again.")
-    wb_date = cell("Price date")
-    if isinstance(wb_date, datetime) and pd.Timestamp(wb_date).normalize() != as_of:
-        flags.append((f"Workbook sheet {t} has prices of {wb_date:%d %b %Y}, the report of {as_of:%d %b %Y}: run "
-                      f"build_ddm_workbook.py {t} --as-of {as_of:%Y-%m-%d}", False))
-    elif isinstance(cells.get("rf"), (int, float)) and abs(cells["rf"] - rf10) > 1e-9:
-        flags.append((f"Workbook rf {cells['rf']:.2%}, report {rf10:.2%}: run both on the same download "
-                      "(build_ddm_workbook.py, then this script with --refresh)", False))
+    if isinstance(g, (int, float)) and abs(g - g2) > 1e-9:     # typed over the link to g2
+        raise SystemExit(f"Sheet {t}: 'g, Gordon growth' is typed ({g:.2%}) and differs from g2 ({g2:.2%}). The report's Gordon "
+                         "model uses g2: clear the cell, or type g2 there")
+
+    # D0 used, as the sheet's formulas: D0 + N(buybacks) / shares, when shares > 0, with Dividends + buybacks
+    D0_div = number("Dividend D0, last 12 months")
+    buy, shares = number("Buybacks, last fiscal year", False), number("Diluted average shares, same year", False)
+    bps = (buy or 0.0) / shares if shares and shares > 0 else 0.0
+    with_bb = basis == "dividends_plus_buybacks"
+    over = number("β override", False)
+    beta = over if over is not None else number("β, 60 months on SPY")
+    rf = cells.get("rf")
+    if not isinstance(rf, (int, float)):
+        raise SystemExit(f"No rf in Inputs C7 of {DDM_WORKBOOK.name}: refresh the workbook")
+    if COMPS_STAT_LABEL not in cells:
+        raise SystemExit(f"Sheet {t} has no comparables block: refresh it with build_ddm_workbook.py {t}")
+
+    months = re.search(r"(\d+) complete months", note("β, 60 months on SPY"))
+    rf_day = re.search(r"(\d{2} \w{3} \d{4})", str(cells.get(("note", "rf")) or ""))
+    src_d = "Dividends, 12 months + last FY buybacks per share" if with_bb else "Dividends paid, last 12 months"
+    if "typed in" in note("Dividend D0"):
+        src_d += ", one payment typed in (workbook)"
+    return {
+        "as_of": pd.Timestamp(date).normalize(), "P0": number("Price P0"), "D0_div": D0_div,
+        "D0": D0_div + bps if with_bb else D0_div, "basis": basis, "method": method,
+        "g1": number("g1, growth in stage 1"), "T": int(round(number("T, years in stage 1"))), "g2": g2,
+        "beta": beta, "beta_override": over is not None, "rf": float(rf), "erp": erp,
+        "peers": [str(cells.get(lb)).strip().upper() for lb in PEER_LABELS if str(cells.get(lb) or "").strip()],
+        "comps_stat": COMPS_STATS.get(cells.get(COMPS_STAT_LABEL), "median"),
+        "comps_primary": [mid for mid, lb in COMPS_USE_LABELS.items() if cells.get(lb) == "Yes"],
+        "sources": {
+            "P0": f"Close {pd.Timestamp(date):%d.%m.%y}, not adjusted", "D0": src_d,
+            "beta": "Override in the workbook" if over is not None else
+                    f"Slope on SPY, {months.group(1) if months else WINDOW} months",
+            "rf10": f"FRED DGS10, {pd.Timestamp(rf_day.group(1)):%d.%m.%y}" if rf_day else f"{DDM_WORKBOOK.name}, Inputs",
+            "erp": src_erp},
+    }
 
 
-def analyse(cfg, snap):
+def yaml_leftovers(cfg, wb):
+    """The workbook holds the assumptions, so the YAML only has the text. Stop on a YAML override the workbook would not
+    see; list the YAML numbers that are no longer used, with the workbook value the report uses instead."""
+    t, v = cfg["ticker"], cfg.get("valuation") or {}
+    bypass = sorted(set(v.get("overrides") or {}) & {"P0", "D0", "beta", "rf10"})
+    if bypass:
+        raise SystemExit(f"{t}.yaml overrides {', '.join(bypass)}, which the report now takes from {DDM_WORKBOOK.name}. "
+                         f"Delete them from the YAML; type a β (e.g. Bloomberg BETA) in the β override of sheet {t}")
+    show = {"g1": "{:.2%}", "T": "{:.0f}", "g2": "{:.2%}", "erp": "{:.2%}"}
+    used = {"g1": wb["g1"], "T": wb["T"], "g2": wb["g2"], "erp": wb["erp"], "method": wb["method"],
+            "dividend_basis": wb["basis"], "comps_stat": wb["comps_stat"], "comps_primary": sorted(wb["comps_primary"])}
+    lines = []
+    for key, x in used.items():
+        if key in v:
+            y = sorted(v[key]) if isinstance(v[key], list) else v[key]
+            fmt = show.get(key, "{}")
+            same = y == x or (isinstance(y, (int, float)) and abs(float(y) - float(x)) < 1e-9)
+            lines.append(f"valuation.{key}" + ("" if same else f": {fmt.format(y)} in the YAML, {fmt.format(x)} in the workbook"))
+    if cfg.get("peers"):
+        same = sorted(str(p).upper() for p in cfg["peers"]) == sorted(wb["peers"])
+        lines.append("peers" + ("" if same else f": {', '.join(cfg['peers'])} in the YAML, {', '.join(wb['peers'])} in the workbook"))
+    if lines:
+        print(f"NOTE: {t}.yaml still has numbers the report now takes from sheet {t} of {DDM_WORKBOOK.name} (the workbook's "
+              "are used; delete these from the YAML):\n  " + "\n  ".join(lines))
+
+
+def analyse(cfg, snap, wb):
+    """The figures of the report. wb: the DDM inputs of the stock's sheet in the workbook (workbook_inputs)."""
     t = cfg["ticker"]
     v = cfg.get("valuation") or {}
     a = cfg.get("alpha") or {}
@@ -643,42 +705,39 @@ def analyse(cfg, snap):
     R_S = est[list(W.index)] @ W
     mu_S, sigma_S = R_S.mean() * 12, R_S.std() * math.sqrt(12)
 
-    # --- inputs of the DDM (§3)
+    # --- inputs of the DDM (§3): all from the stock's sheet of the DDM workbook, so the report gives the workbook's value
+    if wb["as_of"] != as_of:
+        raise SystemExit(f"Sheet {t} of {DDM_WORKBOOK.name} has prices of {wb['as_of']:%d %b %Y}, this report of "
+                         f"{as_of:%d %b %Y}: refresh the workbook first (python3 scripts/build_ddm_workbook.py {t} "
+                         f"--as-of {as_of:%Y-%m-%d}), then run this again")
     close = frame(snap["close"])[t].dropna().loc[:as_of]       # the download may hold later closes
-    P0, src_p = given("P0", float(close.iloc[-1]), f"Close {as_of:%d.%m.%y}, not adjusted")
+    P0, src_p = wb["P0"], wb["sources"]["P0"]
+    if abs(float(close.iloc[-1]) - P0) > 0.005:
+        flags.append((f"Price {P0:.2f} in the workbook, {float(close.iloc[-1]):.2f} in this download: Yahoo revised the "
+                      "close, refresh the workbook and run this with --refresh", False))
     divs = pd.Series(snap["dividends"], dtype=float)
     divs.index = pd.to_datetime(divs.index)
     ttm = float(divs.loc[(divs.index > as_of - pd.Timedelta(days=365)) & (divs.index <= as_of)].sum())
+    if abs(ttm - wb["D0_div"]) > 1e-6:
+        flags.append((f"Dividends of the last 12 months: {wb['D0_div']:.3f} in the workbook (used), {ttm:.3f} in Yahoo's "
+                      "history here. The workbook may include a payment Yahoo misses (MISSING_DIVIDENDS)", False))
 
     f = frame({k: {d: x for d, x in s.items()} for k, s in snap["statements"][t].items()}).reindex(columns=STATEMENT_ITEMS)
     last = f.iloc[-1]
     div_cash = -float(np.nan_to_num(last["Cash Dividends Paid"]))
     buy_cash = -float(np.nan_to_num(last["Repurchase Of Capital Stock"]))
-    shares_fy = float(last["Diluted Average Shares"]) if np.isfinite(last["Diluted Average Shares"]) else None
-    basis = v.get("dividend_basis", "dividends")
-    if basis == "dividends_plus_buybacks" and shares_fy:
-        D0_default = ttm + buy_cash / shares_fy
-        src_d = "Dividends, 12 months + last FY buybacks per share"
-    else:
-        D0_default, src_d = ttm, "Dividends paid, last 12 months"
-    D0, src_d = given("D0", D0_default, src_d)
+    basis = wb["basis"]
+    D0, src_d = wb["D0"], wb["sources"]["D0"]      # with buybacks: in USD per ADR, as the workbook converts them
     if buy_cash > div_cash and basis == "dividends":
         flags.append(("Buybacks exceed dividends: the DDM on dividends alone undervalues the stock", True))
 
-    beta, src_b = given("beta", float(est[t].cov(est["SPY"]) / est["SPY"].var()), f"Slope on SPY, {len(est)} months")
-    rf10, src_rf = given("rf10", float(rates["DGS10"].dropna().iloc[-1]), f"FRED DGS10, {rates['DGS10'].dropna().index[-1]:%d.%m.%y}")
-    erp, src_erp, cells = ddm_workbook(t)
-    if "erp" in v and abs(float(v["erp"]) - erp) > 1e-9:
-        raise SystemExit(f"{t}.yaml has erp {float(v['erp']):.3%}, the workbook {erp:.3%} ({src_erp}). "
-                         "Delete erp from the YAML: the report takes it from the workbook")
-    if cells is not None:
-        check_workbook(t, v, cells, as_of, rf10, flags, cfg.get("peers"))
+    beta, src_b = wb["beta"], v.get("beta_source") or wb["sources"]["beta"]
+    rf10, src_rf = wb["rf"], wb["sources"]["rf10"]
+    erp, src_erp = wb["erp"], wb["sources"]["erp"]
     k = rf10 + beta * erp
 
-    method = v.get("method", "two_stage")
-    if D0 <= 0:
-        method = "none"
-    g1, g2, T = float(v.get("g1", 0.0)), float(v.get("g2", 0.02)), int(v.get("T", 5))
+    method = wb["method"] if D0 > 0 else "none"
+    g1, g2, T = wb["g1"], wb["g2"], wb["T"]
     if method != "none" and k <= g2:
         raise SystemExit(f"k ({k:.2%}) must be above g2 ({g2:.2%})")
 
@@ -700,11 +759,9 @@ def analyse(cfg, snap):
     eps_fwd, src_fe = given("forward_eps", snap["estimates"]["eps_next"], "Yahoo consensus")
     eps_ttm = info.get("trailingEps")
     bvps = info.get("bookValue")
-    primary = list(v.get("comps_primary") or ["forward_pe", "ev_ebitda"])
-    outside = [mid for mid in primary if mid not in SHOWN]
-    if outside:
-        raise SystemExit(f"comps_primary can only use the multiples in the report ({', '.join(SHOWN)}), not {', '.join(outside)}")
-    stat = v.get("comps_stat", "median")
+    primary, stat = wb["comps_primary"], wb["comps_stat"]       # the sheet's "In the comps value" and "Comps statistic"
+    if not primary:
+        raise SystemExit(f"Sheet {t}: no multiple has Yes under 'In the comps value': choose at least one")
     cp = comps_from_snapshot(snap, P0, D0, eps_fwd, primary, stat, cfg.get("peer_names"))
     rows, comps, V_comp, s = cp["rows"], cp["comps"], cp["V_comp"], cp["stock"]
     flags.extend((x, False) for x in cp["peer_notes"])
@@ -798,7 +855,7 @@ def analyse(cfg, snap):
         "ticker": t, "as_of": snap["as_of"], "downloaded_at": snap["downloaded_at"],
         "name": cfg.get("name") or short_name(info.get("longName")), "exchange": info.get("fullExchangeName"),
         "sector": info.get("sector"), "industry": info.get("industry"), "currency": info.get("currency"),
-        "P0": P0, "D0": D0, "beta": beta, "rf10": rf10, "erp": erp, "k": k, "g1": g1, "g2": g2, "T": T, "method": method,
+        "P0": P0, "D0": D0, "beta": beta, "beta_override": wb["beta_override"], "rf10": rf10, "erp": erp, "k": k, "g1": g1, "g2": g2, "T": T, "method": method,
         "sources": {"P0": src_p, "D0": src_d, "beta": src_b, "rf10": src_rf, "erp": src_erp, "forward_eps": src_fe},
         "V_gordon": V_gordon, "V_2stage": V_2stage, "V_ddm": V_ddm, "pv_tv": pv_tv, "tv_share": pv_tv / V_ddm if pv_tv else None,
         "V_ddm_beta1": V_ddm_beta1, "V_comp": V_comp, "V0": V0, "mos": mos, "mos_ddm": mos_ddm,
@@ -1114,7 +1171,7 @@ def blocks(cfg, fig):
     src = fig["sources"]
     two = fig["method"] == "two_stage"
     inp = [(f"{P_0}, price", usd(fig["P0"]), src["P0"]), (f"{D_0}, dividend", usd(fig["D0"]), src["D0"]),
-           ("β on SPY", num(fig["beta"]), src["beta"]), (f"{R_F}, 10-year yield", pct(fig["rf10"], 2), src["rf10"]),
+           ("β" if fig.get("beta_override") else "β on SPY", num(fig["beta"]), src["beta"]), (f"{R_F}, 10-year yield", pct(fig["rf10"], 2), src["rf10"]),
            ("ERP", pct(fig["erp"], 2), src["erp"]), (f"k = {R_F} + β ERP", pct(fig["k"], 2), "CAPM"),
            (f"{G_1}, first stage", pct(fig["g1"], 1) if two else "not used", rich(v.get("g1_source"), tok) if two else "Gordon: one growth rate"),
            ("T, years", (str(fig["T"]) if fig["T"] is not None else "n/a") if two else "not used", rich(v.get("T_source"), tok) if two else ""),
@@ -1307,11 +1364,14 @@ def build(ticker, as_of_arg, refresh):
         raise SystemExit(f"No inputs for {ticker}: copy {INPUTS.name}/_TEMPLATE.yaml to {path.name} and fill it in")
     cfg = yaml.safe_load(path.read_text())
     cfg["ticker"] = ticker
-    if len(cfg.get("peers") or []) == 0:
-        raise SystemExit("List the 5 or 6 peers in the YAML")
+    wb = workbook_inputs(ticker)          # the assumptions and the peers: the stock's sheet of the DDM workbook
+    yaml_leftovers(cfg, wb)
+    if not wb["peers"]:
+        raise SystemExit(f"Sheet {ticker} of {DDM_WORKBOOK.name} has no peers (row 122 on): type them there")
+    cfg["peers"] = wb["peers"]
 
     snap = load_or_download(cfg, as_of_arg, refresh)
-    fig = analyse(cfg, snap)
+    fig = analyse(cfg, snap, wb)
     page = Template(SHELL.read_text()).substitute(blocks(cfg, fig))
 
     run = RUNS / fig["as_of"]                   # the run folder: the as-of date of the prices

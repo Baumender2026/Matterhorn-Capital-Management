@@ -4,21 +4,13 @@
 name: Coca-Cola
 # Listed non-alcoholic beverages, chosen without Bloomberg RV: replace by hand if RV differs.
 # Left out because Yahoo's ratios are broken: COKE (forward P/E 5.4x, negative P/B) and KOF (EV/EBITDA 1.5x, currency mismatch).
-peers: [PEP, KDP, MNST, CCEP, CELH, FIZZ]
+# The peers, and every number of the DDM (g1, T, g2, method, payout, β), are in sheet KO of DDM_valuation.xlsx.
 peer_names: {CCEP: Coca-Cola Europacific}
 
-valuation:
-  method: two_stage              # two_stage | gordon | none
-  dividend_basis: dividends      # buybacks are small: USD 0.9bn in nine months against USD 6.8bn of dividends
-  g1: 0.085
-  g1_source: "Yahoo consensus: average EPS growth, this and next year"
-  T: 5
+valuation:                       # the source texts printed next to the workbook's numbers
+  g1_source: "Bloomberg, long-term EPS growth (LTG)"
   T_source: "Years of above-trend growth; ours"
-  g2: 0.03
   g2_source: "Below the 4–6% sales algorithm [8]; ours"
-  comps_primary: [forward_pe, ev_ebitda]
-  comps_stat: median
-  overrides: {}                  # e.g. beta: {value: 0.30, source: "Bloomberg BETA"}
 
 alpha:
   probability_gap_closes: 0.0    # 0 is the TA's alpha never: no dated event forces the gap shut

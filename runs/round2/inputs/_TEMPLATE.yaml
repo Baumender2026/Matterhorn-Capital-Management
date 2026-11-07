@@ -17,26 +17,17 @@
 # Keep the text short: shorten it rather than shrinking the type.
 
 name:                          # short company name; leave empty to use Yahoo's
-peers: []                      # 5 or 6 tickers from Bloomberg RV: same industry, US-listed if possible. The same as the
-                               # peer cells of the stock's sheet in DDM_valuation.xlsx (row 122 on): the report stops if they differ
+peer_names: {}                 # optional display names, e.g. {CCEP: Coca-Cola Europacific}. The peers themselves are
+                               # in the stock's sheet of DDM_valuation.xlsx (row 122 on), from Bloomberg RV
 
-valuation:                     # the fair value is the DDM value; the comparables are only a double check
-  method: two_stage            # gordon: mature, stable growth. two_stage: not in its normal state today
-                               # (turnaround, cyclical low). none: no dividend, so the fair value falls back on the comps.
-  dividend_basis: dividends    # dividends_plus_buybacks if buybacks are large: the DDM on dividends undervalues
-                               # ERP: from DDM_valuation.xlsx (Inputs C8, or the country ERP typed in the stock's sheet),
-                               # so the report and the workbook match
-  g1: 0.05                     # first-stage growth: the g1 of the stock's sheet in DDM_valuation.xlsx (Yahoo's average earnings growth estimate)
-  g1_source: ""
-  T: 5                         # years to reach the normal state: your assumption
+valuation:                     # every number of the DDM comes from the stock's sheet of DDM_valuation.xlsx: P0, D0, β (the
+                               # override, else the 60-month β), rf, ERP, g1, T, g2, the method, the payout and the comps
+                               # choices. Set them there first; this file holds only the text.
+  g1_source: ""                # printed next to g1, e.g. "Bloomberg, long-term EPS growth (LTG)"
   T_source: ""
-  g2: 0.03                     # terminal growth: below k and close to long-run economic growth (3% for every stock)
   g2_source: ""
-  comps_primary: [forward_pe, ev_ebitda]   # the multiples averaged into the comps value; p_fcf is the other choice.
-                               # As "In the comps value" (Yes) in the stock's sheet: the report stops if they differ
-  comps_stat: median           # median or mean of the peers: "Comps statistic" Median or Average in the sheet
-  overrides: {}                # any computed input, with its source. Keys: P0, D0, beta, rf10, forward_eps
-                               # e.g. beta: {value: 0.30, source: "Bloomberg BETA"}
+  beta_source: ""              # optional, printed next to β, e.g. "Bloomberg BETA" when the sheet has a β override
+  overrides: {}                # forward_eps only (the comps): {value: 4.10, source: "Bloomberg EE"}
 
 alpha:
   probability_gap_closes: 1.0  # 1 is the TA's alpha closed: a catalyst closes the gap within a year.
