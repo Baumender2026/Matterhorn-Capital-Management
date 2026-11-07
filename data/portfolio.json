@@ -1,7 +1,7 @@
 {
  "status": "ok",
  "as_of": "2026-11-06",
- "generated_at": "2026-11-06T22:11:05Z",
+ "generated_at": "2026-11-07T00:06:31Z",
  "currency": "USD",
  "current_round": "Round 1",
  "nav": 98099075.63,
@@ -12,7 +12,7 @@
   "max_drawdown": -0.021173,
   "ex_ante_vol": 0.084401,
   "var_1m_95_pct": 0.040079,
-  "var_1m_95_usd": 3931746.55,
+  "var_1m_95_usd": 3931747.38,
   "daily_returns": 15,
   "min_days_for_stats": 20,
   "rf_1m_latest": null,
@@ -68,7 +68,7 @@
    "weight": 0.102003,
    "target_weight": 0.1024,
    "drift_pp": -0.0397,
-   "risk_contribution": 0.180921,
+   "risk_contribution": 0.18092,
    "target_risk_contribution": 0.1742
   },
   {
@@ -107,7 +107,7 @@
    "weight": 0.169662,
    "target_weight": 0.1648,
    "drift_pp": 0.4862,
-   "risk_contribution": 0.078931,
+   "risk_contribution": 0.078932,
    "target_risk_contribution": 0.0783
   },
   {
@@ -120,7 +120,7 @@
    "weight": 0.156646,
    "target_weight": 0.1526,
    "drift_pp": 0.4046,
-   "risk_contribution": 0.091665,
+   "risk_contribution": 0.091666,
    "target_risk_contribution": 0.0884
   },
   {
