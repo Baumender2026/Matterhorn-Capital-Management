@@ -42,12 +42,19 @@ new portfolio, the team. Write its text by hand; the numbers come from the runs.
    `Inputs` C7, the ERP, g1, T, g2, method, payout, peers and comps choices), so the report gives the workbook's value. It stops
    if the stock has no sheet or the sheet has prices of another date, and notes any number left in the YAML (not used).
 3. **The stocks:** for each, `python3 scripts/build_stock_report.py <TICKER> --as-of 2026-11-06` (see *Add a stock*).
-4. **The portfolio:** fill in `runs/round2/inputs/portfolio.yaml` (`funding`: how the 20% is raised, and the `stocks` in report
-   order), then `python3 scripts/build_round2_portfolio.py`. Treynor-Black gives each stock's weight inside the 20% sleeve; its
-   weight in the portfolio is that × 20%. The run stops, and says why, on a negative weight (never dropped or rescaled, unless `negative_weights: zero` applies the
-   course rule: weight 0, raw weight shown and flagged, the others rescaled), weights
-   that do not add up to 100%, a tracking error outside 2–5%, or inputs from different dates. It writes `portfolio.json` and
-   `portfolio_for_PRTU.csv` (the positions to enter in Bloomberg PRTU).
+4. **The portfolio:** fill in `runs/round2/inputs/portfolio.yaml` (`te_target`, the tracking error to aim for, 4% as in the TA's
+   notebook, and the `stocks` in report order), then `python3 scripts/build_round2_portfolio.py`. It follows the TA's notebook
+   §6–§10, with our Round 1 SAA as passive portfolio and benchmark:
+   - **Weights inside the active portfolio A:** w<sub>i</sub> ∝ α<sub>i</sub> / σ²(ε<sub>i</sub>).
+   - **Size of A:** Treynor-Black's w<sub>A</sub>* (eqs. 11–12). The tracking error is w<sub>A</sub> × sd(R<sub>A</sub> − R<sub>S</sub>)√12, so
+     w<sub>A</sub> is w<sub>A</sub>* pushed between the 2% floor and `te_target`.
+   - **Positions:** every ETF goes to (1 − w<sub>A</sub>) × its SAA weight, each stock to w<sub>A</sub> × w<sub>i</sub>. Whole shares, rounded
+     down; the rest is cash.
+
+   The run stops, and says why, on a negative weight (never dropped or rescaled, unless `negative_weights: zero` applies the
+   course rule: weight 0, raw weight shown and flagged, the others rescaled), weights that do not add up to 100%, a tracking
+   error outside 2–5% after rounding, or inputs from different dates. It writes `portfolio.json` and `portfolio_for_PRTU.csv`
+   (the shares to enter in Bloomberg PRTU).
 5. **Promote** what the report uses: `python3 scripts/promote.py runs/round2/2026-11-06/round1_performance.json
    runs/round2/2026-11-06/portfolio.json runs/round2/2026-11-06/<TICKER>.dc.html …` (one page file per stock).
 6. **Assemble and export:** `python3 scripts/build_round2_report.py --pdf`. It fills the marked blocks of the report, the stock

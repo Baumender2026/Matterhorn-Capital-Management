@@ -298,13 +298,17 @@ def stock_blocks(order, first_page, total):
 # ---------------------------------------------------------------- 03 — Treynor-Black, 04 — portfolio description
 
 def portfolio_blocks(pf, perf):
-    s = pf["sleeve"] if pf else 0.20
-    sl = f"% of the {s:.0%} sleeve"
+    s = pf["sleeve"] if pf else None                      # w_A: the share of the portfolio in the stocks
+    sl = "% of A"
     k = pf["risk"] if pf else {}
     a = pf["active"] if pf else {}
+    te_t = f"{pf['te_target'] * 100:g}%" if pf and pf.get("te_target") else DASH   # 4% or 2.5%
+    star = f"w<sub>A</sub>* {pct(a.get('w_A_star'), 1)}"
+    bound = {"treynor_black": f"Treynor-Black {star}", "te_target": f"{star}, capped at TE {te_t}",
+             "te_floor": f"{star}, raised to TE 2%"}.get(a.get("bound"), "Treynor-Black and the TE budget")
     b = {}
     b["tb-stats"] = stat_row([
-        ("Sleeve", f"{s:.0%}", "Sold from the SAA"),
+        ("In the stocks", pct(s, 1), bound),
         ("Ex-ante TE vs SAA", pct(k.get("te")), "Budget 2–5%"),
         ("Ex-ante volatility", pct(k.get("vol_new")), f'SAA {pct(k.get("vol_saa"))}'),
         ("1-month 5% VaR", pct(k.get("var_new")), f'SAA {pct(k.get("var_saa"))}')])
@@ -325,17 +329,22 @@ def portfolio_blocks(pf, perf):
                           pct(x["weight_sleeve_tb"]), pct(x["weight_sleeve_tb"] * s)], ""))
         else:
             rows.append(([(f'[Stock {i + 1}]', SANS)] + [DASH] * 7, "muted"))
-    rows.append(([("Sleeve, total", SANS), DASH, DASH, DASH, DASH, pct(1) if pf else DASH, pct(1) if pf else DASH, pct(s) if pf else DASH], "total"))
+    rows.append(([("Active portfolio A, total", SANS), DASH, DASH, DASH, DASH, pct(1) if pf else DASH, pct(1) if pf else DASH, pct(s)], "total"))
     rows.append(([("Active portfolio A", SANS), pct(a.get("alpha_A"), 1, True), num(a["sigma_eps_A"] ** 2, 4) if a else DASH, DASH,
                   num(a.get("ir_A")), DASH, DASH, DASH], ""))
     zeroed = [x["ticker"] for x in stocks if x.get("set_to_zero")]
     rule = (f"{', '.join(zeroed)}: negative raw weight, entered as 0 by the course rule (Checkpoint 1: weight 0 for a negative alpha, long-only); "
-            "the positive weights are rescaled to fill the sleeve, and the active portfolio A uses the entered weights. " if zeroed else "A negative weight is shown and flagged, never dropped or rescaled. ")
-    b["tb-table"] = (title(f"Table 3 · Treynor-Black: the stocks inside the {s:.0%} sleeve") + table(head, rows, size=11.5, pad=4)
-                     + caption(f"Weights inside the sleeve ∝ α / σ²(ε) (Class 3 Part II): weight in the portfolio = weight in the sleeve × {s:.0%}. "
-                               + rule +
-                               f"Treynor-Black optimal size w<sub>A</sub>* = {pct(a.get('w_A_star'), 1)}; we hold {s:.0%}. "
-                               f"Sharpe Ratio of the SAA {num(a.get('sharpe_saa'))}, with the active portfolio {num(a.get('sharpe_with_active'))} (eq. 16)."))
+            "the positive weights are rescaled to fill A, and A uses the entered weights. " if zeroed else "A negative weight is shown and flagged, never dropped or rescaled. ")
+    size = (f"Size of A: Treynor-Black w<sub>A</sub>* = {pct(a.get('w_A_star'), 1)} (eqs. 11–12). The SAA is the benchmark: "
+            f"TE = w<sub>A</sub> × {pct(a.get('te_per_unit'))} (the TE of A against the SAA), so the 2% floor and our {te_t} target allow "
+            f"w<sub>A</sub> from {pct(a.get('w_A_lo'))} to {pct(a.get('w_A_hi'))}; w<sub>A</sub> = {pct(s)}. " if a.get("w_A_hi") is not None
+            else f"Treynor-Black optimal size w<sub>A</sub>* = {pct(a.get('w_A_star'), 1)}, kept inside the TE budget. ")
+    b["tb-table"] = (title("Table 3 · Treynor-Black: the stocks inside the active portfolio A" + (f", {pct(s, 1)} of the portfolio" if pf else ""))
+                     + table(head, rows, size=11.5, pad=4)
+                     + caption("Weights inside A ∝ α / σ²(ε) (Class 3 Part II): weight in the portfolio = weight in A × w<sub>A</sub>. "
+                               + rule + size +
+                               f"Sharpe Ratio of the SAA {num(a.get('sharpe_saa'))}, {num(a.get('sharpe_at_w_A'))} at w<sub>A</sub> "
+                               f"({num(a.get('sharpe_with_active'))} at w<sub>A</sub>*, eq. 16)."))
 
     head = [("Security", "left"), ("Bloomberg ticker", "left"), ("Ccy", "left"), ("Shares", "right"), ("Trade", "right"), ("Price", "right"), ("Weight", "right")]
     rows = []
@@ -361,13 +370,12 @@ def portfolio_blocks(pf, perf):
     rows = [([(c[0], SANS)] + c[1:], kd) for c, kd in rows]
     b["portfolio-table"] = title("Table 4 · Portfolio description, as entered in Bloomberg PRTU") + table(head, rows, size=11, pad=4)
     if pf:
-        how = {"target": "every ETF cut to 80% of its SAA target weight", "pro_rata": "the same share sold from every ETF",
-               "positions": "sales of the positions listed"}[pf["funding"]]
-        b["portfolio-note"] = caption(f"Price date: close of {long_date(pf['as_of'])} for every position. The {s:.0%} sleeve was raised by {how}. "
+        b["portfolio-note"] = caption(f"Price date: close of {long_date(pf['as_of'])} for every position. Every ETF goes to (1 − w<sub>A</sub>) = "
+                                      f"{pct(1 - s, 2)} of its SAA weight, so the SAA mix does not change; each stock to w<sub>A</sub> × its weight in A. "
                                       f"Whole shares, rounded down; the rest is cash. The weights add up to {pct(pf['total']['weight'])}. "
                                       f"Ex-ante TE, volatility and VaR on the last {k['months']} complete months ({k['window'][0]} – {k['window'][1]}).")
     else:
-        b["portfolio-note"] = caption("Price date: close of Friday 6 November 2026. [How the 20% was raised.] Whole shares, rounded down; the rest is cash. "
+        b["portfolio-note"] = caption("Price date: close of Friday 6 November 2026. Every ETF goes to (1 − w<sub>A</sub>) of its SAA weight. Whole shares, rounded down; the rest is cash. "
                                       "Filled by scripts/build_round2_portfolio.py once the stocks are chosen.")
     return b
 
