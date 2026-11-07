@@ -20,10 +20,10 @@ If the text is too long, the build stops and says which page and by how many pix
 Before writing a YAML, value the candidates from the Bloomberg screen (`EQS`) in `runs/round2/inputs/DDM_valuation.xlsx`. It has one sheet per stock, with the Gordon Growth Model and the two-stage DDM as Excel formulas, and a Summary with fair value, margin of safety (V0 / P0 − 1) and signal. From row 101, each sheet has the comparables of the stock report as Excel formulas (same multiples, n/m rule, peer median and implied prices, from the same code), and Summary shows the comps value, its margin of safety and the TA's DDM vs comps check from column Y. Column X is the team's.
 
 1. **Add the stocks:** `python3 scripts/build_ddm_workbook.py KO PEP` (with the workbook closed in Excel). It downloads the price, D0, β on SPY, the 10-year yield and Yahoo's growth estimates, and adds one sheet and one Summary row per ticker.
-2. **Check the yellow cells** in each sheet. A new sheet starts with g1 = Yahoo's average earnings growth estimate (the current and next fiscal year, *Analysis > Growth Estimates*; the next year alone for NVO, PFE, VZ, PEP and NSRGY, added on 7 Nov: `G1_NEXT_YEAR` in the script), g2 = 3%, T = 5, the two-stage method, *Dividends + buybacks* and P/FCF in the comps value (the team's rule for every stock since 7 Nov). Set T for the stock by hand, and the β override if you use Bloomberg `BETA`. ERP and the buy threshold are on `Inputs`: the stock reports read the ERP from there too.
+2. **Check the yellow cells** in each sheet. g1 is Bloomberg's estimated long-term EPS growth (LTG), typed in every sheet: the team's source for all stocks since 7 Nov. A new sheet starts with g1 = Yahoo's average earnings growth estimate (the current and next fiscal year, *Analysis > Growth Estimates*; the next year alone for NVO, PFE, VZ, PEP and NSRGY: `G1_NEXT_YEAR` in the script) until the LTG is typed over it, and that estimate stays in row 23 as a check. Then g2 = 3%, T = 5, the two-stage method, *Dividends + buybacks* and P/FCF in the comps value (the team's rule for every stock since 7 Nov). Set T for the stock by hand, and the β override if you use Bloomberg `BETA`. ERP and the buy threshold are on `Inputs`: the stock reports read the ERP from there too.
    **Non-US companies:** the tickers are US lines (ADRs, or AZN on the NYSE), so price and dividends are in USD and rf stays the US 10-year. Only the ERP changes: the script types the country's ERP in the sheet (Damodaran, 5 Jan 2026: mature market 4.23% + country risk premium), and the report takes it from there. A foreign company's buybacks are converted to USD per ADR. Yahoo's estimates come from the home listing when the US line has few analysts (AZN.L for AZN, 0700.HK for TCEHY, GOOGL for GOOG, NOVO-B.CO for NVO, NESN.SW for NSRGY).
-   The payout is *Dividends* or *Dividends + buybacks* (cheat sheet p. 2): the second adds the last fiscal year's buybacks per share to D0, and the stock report uses the sheet's choice. **Limitation:** Yahoo's growth is per share, so with buybacks in they count twice (in the payout and in the falling share count) and V0 is too high. The note next to g1 says so and gives the total growth without that effect; a flag repeats it in Summary.
-3. **Refresh:** run the same command again, with `--as-of 2026-11-06` for the final numbers. Only the data cells change: your assumptions stay. Add `--g1-yahoo` to also reset g1 to the latest Yahoo estimate (then update the YAMLs).
+   The payout is *Dividends* or *Dividends + buybacks* (cheat sheet p. 2): the second adds the last fiscal year's buybacks per share to D0, and the stock report uses the sheet's choice. **Limitation:** g1 is per-share EPS growth (Bloomberg's LTG, like Yahoo's estimate), so with buybacks in they count twice (in the payout and in the falling share count) and V0 is too high. The note next to g1 says so and gives the total growth without that effect; a flag repeats it in Summary while g1 is still Yahoo's estimate.
+3. **Refresh:** run the same command again, with `--as-of 2026-11-06` for the final numbers. Only the data cells change: your assumptions stay. Add `--g1-yahoo` to also reset g1 to the latest Yahoo estimate: it overwrites the Bloomberg LTG typed in g1 (then update the YAMLs).
    A dividend missing from Yahoo's history goes in `MISSING_DIVIDENDS` in the script, with its source (now AZN's interim of Aug 2026).
 4. **Check the peers** (yellow, row 122 on). A new sheet takes them from the stock's YAML if it lists `peers`, else `PEERS` in the script (proposed by Claude on 6 Nov, not from Bloomberg), else Yahoo's industry list. Check them on Bloomberg `RV`, type over them, and change *Peers: source* once checked; a refresh keeps typed peers, and the stock report uses these. The comps choices (*Comps statistic*, *In the comps value*) are yellow too. A peer or a stock that reports in another currency gets its FCF (and, for the stock, EBITDA, revenue and net debt) converted to USD; Yahoo's own ratios are used as they are, so check those peers on `RV`. Banks (GS, AXP) have no EV/EBITDA or P/FCF, so their comps value rests on forward P/E.
 
@@ -31,8 +31,8 @@ The `Example NKE` sheet reproduces the TA notebook's Nike case (GGM 23.24, two-s
 
 ## The Round 2 report
 
-`report/round2-equity.dc.html`: the cover, the Round 1 results (2 pages), six stock slots (2 pages each), Treynor-Black and the
-new portfolio, the team. Write its text by hand; the numbers come from the runs. On 7–8 November, from the repo root:
+`report/round2-equity.dc.html`: the cover, the Round 1 results (2 pages), one 2-page slot per stock in `portfolio.yaml`
+(six empty slots until the portfolio is promoted), Treynor-Black and the new portfolio, the team. Write its text by hand; the numbers come from the runs. On 7–8 November, from the repo root:
 
 1. **Round 1 results:** `python3 scripts/round1_performance.py --end 2026-11-06`. It writes `runs/round2/2026-11-06/round1_performance.json`
    with the website's calculations, and stops if they do not match `data/portfolio.json` or if the contributions do not add up.
@@ -57,8 +57,8 @@ new portfolio, the team. Write its text by hand; the numbers come from the runs.
    (the shares to enter in Bloomberg PRTU).
 5. **Promote** what the report uses: `python3 scripts/promote.py runs/round2/2026-11-06/round1_performance.json
    runs/round2/2026-11-06/portfolio.json runs/round2/2026-11-06/<TICKER>.dc.html …` (one page file per stock).
-6. **Assemble and export:** `python3 scripts/build_round2_report.py --pdf`. It fills the marked blocks of the report, the stock
-   slots (a slot without a stock shows the layout with placeholders) and the page numbers, writes
+6. **Assemble and export:** `python3 scripts/build_round2_report.py --pdf`. It fills the marked blocks of the report, one stock
+   slot per stock of the portfolio and the page numbers, writes
    `report/pdf/Matterhorn_Round2_Equity.pdf`, and stops if a page overflows.
 
 ## Replace by hand before submitting
@@ -69,7 +69,7 @@ Yahoo can't supply these, so they are typed by hand:
 |---|---|---|
 | Equity risk premium, now 4.46% | `Inputs` C8 of `DDM_valuation.xlsx`: the reports read it | Damodaran, United States, 5 Jan 2026 (country risk premiums page) |
 | ERP of a non-US company | The stock's sheet (typed by the script from `COUNTRY_ERP`) | Damodaran, same page: Switzerland 4.23%, UK, Taiwan and Hong Kong 5.01%, China 5.14% |
-| First-stage growth g1 | The stock's sheet (the report reads it), source text in `valuation.g1_source` | Bloomberg LTG (long-term EPS growth), typed for the first 15 stocks on 6 Nov; Yahoo's next-year estimate for NVO, PFE, VZ, PEP, NSRGY |
+| First-stage growth g1 | The stock's sheet (the report reads it), source text in `valuation.g1_source` | Bloomberg LTG (estimated long-term EPS growth), typed for every stock: the first 15 on 6 Nov, NVO, PFE, VZ, PEP and NSRGY on 7 Nov |
 | Peer set | The yellow peer cells of the stock's sheet (the report reads them) | Bloomberg `RV` |
 | Optional: beta, forward EPS | β override of the stock's sheet (its source text in `valuation.beta_source`); forward EPS in `valuation.overrides` | Bloomberg `BETA`, `EE` |
 

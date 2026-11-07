@@ -10,7 +10,8 @@ The report is an ordinary .dc.html: write its text by hand. Only the blocks betw
   round1-report_figures.json       the Round 1 report's ex-ante figures, to compare with
   round2-<TICKER>.dc.html          two pages per stock (scripts/build_stock_report.py)
   round2-portfolio.json            Treynor-Black and the new portfolio (scripts/build_round2_portfolio.py)
-What is not there yet shows as a placeholder; an empty stock slot shows the stock layout with [TO FILL].
+What is not there yet shows as a placeholder. Once stocks are chosen (round2-portfolio.json), the report has one slot per
+stock, in that order; before, it shows six empty slots with the stock layout and [TO FILL].
 The page numbers in the footers are rewritten every time. The layout is Round 1's (report/round1-saa.dc.html).
 """
 
@@ -280,9 +281,14 @@ def sections(doc):
     return re.findall(r'<section class="page"[\s\S]*?</section>', doc)
 
 
+def n_slots(order):
+    """One slot per chosen stock; six empty slots while none is chosen, to show the layout."""
+    return len(order) or SLOTS
+
+
 def stock_blocks(order, first_page, total):
     pages = []
-    for slot in range(1, SLOTS + 1):
+    for slot in range(1, n_slots(order) + 1):
         t = order[slot - 1] if slot <= len(order) else None
         f = FIGURES / f"round2-{t}.dc.html" if t else None
         if f is not None and f.exists():
@@ -318,7 +324,7 @@ def portfolio_blocks(pf, perf):
             ("IR", "right"), (f"Raw, {sl}", "right"), (f"Entered, {sl}", "right"), ("Entered, % of the portfolio", "right")]
     rows = []
     stocks = pf["stocks"] if pf else []
-    for i in range(SLOTS):
+    for i in range(n_slots(stocks)):
         x = stocks[i] if i < len(stocks) else None
         if x:
             raw = x.get("weight_sleeve_raw", x["weight_sleeve_tb"])
@@ -356,7 +362,7 @@ def portfolio_blocks(pf, perf):
             continue                                                # BIL: not held before or after
         rows.append(([e["name"], (e["bloomberg"], MONO), "USD", f'{e["shares_after"]:,.0f}' if pf else DASH, sign(e["trade"]) if pf else DASH,
                       num(e["price"]) if pf else DASH, pct(e["weight"]) if pf else DASH], ""))
-    for i in range(SLOTS):
+    for i in range(n_slots(stocks)):
         x = stocks[i] if i < len(stocks) else None
         if x:
             name = esc(x["name"]) + (" · not bought: negative alpha" if x.get("set_to_zero") else "")

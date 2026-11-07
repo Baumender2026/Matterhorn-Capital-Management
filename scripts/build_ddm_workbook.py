@@ -5,6 +5,7 @@
     python3 scripts/build_ddm_workbook.py KO PEP JNJ               add stocks, or refresh their data
     python3 scripts/build_ddm_workbook.py KO --as-of 2026-11-06    prices of a given date (final numbers)
     python3 scripts/build_ddm_workbook.py KO --g1-yahoo            also reset g1 to Yahoo's average growth estimate
+                                                                   (overwrites the Bloomberg LTG typed in g1)
 
 Writes runs/round2/inputs/DDM_valuation.xlsx (or --out). Close it in Excel first.
 
@@ -27,8 +28,10 @@ k = rf10 + beta x ERP, beta on SPY over 60 complete months, D0 = dividends of th
 MoS = V0 / P0 - 1.
 Payout discounted, a switch in each sheet: Dividends, or Dividends + buybacks (cheat sheet p. 2), where
 D0 used = D0 + last fiscal year's buybacks / its diluted average shares, as dividend_basis in the report script.
-A new sheet starts with g1 = Yahoo's average earnings growth estimate (current and next fiscal year; next year alone for
-the tickers in G1_NEXT_YEAR), Dividends + buybacks and P/FCF in the comps value (the team's rule since 7 Nov 2026), and, for a company based outside the US, its country's ERP (Damodaran) typed in the
+g1 is Bloomberg's estimated long-term EPS growth (LTG), typed in each sheet: the team's source for every stock since
+7 Nov 2026. Yahoo's estimate stays in row g_yahoo as a check. A new sheet starts with g1 = Yahoo's average earnings growth
+estimate (current and next fiscal year; next year alone for the tickers in G1_NEXT_YEAR) until the LTG is typed over it,
+Dividends + buybacks and P/FCF in the comps value (the team's rule since 7 Nov 2026), and, for a company based outside the US, its country's ERP (Damodaran) typed in the
 sheet. rf is the US 10-year for every stock: the tickers are US lines, so price and dividends are in USD.
 """
 
@@ -73,11 +76,10 @@ ESTIMATES_FROM = {"AZN": "AZN.L", "TCEHY": "0700.HK",   # AZN's NYSE page: 2-3 a
                   "GOOG": "GOOGL",                      # the same estimates, 7 analysts on GOOG's current year
                   "NVO": "NOVO-B.CO",                   # 7-8 analysts on the ADR, 21-22 in Copenhagen
                   "NSRGY": "NESN.SW"}                   # 3 analysts on the ADR, 15-20 in Zurich
-# g1 from Yahoo's next-year earnings growth estimate alone, not the average of the current and next year: the team's
-# choice of 7 Nov 2026 for the stocks added that day. Row g_yahoo of their sheets holds that estimate, so the checks on g1
-# (typed or from Yahoo, the buyback flag) work as for the others.
+# Yahoo's next-year earnings growth estimate alone, not the average of the current and next year: the team's g1 for the
+# stocks added on 7 Nov 2026, before Bloomberg's LTG. Row g_yahoo of their sheets holds that estimate, so the checks on
+# g1 (typed or from Yahoo, the buyback flag) work as for the others. g1 itself is now Bloomberg's LTG for every stock.
 G1_NEXT_YEAR = {"NVO", "PFE", "VZ", "PEP", "NSRGY"}
-G1_NEXT_YEAR_DATE = "7 Nov 2026"
 # Dividends missing from Yahoo's history of a ticker, typed from the company: {ticker: [(ex-date, amount, source)]}.
 # Added only if Yahoo has no dividend within 20 days of that date, so a fixed history is not counted twice.
 MISSING_DIVIDENDS = {
@@ -224,8 +226,8 @@ STEPS = [
     "    It adds one sheet per ticker and a row in Summary. Run it again for a stock already here and only the blue cells change.",
     "2. Or by hand: right-click Template > Move or Copy > Create a copy, rename it to the ticker, type the blue cells,",
     "    then type the sheet name in the Ticker column of Summary.",
-    "3. In each stock sheet, check the yellow cells: the payout discounted, g1 (set to Yahoo's average earnings growth",
-    "    estimate), T, g2, the method, the β override, the ERP of a non-US company, and the peers of the comps (row 101 on).",
+    "3. In each stock sheet, check the yellow cells: the payout discounted, g1 (type Bloomberg's estimated long-term EPS",
+    "    growth over Yahoo's estimate), T, g2, the method, the β override, the ERP of a non-US company, and the peers of the comps (row 101 on).",
     "4. Final numbers: run the script again with --as-of 2026-11-06 (the challenge uses the close of Friday 6 November).",
     "5. Don't insert rows or columns in the stock sheets: Summary reads fixed cells.",
 ]
@@ -236,7 +238,7 @@ FORMULAS = [
     "    For a company not yet in its normal state. g1 can be above k; g2 must be below k",
     "Margin of safety:  MoS = V0 / P0 − 1 (cheat sheet). Discount to value = 1 − P0 / V0 (Class 5, Graham)",
     "D0: dividends per share paid over the last 12 months. The first dividend discounted is D1 = D0 (1 + g)",
-    "With buybacks (cheat sheet p. 2): D0 used = D0 + last fiscal year's buybacks per share. g1 is Yahoo's per-share",
+    "With buybacks (cheat sheet p. 2): D0 used = D0 + last fiscal year's buybacks per share. g1 is per-share EPS",
     "    growth, which already contains the buybacks, so they count twice and V0 is too high: see the note next to g1",
     "Non-US companies: the tickers are US lines (price and dividends in USD), so rf stays the US 10-year and the sheet",
     f"    types its country's ERP: Damodaran, {ERP_DATE}, mature market 4.23% + country risk premium",
@@ -448,23 +450,25 @@ def flags_formula():
 
 
 def yahoo_g1():
-    """True when g1 is Yahoo's average growth estimate, as rounded by the script."""
+    """True when g1 is still Yahoo's growth estimate, as rounded by the script: Bloomberg's LTG not yet typed over it."""
     return f'ISNUMBER({A["g_yahoo"]}),ABS({A["g1"]}-{A["g_yahoo"]})<0.0006'
 
 
 def g1_note_formula(next_year=False):
-    """The note next to g1: where it comes from and, with buybacks in, the limitation of per-share growth.
-    next_year: a sheet of G1_NEXT_YEAR, whose row g_yahoo is Yahoo's next-year estimate, not the average."""
+    """The note next to g1: where it comes from (Bloomberg's LTG, typed, or Yahoo's estimate on a sheet where it is not
+    typed yet; a request to type it when g1 is empty) and, with buybacks in, the limitation of per-share growth.
+    next_year: a sheet of G1_NEXT_YEAR, whose row g_yahoo is Yahoo's next-year estimate, not the average.
+    Each text constant stays under Excel's 255 characters."""
     a = A
-    est = "next year" if next_year else "average"
+    est = "next-year" if next_year else "average"
     total = f'IF(ISNUMBER({a["shares_chg"]}),TEXT((1+{a["g1"]})*(1+{a["shares_chg"]})-1,"0.0%"),"n/a")'
-    limitation = ('"Limitation: Yahoo\'s growth is per share, and it already includes the buybacks (fewer shares lift EPS). '
-                  'The payout here counts them too, so they count twice and V0 is too high. Total growth, without that '
-                  f'effect: (1 + g1) × (1 + share count change) − 1 = "&{total}&"."')
-    source = (f'"Yahoo next-year earnings growth estimate, row {ROWS["g_yahoo"]} (the team\'s choice, {G1_NEXT_YEAR_DATE})"'
-              if next_year else f'"Yahoo average earnings growth estimate, row {ROWS["g_yahoo"]}"')
-    typed = f'"Typed. Yahoo {est}: "&IF(ISNUMBER({a["g_yahoo"]}),TEXT({a["g_yahoo"]},"0.0%"),"n/a")'
-    return f'=IF({a["basis"]}="{DIVS_BB}",{limitation},IF(AND({yahoo_g1()}),{source},{typed}))'
+    source = (f'IF(AND({yahoo_g1()}),"Yahoo {est} earnings growth estimate, row {ROWS["g_yahoo"]}: type Bloomberg\'s '
+              'estimated long-term EPS growth (LTG) over it","Bloomberg, estimated long-term EPS growth (LTG), typed")')
+    limitation = ('". Limitation: g1 is per-share growth, so it already includes the buybacks (fewer shares lift EPS). '
+                  'The payout here counts them too, so they count twice and V0 is too high. "'
+                  f'&"Total growth, without that effect: (1 + g1) × (1 + share count change) − 1 = "&{total}&"."')
+    empty = '"Empty: type Bloomberg\'s estimated long-term EPS growth (LTG) here"'
+    return f'=IF(NOT(ISNUMBER({a["g1"]})),{empty},{source}&IF({a["basis"]}="{DIVS_BB}",{limitation},""))'
 
 
 def g_yahoo_label(ws):
@@ -1289,7 +1293,7 @@ def growth_note(d):
     if d.get("g_next"):
         current = f"; {years[0]} {d['g_cy']:.1%} not used" if d["g_cy"] is not None else ""
         return (f"Next fiscal year{f' FY{fy + 1}' if fy else ''} {d['g_ny']:.1%}{current}: Yahoo, Analysis, Growth "
-                f"Estimates, {page}{analysts}. Next year only, the team's choice of {G1_NEXT_YEAR_DATE}")
+                f"Estimates, {page}{analysts}. Next year only: the team's g1 before Bloomberg's LTG")
     return f"Average of {' and '.join(parts)}: Yahoo, Analysis, Growth Estimates, {page}{analysts}"
 
 
@@ -1305,8 +1309,9 @@ def yahoo_g1_value(d):
 
 
 def new_sheet_assumptions(ws, d):
-    """A new sheet: g1 from Yahoo, the payout with buybacks (the team's rule for every stock, 7 Nov 2026; P/FCF in the
-    comps value is set in build_comps), and a non-US company's ERP. T stays at its default: the team sets it by hand."""
+    """A new sheet: g1 from Yahoo until the team types Bloomberg's LTG over it, the payout with buybacks (the team's
+    rule for every stock, 7 Nov 2026; P/FCF in the comps value is set in build_comps), and a non-US company's ERP.
+    T stays at its default: the team sets it by hand."""
     ws[CELL["g1"]].value = yahoo_g1_value(d)
     ws[CELL["basis"]].value = DIVS_BB
     country = d["country"]
@@ -1508,8 +1513,8 @@ def main():
     ap.add_argument("--out", type=Path, default=WORKBOOK, help=f"Workbook path (default {WORKBOOK.relative_to(REPO)})")
     ap.add_argument("--new", action="store_true", help="Start a new workbook even if one exists (loses your edits)")
     ap.add_argument("--g1-yahoo", action="store_true",
-                    help="Also reset g1 of stocks already in the workbook to Yahoo's average earnings growth estimate "
-                         "(new sheets always start from it)")
+                    help="Also reset g1 of stocks already in the workbook to Yahoo's average earnings growth estimate, "
+                         "overwriting the Bloomberg LTG typed there (new sheets always start from it)")
     args = ap.parse_args()
 
     path = args.out.resolve()

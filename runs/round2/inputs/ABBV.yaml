@@ -1,0 +1,80 @@
+# AbbVie. Inputs of the stock report. Copy _TEMPLATE.yaml for a new stock.
+# Every number of the DDM (P0, D0, β, g1, T, g2, method, payout) and the peers are in sheet ABBV of DDM_valuation.xlsx.
+# Drafted by Claude on 7 Nov 2026 from the sources below: re-read before submitting.
+
+name: AbbVie
+peer_names: {LLY: Eli Lilly}
+
+valuation:                       # the source texts printed next to the workbook's numbers
+  g1_source: "Consensus EPS growth for FY2027 (Yahoo)"   # 15.76% in the sheet = Yahoo's FY2027 estimate. If it is
+                                 # Bloomberg's LTG, write "Bloomberg, long-term EPS growth (LTG)"
+  T_source: "Years of the post-Humira earnings rebound; ours"
+  g2_source: "Long-run nominal growth of the economy; ours"
+  beta_source: "60-month β on SPY"   # the sheet's override, 0.199, equals the 60-month β
+  overrides: {}
+
+alpha:
+  probability_gap_closes: 1.0    # the team's assumption: the gap closes within one year
+  rationale: >-
+    Two dated decisions fall inside the window [3][4], so we assume the gap closes within a year (α closed). The
+    comparables give {V_comp}, below the price, so this alpha is an upper bound.
+
+case:
+  value: >-
+    The two-stage DDM gives {V_ddm}, against a price of {P0}. The price implies {implied_g} dividend growth forever,
+    although Skyrizi and Rinvoq grew 23–24% in Q3 [1]. GAAP EPS of {eps_ttm} hides this:
+    it carries charges for acquired research [1]. Consensus has adjusted EPS rising from {eps_cur} to {eps_fwd}.
+  decision: >-
+    We buy, although the margin of {mos} is below our 25% rule and the comparables give {V_comp}. Growth has returned
+    after Humira, the dividend rises 5.2% in 2027 [1], and the low β limits the risk the stock adds.
+
+catalysts:
+  - event: "Medicare negotiated price for Botox"
+    date: 2026-11-30
+    date_label: "By 30 Nov (CMS)"
+    why: "Botox is in the third negotiation cycle, and CMS must publish the agreed prices by 30 Nov 2026 [4]."
+    effect: "Botox had USD 1.1bn of Medicare spending [4]. A known price, effective in 2028, removes an overhang."
+  - event: "FDA decision on Rinvoq in vitiligo"
+    date: 2026-12-03             # filed on 3 Feb 2026 + a standard 10-month review: our estimate, no date published
+    date_label: "About 3 Dec (ours)"
+    why: "Filed on 3 Feb 2026 [3]; a standard 10-month review points to early December. No date is published."
+    effect: "It would be the first systemic treatment for vitiligo [3], supporting the growth in our first stage."
+
+method_text:
+  why: >-
+    AbbVie returns cash mainly through dividends, raised every year since 2013, with small buybacks. We use two stages
+    because earnings are rebounding from the loss of Humira's patent, faster than they can grow forever: {g1} for {T}
+    years, then {g2}.
+  not_suitable: >-
+    Gordon alone gives {V_gordon}: it misses the rebound. P/B and ROE are meaningless, as book equity is negative. GAAP
+    P/E is distorted by charges for acquired research [1]. Peers such as Eli Lilly grow at other rates, so the
+    comparables are only a double check.
+  sensitivity: >-
+    The value stays above the price in {grid_above} cases, but it falls to the price if k rises by 0.6 point or g2 falls
+    by 0.6 point. With k − g2 at 2.7%, the value is fragile.
+
+text:
+  value_trap: >-
+    Watch: ROA is below peers, as the Allergan purchase left large intangibles and acquired research is expensed. Cash
+    tells a better story: the FCF margin beats peers and dividends and buybacks take {payout_fcf} times FCF. Debt is USD 80.9bn against
+    USD 10.8bn of cash [2]. **Earnings are recovering, not falling.**
+
+issues:
+  - title: "Main risk: a low β and a high terminal value"
+    text: >-
+      The 60-month β of {beta} gives k of {k}, so k − g2 is only 2.7% and the terminal value is {tv_share} of the value.
+      An adjusted β near 0.46 would put the value below the price. Humira sales fell 31% in Q3 [1].
+  - title: "Upside: sustainable growth and management"
+    text: >-
+      Skyrizi and Rinvoq already replace Humira, and the 2026 EPS guide rose to USD 13.95–13.99 [1]. CEO Rob Michael,
+      in charge since 2024, keeps raising the dividend while buying research. No activist route at this size.
+
+sources:
+  - text: "AbbVie, Q3 2026 results, 30 Oct 2026."
+    url: "https://www.sec.gov/Archives/edgar/data/0001551152/000155115226000033/abbv-20260930xexhibit991.htm"
+  - text: "AbbVie, Form 10-Q, Q3 2026."
+    url: "https://www.sec.gov/Archives/edgar/data/0001551152/000155115226000037/abbv-20260930.htm"
+  - text: "AbbVie, Rinvoq vitiligo filings to FDA and EMA, 3 Feb 2026."
+    url: "https://news.abbvie.com/2026-02-03-AbbVie-Submits-Regulatory-Applications-to-FDA-and-EMA-for-Upadacitinib-RINVOQ-R-in-Adults-and-Adolescents-With-Vitiligo"
+  - text: "CMS, selected drugs for 2028 (third cycle), Jan 2026."
+    url: "https://www.cms.gov/files/document/factsheet-medicare-negotiation-selected-drug-list-ipay-2028.pdf"

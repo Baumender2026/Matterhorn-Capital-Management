@@ -1,0 +1,77 @@
+# PepsiCo. Inputs of the stock report. Copy _TEMPLATE.yaml for a new stock.
+# Every number of the DDM (P0, D0, β, g1, T, g2, method, payout) and the peers are in sheet PEP of DDM_valuation.xlsx.
+# Drafted by Claude on 7 Nov 2026 from the sources below: re-read before submitting.
+
+name: PepsiCo
+peer_names: {MDLZ: Mondelez}
+
+valuation:                       # the source texts printed next to the workbook's numbers
+  g1_source: "Bloomberg, long-term EPS growth (LTG)"
+  T_source: "Not used by the Gordon model; ours"
+  g2_source: "Long-run nominal growth, near the 3% organic growth of 2026 [1]; ours"
+  beta_source: ""                # the sheet's β override (0.40): add its source, e.g. "Bloomberg BETA"
+  overrides: {}
+
+alpha:
+  probability_gap_closes: 1.0    # the team's assumption: the gap closes within one year
+  rationale: >-
+    Two company events are due before the end of the year [1][2], so we assume the gap closes within a year (α closed).
+    Analysts' target is near the price, so this alpha is an upper bound.
+
+case:
+  value: >-
+    The Gordon model gives {V_ddm}, against a price of {P0}. At a cost of equity of {k}, the price implies only
+    {implied_g} growth forever, below the 3.1% organic revenue growth of Q3 [1]. The market has priced the cut in 2026
+    EPS guidance [1], not the cost programme agreed with Elliott, which targets at least 1 point of margin by 2028 [2].
+  decision: >-
+    We buy: the widest margin of our three ({mos}), the only one above our 25% rule, and the comparables ({V_comp}) are
+    above the price too. A defensive stock with dated news from management inside the challenge.
+
+catalysts:
+  - event: "Update on the North America supply chain and go-to-market"
+    date: 2026-12-10             # "late 2026", no date set: mid-December, for the flag only
+    date_label: "Late 2026 (company)"
+    why: "Promised to analysts and investors for late 2026 in the agreement with Elliott [2]; no date set yet."
+    effect: "Figures on an integrated food and drinks network and its savings would make the margin target concrete."
+  - event: "New structural cost actions"
+    date: 2026-12-15             # "in the coming months": mid-December, for the flag only
+    date_label: "Coming months (company)"
+    why: "Announced with Q3: actions are being identified and will be implemented in the coming months [1]."
+    effect: "Savings that fund price investment and volume would lift the earnings path the market discounts."
+
+method_text:
+  why: >-
+    PepsiCo is mature and pays out most of its earnings: USD 8.9bn of cash returns planned for 2026, of which USD 7.9bn
+    in dividends [1]. Bloomberg's long-term growth of {g1} is close to the long-run rate, so one stage is enough: the
+    Gordon model with growth of {g2}.
+  not_suitable: >-
+    Two stages add little when g1 is this close to g2. P/B ({pb}) says little: the brands were built in-house and are not
+    on the balance sheet, and leverage shrinks the equity. Coca-Cola sold its bottlers and has other margins, so the
+    comparables are only a double check.
+  sensitivity: >-
+    The value stays above the price in {grid_above} cases. It reaches the price only if k rises by about 1.1 points or
+    growth falls to about 1.9%, the rate the price implies.
+
+text:
+  value_trap: >-
+    Watch: revenue grows slower than peers and debt is 2.4 times equity. Earnings are not falling: core EPS rose 2% in
+    Q3 [1]. Dividends and buybacks exceeded FCF in FY25, so part of the payout is borrowed. **The business is sound; the
+    payout is the point to watch.**
+
+issues:
+  - title: "Main risk: leverage and the payout"
+    text: >-
+      With dividends and buybacks at {payout_fcf} times FCF and high debt, a further profit cut would put pressure on buybacks first. North
+      American drinks volume fell 3% in Q3 [1]. If the cost plan slips, the market may keep pricing growth near {implied_g}.
+  - title: "Upside: an activist and management quality"
+    text: >-
+      Elliott took a stake of about USD 4bn in 2025 [3]. The agreement brought a supply-chain review, nearly 20% fewer US
+      products and board refreshment [2]. CEO Ramon Laguarta must now deliver the margin target, under activist scrutiny.
+
+sources:
+  - text: "PepsiCo, Q3 2026 results, 8 Oct 2026."
+    url: "https://www.sec.gov/Archives/edgar/data/0000077476/000007747626000050/q320268-kxexhibit991.htm"
+  - text: "PepsiCo, priorities to enhance shareholder value, 8 Dec 2025."
+    url: "https://www.sec.gov/Archives/edgar/data/77476/000007747625000059/exhibit991-pepsicopressrel.htm"
+  - text: "Reuters via Investing.com, PepsiCo to review supply chain amid Elliott talks, 8 Dec 2025."
+    url: "https://www.investing.com/news/stock-market-news/pepsico-looking-to-review-supply-chain-amid-talks-with-elliott-management-bloomberg-news-reports-4396809"

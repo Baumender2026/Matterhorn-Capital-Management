@@ -1,0 +1,74 @@
+# NVIDIA. Inputs of the stock report. Copy _TEMPLATE.yaml for a new stock.
+# Every number of the DDM (P0, D0, β, g1, T, g2, method, payout) and the peers are in sheet NVDA of DDM_valuation.xlsx.
+# Drafted by Claude on 7 Nov 2026 from the sources below: re-read before submitting.
+
+name: NVIDIA
+peer_names: {}
+
+valuation:                       # the source texts printed next to the workbook's numbers
+  g1_source: "Bloomberg, long-term EPS growth (LTG)"
+  T_source: "Years of above-trend AI demand; ours"
+  g2_source: "Long-run nominal growth of the economy; ours"
+  beta_source: "Bloomberg BETA"
+  overrides: {}
+
+alpha:
+  probability_gap_closes: 1.0    # the team's assumption: the gap closes within one year
+  rationale: >-
+    The Q3 results of 17 Nov [2] fall inside the window, so we assume the gap closes within a year (α closed). The
+    comparables give {V_comp}, so the DDM is the cautious value.
+
+case:
+  value: >-
+    The two-stage DDM gives {V_ddm}, against a price of {P0}, 23% below the 52-week high. The market prices a slowdown in
+    AI spending, yet Q2 revenue doubled to USD 96.2bn and the company guides USD 108bn for Q3, without China [1]. At
+    {fpe} forward earnings, against {fpe_med} for peers, the leader trades below the group.
+  decision: >-
+    We buy, although the margin of {mos} is below our 25% rule: the comparables ({V_comp}) and analysts ({target}) see more,
+    and a dated report can close the gap. Its high residual risk keeps the Treynor-Black weight small.
+
+catalysts:
+  - event: "Q3 FY2027 results and Q4 guidance"
+    date: 2026-11-17
+    date_label: "17 Nov (company)"
+    why: "Set by the company for 17 Nov, after the close [2]; the quarter ended on 25 Oct."
+    effect: >-
+      A quarter at or above the USD 108bn guide, with Rubin in full production [1], would show that demand is not slowing
+      and move the price towards fair value.
+
+method_text:
+  why: >-
+    NVIDIA returns cash mostly through buybacks: USD 39.0bn in the first half against USD 6.3bn of dividends [1]. So we
+    discount dividends plus buybacks (cheat sheet p. 2). Two stages, because growth is far above what any company can keep
+    forever: {g1} for {T} years, then {g2}.
+  not_suitable: >-
+    Gordon alone gives {V_gordon}: one rate cannot fit a company growing this fast. P/B ({pb}) says little, as its value
+    is in chip designs and software, not on the balance sheet. Peers are smaller and differently built, so the
+    comparables are only a double check.
+  sensitivity: >-
+    The DDM stays above the price in {grid_above} cases. It falls to the price if k rises by about 0.6 point or g2 falls
+    by 1 point: the margin is thin, and the value rests on the long growth phase.
+
+text:
+  value_trap: >-
+    No red flag: returns, margins and FCF beat the peers and keep improving, and debt is almost nil. Revenue growth slows
+    from a very high base, still far above peers. Capital goes back to shareholders, with USD 99bn of buybacks still
+    authorised [1]. **Not a value trap.**
+
+issues:
+  - title: "Main risk: AI spending and the inputs"
+    text: >-
+      Revenue rests on the capex of a few cloud and AI customers: a cut would hit growth fast, and China is out
+      of the guide [1]. g1 is per-share growth and the payout includes buybacks, so they count twice: the DDM is an upper
+      bound on these inputs.
+  - title: "Upside: sustainable growth and management"
+    text: >-
+      The quarterly dividend is now USD 0.25 [1], but D0 counts the last 12 months, so the DDM understates it. At β = 1
+      the DDM gives {V_ddm_beta1}, and analysts' target is {target}. Founder-CEO Jensen Huang has led it since 1993; no activist
+      route at this size.
+
+sources:
+  - text: "NVIDIA, Q2 FY2027 results, 26 Aug 2026."
+    url: "https://investor.nvidia.com/news/press-release-details/2026/NVIDIA-Announces-Financial-Results-for-Second-Quarter-Fiscal-2027/default.aspx"
+  - text: "NVIDIA, Q3 FY2027 conference call, 28 Oct 2026."
+    url: "https://nvidianews.nvidia.com/news/nvidia-sets-conference-call-for-third-quarter-financial-results-6928873"

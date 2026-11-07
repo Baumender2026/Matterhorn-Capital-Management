@@ -82,8 +82,6 @@ def compute(out, cfg, runs):
                         "(the TA uses 0.04, safely inside the budget)")
     if not 1 <= len(stocks) <= 6:
         problems.append(f"{len(stocks)} stocks listed: give 1 to 6 tickers under `stocks`")
-    elif len(stocks) != 6:
-        notes.append(f"{len(stocks)} stocks: the report has 6 slots, the rest stay empty")
     perf_path = run / "round1_performance.json"
     if not perf_path.exists():
         problems.append(f"no {perf_path.relative_to(runs.parent.parent) if perf_path.is_relative_to(runs.parent.parent) else perf_path}: "
