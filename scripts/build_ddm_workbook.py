@@ -262,8 +262,8 @@ def build_inputs(ws):
     widths(ws, {"A": 2, "B": 40, "C": 14, "D": 70})
     section(ws, 5, "Market and rules")
     rows = [
-        ("as_of", "Price date", "data", None, DATE, "Set by the script: the latest close it used"),
-        ("rf", "Risk-free rate rf, 10-year Treasury", "data", None, PCT, "FRED DGS10, set by the script"),
+        ("as_of", "Price date", "data", None, DATE, "The latest close used"),
+        ("rf", "Risk-free rate rf, 10-year Treasury", "data", None, PCT, "FRED DGS10"),
         ("erp", "Equity risk premium ERP", "input", ERP_DEFAULT, PCT, ERP_NOTE),
         ("buy", "Buy threshold: margin of safety at least", "input", 0.25, PCT1,
          "Class 5: buy below 80% of value, i.e. V0 / P0 − 1 ≥ 25%"),
@@ -280,7 +280,7 @@ def build_inputs(ws):
 
     section(ws, 14, "Legend")
     legend = [("input", 0.05, PCT, "Yellow: an assumption. Change it"),
-              ("data", 1.23, PRICE, "Blue: data from Yahoo Finance or FRED, written by the script (or typed from Bloomberg)"),
+              ("data", 1.23, PRICE, "Blue: data from Yahoo Finance or FRED (or typed from Bloomberg)"),
               ("formula", 1.23, PRICE, "Black: a formula. Don't type over it"),
               ("link", 0.05, PCT, "Green: a link to the Inputs sheet"),
               ("result", 1.23, PRICE, "Green fill: the result, fair value and margin of safety")]
@@ -301,7 +301,7 @@ def build_inputs(ws):
 # with {key} replaced by the absolute address of that row. "section" rows have only a title.
 LEFT = [
     ("section", "Company"),
-    ("ticker", "Ticker", "data", None, None, "The sheet name must match the ticker typed in Summary"),
+    ("ticker", "Ticker", "data", None, None, ""),
     ("name", "Company", "data", None, None, ""),
     ("sector", "Sector / industry", "data", None, None, ""),
     ("currency", "Currency", "data", None, None, ""),
@@ -326,7 +326,7 @@ LEFT = [
     ("buyback_fy", "Buybacks, last fiscal year (USD m)", "data", None, "#,##0", "Repurchase Of Capital Stock, cash flow statement"),
     ("shares_fy", "Diluted average shares, same year (m)", "data", None, "#,##0.0", ""),
     ("bps", "Buybacks per share", "formula", '=IF(N({shares_fy})>0,N({buyback_fy})/{shares_fy},"")', PRICE3,
-     "Added to D0 with Dividends + buybacks, as in the report script"),
+     "Added to D0 with Dividends + buybacks"),
     ("bps_avg", f"Buybacks per share, {GROWTH_YEARS}-year average", "data", None, PRICE3,
      "A check: buybacks are lumpy and cut first in a downturn"),
     ("shares_chg", f"Share count change per year, {GROWTH_YEARS} years", "data", None, PCT,
@@ -678,9 +678,9 @@ MULT, YES_NO = '0.0"x"', '"Yes,No"'
 STOCK_DATA = [   # key, label, kind, number format, note
     ("eps_fwd", "Forward EPS, next fiscal year (consensus)", "data", PRICE,
      "Yahoo, Analysis, Earnings Estimate, next year: the stock report's forward EPS"),
-    ("shares", "Shares: Yahoo market cap ÷ price (m)", "data", "#,##0.0", "As the report: not row 29"),
+    ("shares", "Shares: Yahoo market cap ÷ price (m)", "data", "#,##0.0", "Not the diluted average shares of row 29"),
     ("mcap", "Market cap at P0 (USD m)", "formula", "#,##0", "P0 × shares"),
-    ("net_debt", "Net debt (USD m)", "data", "#,##0", "Yahoo enterprise value − market cap, as the report"),
+    ("net_debt", "Net debt (USD m)", "data", "#,##0", "Yahoo enterprise value − market cap"),
     ("ev", "Enterprise value at P0 (USD m)", "formula", "#,##0", "Market cap + net debt"),
     ("ebitda", "EBITDA, last 12 months (USD m)", "data", "#,##0", "Yahoo"),
     ("fcf", "Free cash flow, last fiscal year (USD m)", "data", "#,##0", "Cash flow statement"),
@@ -761,8 +761,8 @@ def comps_formulas():
     n_peers = f"SUMPRODUCT(--(LEN(C{first}:C{last})>0))"
     chosen = f'COUNTIF({CA["forward_pe"]}:{CA["ev_ebitda"]},"Yes")'
     parts = (f'IF({n_peers}<5,"Only "&{n_peers}&" peers: the template asks for 5 or 6. ","")'
-             f'&IF({CA["verdict"]}="mixed: check","DDM and comps disagree (the TA\'s mixed: check). ","")'
-             f'&IF(LEFT({CA["source"]},8)="Proposed","Peers proposed, not yet checked on Bloomberg RV. ","")'
+             f'&IF({CA["verdict"]}="mixed: check","DDM and comps disagree (mixed: check). ","")'
+             f'&IF(TRIM({CA["source"]})<>"",TRIM({CA["source"]})&". ","")'
              f'&IF(AND({n_peers}>0,{chosen}>COUNT({use})),"Only "&COUNT({use})&" of the "&{chosen}&'
              f'" chosen multiples give a price (EV/EBITDA and P/FCF are n/m for a bank). ","")'
              f'&IF(NOT(ISNUMBER({A["V0"]})),"No DDM: the report would use the comps value as the fair value. ","")'
@@ -795,15 +795,14 @@ def build_comps(ws):
     """Write (or rewrite) the layout and formulas of the comps block. Yellow cells keep what is typed in them."""
     clear_comps_rules(ws)
     section(ws, CR["title"], "Comparables: a double check (as in the stock report)", cols="BCDEFGHIJKLMN")
-    note(ws, f"B{CR['note']}", "Not in the fair value: the DDM is V0, the comps are a check (stock report, Round 2 README). "
-                               "Peers: 5–6 from Bloomberg RV, same industry. n/m: negative, or above 100x for P/E, P/FCF "
-                               "and EV/EBITDA. Blue cells are rewritten by every refresh: type a Bloomberg figure again after one.")
+    note(ws, f"B{CR['note']}", "Not in the fair value: the DDM is V0, the comps are a check. Peers: 5–6, same industry; "
+                               "their source is in row 108. n/m: negative, or above 100x for P/E, P/FCF and EV/EBITDA.")
     # a new sheet: the three multiples in, the team's rule for every stock (7 Nov 2026). The stock report uses these cells
     choices = [("stat", COMPS_STAT_LABEL, "Median", "Median or Average of the peers. The stock report uses this choice"),
                ("forward_pe", COMPS_USE_LABELS["forward_pe"], "Yes", "Yes: its implied price is in the comps value"),
-               ("p_fcf", COMPS_USE_LABELS["p_fcf"], "Yes", "Yes: in the comps value. New sheets start with Yes (team's rule); n/m for banks"),
+               ("p_fcf", COMPS_USE_LABELS["p_fcf"], "Yes", "Yes: in the comps value; n/m for banks"),
                ("ev_ebitda", COMPS_USE_LABELS["ev_ebitda"], "Yes", "Yes: its implied price is in the comps value"),
-               ("source", "Peers: source", None, "Change it once the peers are checked on Bloomberg RV")]
+               ("source", "Peers: source", None, "Bloomberg RV, or proposed by us when a peer is not listed there. Shown in the comps flags")]
     for key, text, default, why in choices:
         ref = CELL_C(key)
         label(ws, f"B{CR[key]}", text)
@@ -871,7 +870,7 @@ def build_comps(ws):
 
     results = [("value", "Comps value", "Average of the implied prices in the shaded columns, at the chosen statistic"),
                ("mos", "Comps margin of safety V comps / P0 − 1", "Compare with the DDM margin of safety (row 77)"),
-               ("verdict", "DDM vs comps", "The TA's check: both above 0 undervalued, both below 0 overvalued"),
+               ("verdict", "DDM vs comps", "Check: both above 0 undervalued, both below 0 overvalued, otherwise mixed"),
                ("peers", "Peers in the comps", ""), ("flags", "Comps flags", "")]
     for key, text, why in results:
         label(ws, f"B{CR[key]}", text, bold=key in ("value", "mos"))
@@ -930,7 +929,7 @@ def fill_comps(ws, c, source=None):
             note(ws, f"D{CR['eps_fwd']}", "Yahoo, Earnings Estimate, next year; " + parts[-2])
             note(ws, f"D{CR['bvps']}", "Yahoo; " + parts[-1])
     else:
-        note(ws, f"D{CR['net_debt']}", "Yahoo enterprise value − market cap, as the report")
+        note(ws, f"D{CR['net_debt']}", "Yahoo enterprise value − market cap")
         for key in ("ebitda", "revenue", "eps_fwd", "bvps"):
             note(ws, f"D{CR[key]}", next(x[4] for x in STOCK_DATA if x[0] == key))
     raws = {r["ticker"]: r for r in c["raw"]}
@@ -1293,7 +1292,7 @@ def growth_note(d):
     if d.get("g_next"):
         current = f"; {years[0]} {d['g_cy']:.1%} not used" if d["g_cy"] is not None else ""
         return (f"Next fiscal year{f' FY{fy + 1}' if fy else ''} {d['g_ny']:.1%}{current}: Yahoo, Analysis, Growth "
-                f"Estimates, {page}{analysts}. Next year only: the team's g1 before Bloomberg's LTG")
+                f"Estimates, {page}{analysts}")
     return f"Average of {' and '.join(parts)}: Yahoo, Analysis, Growth Estimates, {page}{analysts}"
 
 
@@ -1332,8 +1331,10 @@ def new_sheet_assumptions(ws, d):
 def set_market(wsi, market):
     wsi[INP["as_of"]].value = market["as_of"]
     wsi[INP["rf"]].value = market["rf"]
-    note(wsi, f"D{INP['as_of'][1:]}", "Set by the script: the latest close it used. Final run: --as-of 2026-11-06")
-    note(wsi, f"D{INP['rf'][1:]}", f"FRED DGS10 on {market['rf_date']:%d %b %Y}, set by the script")
+    as_of = market["as_of"]
+    note(wsi, f"D{INP['as_of'][1:]}", f"Close of {as_of:%A} {as_of.day} {as_of:%b %Y}"
+         + (", the Round 2 reference date" if f"{as_of:%Y-%m-%d}" == "2026-11-06" else ""))
+    note(wsi, f"D{INP['rf'][1:]}", f"FRED DGS10 on {market['rf_date']:%d %b %Y}")
 
 
 def new_workbook():
@@ -1388,13 +1389,13 @@ def choose_peers(yf, ws, t, d):
     typed = sheet_peers(ws)
     if typed:
         return typed, None if ws[CELL_C("source")].value else "Typed in the sheet"
-    for peers, source in ((yaml_peers(t), f"From {t}.yaml (the stock report's peers)"),
-                          (PEERS.get(t, []), f"Proposed by Claude, {PEERS_DATES.get(t, PEERS_DATE)}: check on Bloomberg RV")):
+    for peers, source in ((yaml_peers(t), "Peers proposed by us"),
+                          (PEERS.get(t, []), "Peers proposed by us")):
         if peers:
             break
     else:
         peers, key = propose_peers(yf, t, d["comps_info"])
-        source = f"Proposed from Yahoo's industry list ({key}), {PEERS_DATE}: check on Bloomberg RV"
+        source = "Peers proposed by us"
         print(f"  {t}: peers proposed from Yahoo's industry ({key}): {', '.join(peers) or 'none found'}")
     for i in range(N_PEERS):
         ws[f"C{CR['peer0'] + i}"].value = peers[i] if i < len(peers) else None

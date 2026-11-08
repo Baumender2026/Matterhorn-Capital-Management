@@ -426,7 +426,7 @@ def peer_row(p, info, statements, fx, name=None):
     note = None
     if foreign:
         conv = f"FCF converted at {rate:.4f} {fin}{info.get('currency')}" if rate else "no exchange rate, so no P/FCF"
-        note = f"{p} reports in {fin}: {conv}; Yahoo's ratios as given, check it on Bloomberg RV"
+        note = f"{p} reports in {fin}: {conv}; Yahoo's ratios as given"
     return row, raw, note
 
 
