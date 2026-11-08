@@ -24,8 +24,8 @@ case:
     AI spending, yet Q2 revenue doubled to USD 96.2bn and the company guides USD 108bn for Q3, without China [1]. At
     {fpe} forward earnings, against {fpe_med} for peers, the leader trades below the group.
   decision: >-
-    We buy, although the margin of {mos} is below our 25% rule: the comparables ({V_comp}) and analysts ({target}) see more,
-    and a dated report can close the gap. Its high residual risk keeps the Treynor-Black weight small.
+    We buy: the margin of {mos} meets our 25% rule, and the comparables ({V_comp}) and analysts ({target}) see more.
+    A dated report can close the gap. Its high residual risk keeps the Treynor-Black weight small.
 
 catalysts:
   - event: "Q3 FY2027 results and Q4 guidance"
@@ -46,8 +46,8 @@ method_text:
     is in chip designs and software, not on the balance sheet. Peers are smaller and differently built, so the
     comparables are only a double check.
   sensitivity: >-
-    The DDM stays above the price in {grid_above} cases. It falls to the price if k rises by about 0.6 point or g2 falls
-    by 1 point: the margin is thin, and the value rests on the long growth phase.
+    The DDM stays above the price in {grid_above} cases. It falls to the price only if k rises by about 1.7 points (a β
+    near 2.1) or g1 falls to about 45%: the value rests on the long growth phase, not on g2.
 
 text:
   value_trap: >-

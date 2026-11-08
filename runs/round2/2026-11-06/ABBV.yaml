@@ -6,11 +6,10 @@ name: AbbVie
 peer_names: {LLY: Eli Lilly}
 
 valuation:                       # the source texts printed next to the workbook's numbers
-  g1_source: "Consensus EPS growth for FY2027 (Yahoo)"   # 15.76% in the sheet = Yahoo's FY2027 estimate. If it is
-                                 # Bloomberg's LTG, write "Bloomberg, long-term EPS growth (LTG)"
+  g1_source: "Bloomberg, long-term EPS growth (LTG)"   # 22.09% in the sheet, typed as Bloomberg's LTG (note D49)
   T_source: "Years of the post-Humira earnings rebound; ours"
   g2_source: "Long-run nominal growth of the economy; ours"
-  beta_source: "60-month β on SPY"   # the sheet's override, 0.199, equals the 60-month β
+  beta_source: ""                # the sheet's β override (0.52; the 60-month β is 0.20): add its source, e.g. "Bloomberg BETA"
   overrides: {}
 
 alpha:
@@ -50,8 +49,8 @@ method_text:
     P/E is distorted by charges for acquired research [1]. Peers such as Eli Lilly grow at other rates, so the
     comparables are only a double check.
   sensitivity: >-
-    The value stays above the price in {grid_above} cases, but it falls to the price if k rises by 0.6 point or g2 falls
-    by 0.6 point. With k − g2 at 2.7%, the value is fragile.
+    The value stays above the price in {grid_above} cases, but it falls to the price if k rises by about 0.9 point or g2
+    falls by 1 point. With the terminal value at {tv_share}, the value rests on k and g2.
 
 text:
   value_trap: >-
@@ -62,8 +61,8 @@ text:
 issues:
   - title: "Main risk: a low β and a high terminal value"
     text: >-
-      The 60-month β of {beta} gives k of {k}, so k − g2 is only 2.7% and the terminal value is {tv_share} of the value.
-      An adjusted β near 0.46 would put the value below the price. Humira sales fell 31% in Q3 [1].
+      Our β of {beta}, far above the 60-month 0.20, gives k of {k}, and the terminal value is {tv_share} of the value. A β
+      above about 0.71, or g1 below about 16%, would put the value below the price. Humira sales fell 31% in Q3 [1].
   - title: "Upside: sustainable growth and management"
     text: >-
       Skyrizi and Rinvoq already replace Humira, and the 2026 EPS guide rose to USD 13.95–13.99 [1]. CEO Rob Michael,

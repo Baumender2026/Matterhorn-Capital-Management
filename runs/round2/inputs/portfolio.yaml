@@ -5,7 +5,7 @@
 
 as_of: 2026-11-06      # price date of the trades: the close of Friday 6 November, which Bloomberg uses for PRTU
 
-te_target: 0.03        # the largest ex-ante tracking error vs the SAA we accept (budget 2-5%; the TA uses 4%, safely
+te_target: 0.025       # the largest ex-ante tracking error vs the SAA we accept (budget 2-5%; the TA uses 4%, safely
                        # inside 5%). w_A = Treynor-Black's w_A*, kept between 2% / TE per unit and te_target / TE per unit
 
 negative_weights: zero # a stock whose Treynor-Black weight is negative (negative alpha):
@@ -13,5 +13,5 @@ negative_weights: zero # a stock whose Treynor-Black weight is negative (negativ
                        #   zero  the course rule (Checkpoint 1, the TA's clip at 0): entered as 0, its raw weight shown
                        #         and flagged, the positive weights rescaled to fill A
 
-stocks: [NVDA, PEP, ABBV]    # the tickers, in report order (3 to 6; the report has 6 slots). Each needs
+stocks: [NVDA, PEP, ABBV, DRI] # the tickers, in report order (3 to 6; the report has 6 slots). Each needs
                        # runs/round2/<as_of>/<TICKER>_figures.json and _data.json from build_stock_report.py

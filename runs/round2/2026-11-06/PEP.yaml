@@ -9,7 +9,7 @@ valuation:                       # the source texts printed next to the workbook
   g1_source: "Bloomberg, long-term EPS growth (LTG)"
   T_source: "Not used by the Gordon model; ours"
   g2_source: "Long-run nominal growth, near the 3% organic growth of 2026 [1]; ours"
-  beta_source: ""                # the sheet's β override (0.40): add its source, e.g. "Bloomberg BETA"
+  beta_source: ""                # the sheet's β override (0.53): add its source, e.g. "Bloomberg BETA"
   overrides: {}
 
 alpha:
@@ -24,8 +24,8 @@ case:
     {implied_g} growth forever, below the 3.1% organic revenue growth of Q3 [1]. The market has priced the cut in 2026
     EPS guidance [1], not the cost programme agreed with Elliott, which targets at least 1 point of margin by 2028 [2].
   decision: >-
-    We buy: the widest margin of our three ({mos}), the only one above our 25% rule, and the comparables ({V_comp}) are
-    above the price too. A defensive stock with dated news from management inside the challenge.
+    We buy, although the margin of {mos} is below our 25% rule: the comparables ({V_comp}) are above the price too. A
+    defensive stock with dated news from management inside the challenge.
 
 catalysts:
   - event: "Update on the North America supply chain and go-to-market"
@@ -49,8 +49,8 @@ method_text:
     on the balance sheet, and leverage shrinks the equity. Coca-Cola sold its bottlers and has other margins, so the
     comparables are only a double check.
   sensitivity: >-
-    The value stays above the price in {grid_above} cases. It reaches the price only if k rises by about 1.1 points or
-    growth falls to about 1.9%, the rate the price implies.
+    The value stays above the price in {grid_above} cases. It reaches the price if k rises by about 0.6 point (a β near
+    0.66) or growth falls to {implied_g}, the rate the price implies: a thin margin.
 
 text:
   value_trap: >-

@@ -1,0 +1,76 @@
+# Darden Restaurants. Inputs of the stock report. Copy _TEMPLATE.yaml for a new stock.
+# Every number of the DDM (P0, D0, β, g1, T, g2, method, payout) and the peers are in sheet DRI of DDM_valuation.xlsx.
+# Drafted by Claude on 8 Nov 2026 from the sources below: re-read before submitting.
+
+name: Darden
+peer_names: {}
+
+valuation:                       # the source texts printed next to the workbook's numbers
+  g1_source: "Bloomberg, long-term EPS growth (LTG)"
+  T_source: "A mature chain: a short phase of unit growth; ours"
+  g2_source: "Long-run nominal growth of the economy; ours"
+  beta_source: ""                # the sheet's β override (0.755): add its source, e.g. "Bloomberg BETA"
+  overrides: {}
+
+alpha:
+  probability_gap_closes: 1.0    # the team's assumption: the gap closes within one year
+  rationale: >-
+    The Q2 results of 18 Dec [2] fall inside the window, so we assume the gap closes within a year (α closed).
+    Analysts' target ({target}) is near the price, so this alpha is an upper bound.
+
+case:
+  value: >-
+    The two-stage DDM gives {V_ddm}, against a price of {P0}: the price implies only {implied_g} growth forever.
+    Darden reaffirmed FY2027 EPS of USD 11.10–11.35, 4–7% above FY2026 [1]. The market reads a slow Olive Garden
+    quarter as a trend; management blames the World Cup, and traffic improved into September [2].
+  decision: >-
+    We buy, although the margin of {mos} is below our 25% rule: the comparables ({V_comp}) see more, and the Q2
+    results fall inside the challenge. A low-β stock that adds restaurants to our chip, food and drug names.
+
+catalysts:
+  - event: "Q2 FY2027 results and outlook"
+    date: 2026-12-18
+    date_label: "18 Dec (company)"
+    why: "Set on the Q1 call for Friday 18 Dec, before the open [2]; the quarter ends in late November."
+    effect: >-
+      Olive Garden traffic back after the World Cup and a kept EPS guide would show the slowdown was one-off, and move
+      the price towards fair value.
+
+method_text:
+  why: >-
+    Darden returns most of its cash: USD 693m of dividends and USD 672m of buybacks in FY2026 [3], so we discount
+    dividends plus buybacks (cheat sheet p. 2). Two stages: {g1} for {T} years, from 75–80 new restaurants a year [3]
+    and buybacks, then {g2}.
+  not_suitable: >-
+    Gordon alone gives {V_gordon}: it misses the near-term growth. P/B ({pb}) says little, as buybacks have shrunk the
+    equity. McDonald's and Yum franchise most of their restaurants, while Darden runs its own, so margins differ and
+    the comparables are only a double check.
+  sensitivity: >-
+    The value stays above the price in {grid_above} cases. It falls to the price if k rises by about 0.9 point (a β
+    near 0.95) or g2 falls to about 2.1%: the terminal value is {tv_share} of the value.
+
+text:
+  value_trap: >-
+    Watch: three red flags. Debt is {de} times equity, as buybacks shrink the equity; dividends and buybacks took
+    {payout_fcf} times FCF in {fy}; the FCF margin trails peers. Earnings are not falling and revenue grows faster than
+    peers. **A leveraged payout, not a value trap.**
+
+issues:
+  - title: "Main risk: Olive Garden and the payout"
+    text: >-
+      Olive Garden, over 40% of sales, grew same-restaurant sales by only 1% in Q1 [1]. If traffic stays weak,
+      buybacks, which take the payout above FCF, would be cut first. On dividends alone, the DDM gives about USD 137,
+      well below the price.
+  - title: "Upside: sustainable growth and management"
+    text: >-
+      LongHorn has grown same-restaurant sales for 22 quarters in a row, by 6.8% in Q1 [2], and Darden keeps each
+      brand's unit growth below 10% a year [2]. CEO Rick Cardenas raised the dividend by 8% in June, with a new USD 1.5bn
+      buyback programme [3].
+
+sources:
+  - text: "Darden, Q1 fiscal 2027 results, 24 Sep 2026."
+    url: "https://www.sec.gov/Archives/edgar/data/0000940944/000094094426000032/exhibit991-q1fy27.htm"
+  - text: "Darden, Q1 fiscal 2027 earnings call, corrected transcript (FactSet), 24 Sep 2026."
+    url: "https://s27.q4cdn.com/308865545/files/doc_earnings/2027/q1/transcript/Q1-FY2027-Transcript.pdf"
+  - text: "Darden, Q4 and fiscal 2026 results and fiscal 2027 outlook, 25 Jun 2026."
+    url: "https://www.sec.gov/Archives/edgar/data/0000940944/000094094426000016/exhibit991-q4fy26.htm"
