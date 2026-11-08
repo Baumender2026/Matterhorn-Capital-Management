@@ -46,14 +46,14 @@
   "figures/round2-portfolio.json": {
    "source": "runs/round2/2026-11-06/portfolio.json",
    "run": "round2/2026-11-06",
-   "sha256": "ceae7317335dce42860864ee48dc03eb8fef656b682b556320a45632ac860e9c",
+   "sha256": "aa976a4800a1bce40034e81ddd016ddd1d5a8c8da476e5d44b452927a93c15ee",
    "promoted": "2026-11-08"
   },
   "figures/round2-round1_performance.json": {
    "source": "runs/round2/2026-11-06/round1_performance.json",
    "run": "round2/2026-11-06",
-   "sha256": "681ad80848cf361e83c3b5b7ccba1e6146912c7911d36a896d0b3ee046796d50",
-   "promoted": "2026-11-07"
+   "sha256": "3b11f9e6068fbcb8337ffe42a51e89efbfd00051a16f1cc50f848810765583ed",
+   "promoted": "2026-11-08"
   }
  }
 }

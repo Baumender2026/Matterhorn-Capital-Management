@@ -294,7 +294,7 @@ def report(out):
     if a:
         print(f"  A: alpha {a['alpha_A']:+.2%}, beta {a['beta_A']:.2f}, sigma(eps) {a['sigma_eps_A']:.2%}, IR {a['ir_A']:.2f}")
         print(f"Size of A: Treynor-Black w_A* {a['w_A_star']:.2%}; TE per unit of A {a['te_per_unit']:.2%}, so the budget allows "
-              f"{a['w_A_lo']:.2%} (TE {TE_BUDGET[0]:.0%}) to {a['w_A_hi']:.2%} (TE {out['te_target']:.0%})")
+              f"{a['w_A_lo']:.2%} (TE {TE_BUDGET[0]:.0%}) to {a['w_A_hi']:.2%} (TE {out['te_target']:.1%})")
         print(f"  w_A = {a['w_A']:.2%}, {BOUND[a['bound']]}; every ETF x {1 - a['w_A']:.4f}")
     if out["status"] == "ok":
         k = out["risk"]

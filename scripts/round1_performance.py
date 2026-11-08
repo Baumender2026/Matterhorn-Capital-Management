@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Round 1 results for the Round 2 report: the performance of the Round 1 portfolio from its start to a
 date, and what each position contributed. The calculations are the website's (scripts/update_portfolio.py):
-same prices (Yahoo closes), dividends reinvested at the ex-date close as in Bloomberg PRTU, same risk model.
+same prices (Yahoo closes), dividends reinvested at the close before the ex-date as in Bloomberg PRTU (with the
+dividends listed in data/holdings.json that Yahoo does not have yet), same risk model.
 
     python scripts/round1_performance.py                    up to the latest close: a draft
     python scripts/round1_performance.py --end 2026-11-06   final: the guidelines measure Round 1 to Friday 6 November
@@ -130,7 +131,7 @@ def main():
                  "with the website's calculations (scripts/update_portfolio.py).",
         "round": "Round 1", "start_date": r1["start"].date().isoformat(), "as_of": last.date().isoformat(),
         "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), "currency": "USD",
-        "prices": "Yahoo Finance closes; dividends reinvested at the ex-date close (Bloomberg PRTU reinvest cash dividends)",
+        "prices": "Yahoo Finance closes; dividends reinvested at the close before the ex-date (Bloomberg PRTU reinvest cash dividends)",
         "nav_start": r(nav0, 2), "nav_end": r(nav1, 2), "cash": r(cash.iloc[-1], 2), "trading_days": n,
         "vol_target": VOL_TARGET, "vol_band": list(VOL_BAND),
         "metrics": {"total_return": r(total_return), "realised_vol": r(vol), "sharpe": r(sharpe),

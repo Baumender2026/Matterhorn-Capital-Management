@@ -3,11 +3,11 @@
  "round": "Round 1",
  "start_date": "2026-10-16",
  "as_of": "2026-11-06",
- "generated_at": "2026-11-07T15:42:49Z",
+ "generated_at": "2026-11-08T13:07:11Z",
  "currency": "USD",
- "prices": "Yahoo Finance closes; dividends reinvested at the ex-date close (Bloomberg PRTU reinvest cash dividends)",
+ "prices": "Yahoo Finance closes; dividends reinvested at the close before the ex-date (Bloomberg PRTU reinvest cash dividends)",
  "nav_start": 100000000.0,
- "nav_end": 98099075.63,
+ "nav_end": 98212801.27,
  "cash": 5.22,
  "trading_days": 15,
  "vol_target": 0.08,
@@ -16,15 +16,15 @@
   0.09
  ],
  "metrics": {
-  "total_return": -0.01900924,
+  "total_return": -0.01787199,
   "realised_vol": null,
   "sharpe": null,
-  "max_drawdown": -0.02117304,
+  "max_drawdown": -0.02003722,
   "max_drawdown_from": "2026-10-28",
   "max_drawdown_to": "2026-11-05",
-  "ex_ante_vol": 0.08438242,
-  "var_1m_95_pct": 0.04007073,
-  "var_1m_95_usd": 3930901.47,
+  "ex_ante_vol": 0.08432356,
+  "var_1m_95_pct": 0.04004278,
+  "var_1m_95_usd": 3932713.57,
   "min_days_for_stats": 20,
   "rf_source": null,
   "risk_model_months": 60,
@@ -46,10 +46,10 @@
    "value_start": 10903766.43,
    "value_now": 10549897.57,
    "weight_start": 0.10903766,
-   "weight_now": 0.10754329,
+   "weight_now": 0.10741876,
    "return": -0.03245382,
    "contribution": -0.00353869,
-   "risk_contribution": 0.15846101,
+   "risk_contribution": 0.15840213,
    "target_risk_contribution": 0.1521
   },
   {
@@ -64,10 +64,10 @@
    "value_start": 10240671.81,
    "value_now": 10006355.1,
    "weight_start": 0.10240672,
-   "weight_now": 0.10200254,
+   "weight_now": 0.10188443,
    "return": -0.02288099,
    "contribution": -0.00234317,
-   "risk_contribution": 0.18096181,
+   "risk_contribution": 0.18088267,
    "target_risk_contribution": 0.1742
   },
   {
@@ -82,10 +82,10 @@
    "value_start": 10237642.8,
    "value_now": 9625704.0,
    "weight_start": 0.10237643,
-   "weight_now": 0.09812227,
+   "weight_now": 0.09800865,
    "return": -0.05977341,
    "contribution": -0.00611939,
-   "risk_contribution": 0.17393587,
+   "risk_contribution": 0.17376426,
    "target_risk_contribution": 0.1736
   },
   {
@@ -94,16 +94,16 @@
    "asset_class": "Bonds",
    "target_weight": 0.1333,
    "shares_start": 188225.0,
-   "shares_now": 188225.0,
+   "shares_now": 188900.4689,
    "price_start": 70.82,
    "price_now": 71.59,
    "value_start": 13330094.5,
-   "value_now": 13475027.75,
+   "value_now": 13523384.57,
    "weight_start": 0.13330094,
-   "weight_now": 0.13736141,
-   "return": 0.01087263,
-   "contribution": 0.00144933,
-   "risk_contribution": 0.08272131,
+   "weight_now": 0.13769472,
+   "return": 0.01450028,
+   "contribution": 0.0019329,
+   "risk_contribution": 0.08306341,
    "target_risk_contribution": 0.0834
   },
   {
@@ -112,16 +112,16 @@
    "asset_class": "Bonds",
    "target_weight": 0.1648,
    "shares_start": 349731.0,
-   "shares_now": 349731.0,
+   "shares_now": 350616.5818,
    "price_start": 47.13,
    "price_now": 47.59,
    "value_start": 16482822.03,
-   "value_now": 16643698.29,
+   "value_now": 16685843.13,
    "weight_start": 0.16482822,
-   "weight_now": 0.16966213,
-   "return": 0.00976024,
-   "contribution": 0.00160876,
-   "risk_contribution": 0.07899168,
+   "weight_now": 0.16989479,
+   "return": 0.01231713,
+   "contribution": 0.00203021,
+   "risk_contribution": 0.07904975,
    "target_risk_contribution": 0.0783
   },
   {
@@ -130,16 +130,16 @@
    "asset_class": "Bonds",
    "target_weight": 0.1526,
    "shares_start": 144602.0,
-   "shares_now": 144602.0,
+   "shares_now": 144820.5375,
    "price_start": 105.54,
    "price_now": 106.27,
    "value_start": 15261295.08,
-   "value_now": 15366854.54,
+   "value_now": 15390078.53,
    "weight_start": 0.15261295,
-   "weight_now": 0.15664627,
-   "return": 0.00691681,
-   "contribution": 0.00105559,
-   "risk_contribution": 0.09176116,
+   "weight_now": 0.15670135,
+   "return": 0.00843857,
+   "contribution": 0.00128783,
+   "risk_contribution": 0.09194712,
    "target_risk_contribution": 0.0884
   },
   {
@@ -154,10 +154,10 @@
    "value_start": 11145905.77,
    "value_now": 10869016.04,
    "weight_start": 0.11145906,
-   "weight_now": 0.11079631,
+   "weight_now": 0.11066802,
    "return": -0.02484228,
    "contribution": -0.0027689,
-   "risk_contribution": 0.14489409,
+   "risk_contribution": 0.14471982,
    "target_risk_contribution": 0.1549
   },
   {
@@ -172,10 +172,10 @@
    "value_start": 12397796.36,
    "value_now": 11562517.12,
    "weight_start": 0.12397796,
-   "weight_now": 0.11786571,
+   "weight_now": 0.11772923,
    "return": -0.0673732,
    "contribution": -0.00835279,
-   "risk_contribution": 0.08827307,
+   "risk_contribution": 0.08817084,
    "target_risk_contribution": 0.0951
   },
   {
@@ -201,23 +201,23 @@
   {
    "name": "Equity",
    "weight_start": 0.31382081,
-   "weight_now": 0.3076681,
+   "weight_now": 0.30731184,
    "contribution": -0.01200125,
-   "risk_contribution": 0.51335869
+   "risk_contribution": 0.51304906
   },
   {
    "name": "Bonds",
    "weight_start": 0.45074211,
-   "weight_now": 0.46366981,
-   "contribution": 0.00411368,
-   "risk_contribution": 0.25347415
+   "weight_now": 0.46429086,
+   "contribution": 0.00525094,
+   "risk_contribution": 0.25406028
   },
   {
    "name": "Real assets",
    "weight_start": 0.23543702,
-   "weight_now": 0.22866202,
+   "weight_now": 0.22839725,
    "contribution": -0.01112169,
-   "risk_contribution": 0.23316716
+   "risk_contribution": 0.23289066
   },
   {
    "name": "Cash leg",
@@ -285,32 +285,32 @@
   },
   {
    "date": "2026-11-02",
-   "nav": 98699116.3,
-   "index": 98.699116
+   "nav": 98812482.19,
+   "index": 98.812482
   },
   {
    "date": "2026-11-03",
-   "nav": 98492938.03,
-   "index": 98.492938
+   "nav": 98606097.41,
+   "index": 98.606097
   },
   {
    "date": "2026-11-04",
-   "nav": 99221414.36,
-   "index": 99.221414
+   "nav": 99334953.5,
+   "index": 99.334954
   },
   {
    "date": "2026-11-05",
-   "nav": 98016232.47,
-   "index": 98.016232
+   "nav": 98129969.89,
+   "index": 98.12997
   },
   {
    "date": "2026-11-06",
-   "nav": 98099075.63,
-   "index": 98.099076
+   "nav": 98212801.27,
+   "index": 98.212801
   }
  ],
  "checks": {
   "contributions_add_up": true,
-  "site": "matches data/portfolio.json except ex-ante vol 0.084382 vs 0.084401 and VaR 0.040071 vs 0.040079: Yahoo's adjusted history changed after the site ran (Fri 6 Nov 19:06 NY); scripts/update_portfolio.py re-run on 7 Nov gives 0.084382, as here"
+  "site": "matches data/portfolio.json"
  }
 }

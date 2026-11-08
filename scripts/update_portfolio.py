@@ -8,9 +8,11 @@ ex-ante risk model. Run daily by .github/workflows/update-portfolio.yml.
     python scripts/update_portfolio.py [--config data/holdings.json] [--out data/portfolio.json]
 
 Rules (AMC):
-  * NAV = cash + sum(shares * raw close). Dividends are reinvested in the ETF that
-    pays them at the ex-date close, as in the Bloomberg portfolio (PRTU "reinvest
-    cash dividends"); cash earns 0%.
+  * NAV = cash + sum(shares * raw close). On the ex-date, dividends buy more of the
+    ETF that pays them at the previous close, as the Bloomberg portfolio does (PRTU
+    "reinvest cash dividends": checked on the BND, BNDX and TIP dividends of 2 Nov
+    2026); cash earns 0%. A dividend Yahoo does not have yet goes in the round's
+    `dividends` in holdings.json, and replaces Yahoo's once Yahoo has it.
   * Each round restarts at its own starting NAV (USD 100M). Daily returns are
     chain-linked across rounds into an index (base 100) for the inception figures.
   * Realised volatility and the Sharpe ratio are left empty until there are
@@ -184,6 +186,24 @@ def trading_days_old(as_of, ny_now):
     return len(pd.bdate_range(as_of + pd.Timedelta(days=1), due))
 
 
+def add_listed_dividends(d, r):
+    """The dividends listed in the round's `dividends` (holdings.json), typed from Bloomberg because Yahoo does not
+    have them yet. Each replaces any Yahoo dividend of the same ETF within 7 days of its ex-date, so it is never
+    counted twice once Yahoo publishes it."""
+    d = d.copy()
+    for x in r.get("dividends", []):
+        t, ex = x["ticker"], pd.Timestamp(x["ex_date"])
+        if t not in d.columns:
+            raise DataError(f"{r['id']}: dividend listed for {t}, which the round does not hold")
+        if not d.index[0] <= ex <= d.index[-1]:
+            continue                                               # outside the dates of this run
+        if ex not in d.index:
+            raise DataError(f"{r['id']}: {t} ex-date {ex.date()} is not a trading day")
+        d.loc[(d.index >= ex - pd.Timedelta(days=7)) & (d.index <= ex + pd.Timedelta(days=7)), t] = 0.0
+        d.loc[ex, t] = float(x["amount"])
+    return d
+
+
 def round_nav(r, close, div, as_of):
     """Daily NAV of one round from its start to its end (next round's start) or as_of."""
     tickers = [h["ticker"] for h in r["holdings"]]
@@ -195,10 +215,11 @@ def round_nav(r, close, div, as_of):
     px = px.ffill()
     if px.isna().any().any():
         raise DataError(f"{r['id']}: missing prices for {list(px.columns[px.isna().any()])}")
-    d = div.reindex(px.index).loc[:, tickers].fillna(0.0)
+    d = add_listed_dividends(div.reindex(px.index).loc[:, tickers].fillna(0.0), r)
     d.iloc[0] = 0.0  # bought at the start-date close: not entitled to that day's ex-dividend
-    # dividends buy more of the ETF that pays them at the ex-date close (Bloomberg PRTU "reinvest cash dividends")
-    units = shares * (1 + d / px).cumprod()
+    # on the ex-date, dividends buy more of the ETF that pays them at the previous close, as Bloomberg PRTU does:
+    # its shares after the 2 Nov 2026 dividends of BND, BNDX and TIP are dividend / close of 30 Oct
+    units = shares * (1 + (d / px.shift(1)).fillna(0.0)).cumprod()
     cash = pd.Series(float(r.get("cash", 0.0)), index=px.index)
     mv = px * units
     nav = cash + mv.sum(axis=1)

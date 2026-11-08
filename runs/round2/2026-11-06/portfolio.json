@@ -26,10 +26,10 @@
    "negative": false,
    "set_to_zero": false,
    "weight_target": 0.01827779035226104,
-   "shares": 9606,
-   "value": 1792863.8341369627,
-   "weight_total": 0.018276052272899107,
-   "weight_sleeve_actual": 0.08324763323093212
+   "shares": 9618,
+   "value": 1795103.5141296384,
+   "weight_total": 0.01827769385372342,
+   "weight_sleeve_actual": 0.08325511065090994
   },
   {
    "ticker": "PEP",
@@ -47,10 +47,10 @@
    "negative": false,
    "set_to_zero": false,
    "weight_target": 0.07780438618498096,
-   "shares": 54001,
-   "value": 7632501.14224243,
-   "weight_total": 0.07780400674752444,
-   "weight_sleeve_actual": 0.35439816656791845
+   "shares": 54063,
+   "value": 7641264.222015379,
+   "weight_total": 0.07780313893102929,
+   "weight_sleeve_actual": 0.35439421365356794
   },
   {
    "ticker": "ABBV",
@@ -68,10 +68,10 @@
    "negative": false,
    "set_to_zero": false,
    "weight_target": 0.05811905926596579,
-   "shares": 19571,
-   "value": 5701227.962219239,
-   "weight_total": 0.05811704061027593,
-   "weight_sleeve_actual": 0.26472380407697177
+   "shares": 19594,
+   "value": 5707928.092163087,
+   "weight_total": 0.05811796444407727,
+   "weight_sleeve_actual": 0.2647280121508114
   },
   {
    "ticker": "DRI",
@@ -89,10 +89,10 @@
    "negative": false,
    "set_to_zero": false,
    "weight_target": 0.06533716503277319,
-   "shares": 28316,
-   "value": 6409326.7728271475,
-   "weight_total": 0.06533524125141797,
-   "weight_sleeve_actual": 0.29760279296299735
+   "shares": 28349,
+   "value": 6416796.3230285635,
+   "weight_total": 0.06533564097604691,
+   "weight_sleeve_actual": 0.2976046137133873
   }
  ],
  "etfs": [
@@ -105,11 +105,11 @@
    "weight_saa": 0.109,
    "weight_target": 0.08507031430887807,
    "shares_before": 29149.0,
-   "shares_after": 23057,
-   "trade": -6092.0,
+   "shares_after": 23084,
+   "trade": -6065.0,
    "price": 361.93,
-   "value": 8345020.01,
-   "weight": 0.0850672644610321
+   "value": 8354792.12,
+   "weight": 0.08506826006348775
   },
   {
    "ticker": "VEA",
@@ -120,11 +120,11 @@
    "weight_saa": 0.1024,
    "weight_target": 0.07991926775439555,
    "shares_before": 147369.0,
-   "shares_after": 115464,
-   "trade": -31905.0,
+   "shares_after": 115597,
+   "trade": -31772.0,
    "price": 67.9,
-   "value": 7840005.600000001,
-   "weight": 0.0799192607030277
+   "value": 7849036.300000001,
+   "weight": 0.07991866842716318
   },
   {
    "ticker": "IEMG",
@@ -135,11 +135,11 @@
    "weight_saa": 0.1023,
    "weight_target": 0.07984122159447915,
    "shares_before": 133320.0,
-   "shares_after": 108481,
-   "trade": -24839.0,
+   "shares_after": 108607,
+   "trade": -24713.0,
    "price": 72.2,
-   "value": 7832328.2,
-   "weight": 0.0798409990073828
+   "value": 7841425.4,
+   "weight": 0.07984117445589281
   },
   {
    "ticker": "BND",
@@ -149,12 +149,12 @@
    "asset_class": "Bonds",
    "weight_saa": 0.1333,
    "weight_target": 0.10403553116856373,
-   "shares_before": 188225.0,
-   "shares_after": 142558,
-   "trade": -45667.0,
+   "shares_before": 188900.4689,
+   "shares_after": 142724,
+   "trade": -46176.46890000001,
    "price": 71.59,
-   "value": 10205727.22,
-   "weight": 0.10403489690864073
+   "value": 10217611.16,
+   "weight": 0.10403543151070943
   },
   {
    "ticker": "BNDX",
@@ -164,12 +164,12 @@
    "asset_class": "Bonds",
    "weight_saa": 0.1648,
    "weight_target": 0.12862007154223035,
-   "shares_before": 349731.0,
-   "shares_after": 265129,
-   "trade": -84602.0,
+   "shares_before": 350616.5818,
+   "shares_after": 265436,
+   "trade": -85180.58179999999,
    "price": 47.59,
-   "value": 12617489.110000001,
-   "weight": 0.12861985731230893
+   "value": 12632099.24,
+   "weight": 0.12861968171819768
   },
   {
    "ticker": "TIP",
@@ -179,12 +179,12 @@
    "asset_class": "Bonds",
    "weight_saa": 0.1526,
    "weight_target": 0.11909844003242931,
-   "shares_before": 144602.0,
-   "shares_after": 109941,
-   "trade": -34661.0,
+   "shares_before": 144820.5375,
+   "shares_after": 110068,
+   "trade": -34752.537500000006,
    "price": 106.27,
-   "value": 11683430.07,
-   "weight": 0.11909826871423702
+   "value": 11696926.36,
+   "weight": 0.11909777756815632
   },
   {
    "ticker": "GLD",
@@ -195,11 +195,11 @@
    "weight_saa": 0.1115,
    "weight_target": 0.08702146830678813,
    "shares_before": 29177.0,
-   "shares_after": 22916,
-   "trade": -6261.0,
+   "shares_after": 22942,
+   "trade": -6235.0,
    "price": 372.52,
-   "value": 8536668.32,
-   "weight": 0.08702088439852101
+   "value": 8546353.84,
+   "weight": 0.08701873614728635
   },
   {
    "ticker": "BCI",
@@ -210,11 +210,11 @@
    "weight_saa": 0.124,
    "weight_target": 0.09677723829633836,
    "shares_before": 469258.0,
-   "shares_after": 385298,
-   "trade": -83960.0,
+   "shares_after": 385745,
+   "trade": -83513.0,
    "price": 24.64,
-   "value": 9493742.72,
-   "weight": 0.09677708642034022
+   "value": 9504756.8,
+   "weight": 0.09677716832320224
   },
   {
    "ticker": "BIL",
@@ -232,8 +232,8 @@
    "weight": 0.0
   }
  ],
- "generated_at": "2026-11-08T11:23:06Z",
- "nav": 98099075.63,
+ "generated_at": "2026-11-08T13:07:16Z",
+ "nav": 98212801.27,
  "negative_weights": "zero",
  "sleeve": 0.21953840083598097,
  "active": {
@@ -260,22 +260,22 @@
   ]
  },
  "raised": {
-  "usd": 21544659.159999996,
-  "weight": 0.21962142886299893
+  "usd": 21569794.82653801,
+  "weight": 0.21962304860076018
  },
  "cash": {
-  "usd": 8744.668574217707,
-  "weight": 8.914119239206645e-05
+  "usd": 8707.898663330823,
+  "weight": 8.866358102740249e-05
  },
  "total": {
-  "usd": 98099075.63,
+  "usd": 98212801.27,
   "weight": 1.0
  },
  "risk": {
-  "te": 0.024999328311440513,
-  "vol_new": 0.08691792160072886,
+  "te": 0.024999557098593955,
+  "vol_new": 0.08691818545531683,
   "vol_saa": 0.08403369712367345,
-  "var_new": 0.04127476526912251,
+  "var_new": 0.041274890565908065,
   "var_saa": 0.039905131871527305,
   "months": 60,
   "window": [

@@ -5,6 +5,11 @@
       "start_date": "2026-10-16",
       "starting_nav": 100000000,
       "cash": 5.22,
+      "dividends": [
+        { "ticker": "BND",  "ex_date": "2026-11-02", "amount": 0.256802, "pay_date": "2026-11-04", "source": "Bloomberg PRTU, 8 Nov 2026: not on Yahoo yet" },
+        { "ticker": "BNDX", "ex_date": "2026-11-02", "amount": 0.12,     "pay_date": "2026-11-04", "source": "Bloomberg PRTU, 8 Nov 2026: not on Yahoo yet" },
+        { "ticker": "TIP",  "ex_date": "2026-11-02", "amount": 0.161241, "pay_date": "2026-11-05", "source": "Bloomberg PRTU, 8 Nov 2026: not on Yahoo yet" }
+      ],
       "holdings": [
         { "ticker": "VTI",  "name": "Vanguard Total Stock Market ETF",                     "asset_class": "Equity",      "shares": 29149,  "target_weight": 0.1090, "target_risk_contribution": 0.1521 },
         { "ticker": "VEA",  "name": "Vanguard FTSE Developed Markets ETF",                 "asset_class": "Equity",      "shares": 147369, "target_weight": 0.1024, "target_risk_contribution": 0.1742 },

@@ -1,18 +1,18 @@
 {
  "status": "ok",
  "as_of": "2026-11-06",
- "generated_at": "2026-11-07T00:06:31Z",
+ "generated_at": "2026-11-08T13:07:01Z",
  "currency": "USD",
  "current_round": "Round 1",
- "nav": 98099075.63,
+ "nav": 98212801.27,
  "metrics": {
-  "total_return": -0.019009,
+  "total_return": -0.017872,
   "realised_vol": null,
   "sharpe": null,
-  "max_drawdown": -0.021173,
-  "ex_ante_vol": 0.084401,
-  "var_1m_95_pct": 0.040079,
-  "var_1m_95_usd": 3931747.38,
+  "max_drawdown": -0.020037,
+  "ex_ante_vol": 0.084324,
+  "var_1m_95_pct": 0.040043,
+  "var_1m_95_usd": 3932713.42,
   "daily_returns": 15,
   "min_days_for_stats": 20,
   "rf_1m_latest": null,
@@ -30,8 +30,8 @@
    "end_date": "2026-11-06",
    "status": "active",
    "start_nav": 100000000.0,
-   "end_nav": 98099075.63,
-   "return": -0.019009
+   "end_nav": 98212801.27,
+   "return": -0.017872
   },
   {
    "id": "Round 2",
@@ -52,10 +52,10 @@
    "shares": 29149.0,
    "price": 361.93,
    "market_value": 10549897.57,
-   "weight": 0.107543,
+   "weight": 0.107419,
    "target_weight": 0.109,
-   "drift_pp": -0.1457,
-   "risk_contribution": 0.158419,
+   "drift_pp": -0.1581,
+   "risk_contribution": 0.158402,
    "target_risk_contribution": 0.1521
   },
   {
@@ -65,10 +65,10 @@
    "shares": 147369.0,
    "price": 67.9,
    "market_value": 10006355.1,
-   "weight": 0.102003,
+   "weight": 0.101884,
    "target_weight": 0.1024,
-   "drift_pp": -0.0397,
-   "risk_contribution": 0.18092,
+   "drift_pp": -0.0516,
+   "risk_contribution": 0.180883,
    "target_risk_contribution": 0.1742
   },
   {
@@ -78,49 +78,49 @@
    "shares": 133320.0,
    "price": 72.2,
    "market_value": 9625704.0,
-   "weight": 0.098122,
+   "weight": 0.098009,
    "target_weight": 0.1023,
-   "drift_pp": -0.4178,
-   "risk_contribution": 0.173989,
+   "drift_pp": -0.4291,
+   "risk_contribution": 0.173764,
    "target_risk_contribution": 0.1736
   },
   {
    "ticker": "BND",
    "name": "Vanguard Total Bond Market ETF",
    "asset_class": "Bonds",
-   "shares": 188225.0,
+   "shares": 188900.4689,
    "price": 71.59,
-   "market_value": 13475027.75,
-   "weight": 0.137361,
+   "market_value": 13523384.57,
+   "weight": 0.137695,
    "target_weight": 0.1333,
-   "drift_pp": 0.4061,
-   "risk_contribution": 0.082858,
+   "drift_pp": 0.4395,
+   "risk_contribution": 0.083064,
    "target_risk_contribution": 0.0834
   },
   {
    "ticker": "BNDX",
    "name": "Vanguard Total International Bond ETF",
    "asset_class": "Bonds",
-   "shares": 349731.0,
+   "shares": 350616.5818,
    "price": 47.59,
-   "market_value": 16643698.29,
-   "weight": 0.169662,
+   "market_value": 16685843.13,
+   "weight": 0.169895,
    "target_weight": 0.1648,
-   "drift_pp": 0.4862,
-   "risk_contribution": 0.078932,
+   "drift_pp": 0.5095,
+   "risk_contribution": 0.07905,
    "target_risk_contribution": 0.0783
   },
   {
    "ticker": "TIP",
    "name": "iShares TIPS Bond ETF",
    "asset_class": "Bonds",
-   "shares": 144602.0,
+   "shares": 144820.5375,
    "price": 106.27,
-   "market_value": 15366854.54,
-   "weight": 0.156646,
+   "market_value": 15390078.53,
+   "weight": 0.156701,
    "target_weight": 0.1526,
-   "drift_pp": 0.4046,
-   "risk_contribution": 0.091666,
+   "drift_pp": 0.4101,
+   "risk_contribution": 0.091947,
    "target_risk_contribution": 0.0884
   },
   {
@@ -130,10 +130,10 @@
    "shares": 29177.0,
    "price": 372.52,
    "market_value": 10869016.04,
-   "weight": 0.110796,
+   "weight": 0.110668,
    "target_weight": 0.1115,
-   "drift_pp": -0.0704,
-   "risk_contribution": 0.144958,
+   "drift_pp": -0.0832,
+   "risk_contribution": 0.14472,
    "target_risk_contribution": 0.1549
   },
   {
@@ -143,10 +143,10 @@
    "shares": 469258.0,
    "price": 24.64,
    "market_value": 11562517.12,
-   "weight": 0.117866,
+   "weight": 0.117729,
    "target_weight": 0.124,
-   "drift_pp": -0.6134,
-   "risk_contribution": 0.088259,
+   "drift_pp": -0.6271,
+   "risk_contribution": 0.088171,
    "target_risk_contribution": 0.0951
   },
   {
@@ -170,15 +170,15 @@
  "asset_classes": [
   {
    "name": "Equity",
-   "weight": 0.307668
+   "weight": 0.307312
   },
   {
    "name": "Bonds",
-   "weight": 0.463669
+   "weight": 0.464291
   },
   {
    "name": "Real assets",
-   "weight": 0.228662
+   "weight": 0.228397
   },
   {
    "name": "Cash leg",
@@ -259,32 +259,32 @@
   {
    "date": "2026-11-02",
    "round": "Round 1",
-   "nav": 98699116.3,
-   "index": 98.6991
+   "nav": 98812482.19,
+   "index": 98.8125
   },
   {
    "date": "2026-11-03",
    "round": "Round 1",
-   "nav": 98492938.03,
-   "index": 98.4929
+   "nav": 98606097.41,
+   "index": 98.6061
   },
   {
    "date": "2026-11-04",
    "round": "Round 1",
-   "nav": 99221414.36,
-   "index": 99.2214
+   "nav": 99334953.5,
+   "index": 99.335
   },
   {
    "date": "2026-11-05",
    "round": "Round 1",
-   "nav": 98016232.47,
-   "index": 98.0162
+   "nav": 98129969.89,
+   "index": 98.13
   },
   {
    "date": "2026-11-06",
    "round": "Round 1",
-   "nav": 98099075.63,
-   "index": 98.0991
+   "nav": 98212801.27,
+   "index": 98.2128
   }
  ]
 }

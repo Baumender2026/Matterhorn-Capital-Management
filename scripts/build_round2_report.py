@@ -206,7 +206,7 @@ def round1_blocks(perf, r1):
     b = {}
     b["r1-period"] = (f'<p style="margin:0;font-size:13px;line-height:1.55;">The Round 1 portfolio from the close of Friday 16 October 2026, when it was entered '
                       f'in Bloomberg, to the close of {long_date(perf["as_of"]) if perf else "[date]"}: {n if perf else "[n]"} trading days. '
-                      'Prices are closes, and dividends are reinvested in the ETF that pays them at the ex-date close, as in Bloomberg PRTU.</p>')
+                      'Prices are closes, and dividends buy more of the ETF that pays them at the close before the ex-date, as in Bloomberg PRTU.</p>')
     b["r1-stats"] = stat_row([
         ("Return", pct(m.get("total_return"), 2, True), f'USD {perf["nav_start"] / 1e6:.1f}M → {perf["nav_end"] / 1e6:.1f}M' if perf else DASH),
         ("Realised volatility", pct(m.get("realised_vol")),
