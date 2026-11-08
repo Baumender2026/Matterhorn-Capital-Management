@@ -45,8 +45,9 @@ def compare_with_site(out):
     m, s = out["metrics"], site["metrics"]
     pairs = [("NAV", out["nav_end"], site["nav"], 0.01), ("total return", m["total_return"], s["total_return"], 1e-5),
              ("max drawdown", m["max_drawdown"], s["max_drawdown"], 1e-5), ("ex-ante vol", m["ex_ante_vol"], s["ex_ante_vol"], 1e-6),
-             ("VaR", m["var_1m_95_pct"], s["var_1m_95_pct"], 1e-6), ("realised vol", m["realised_vol"], s["realised_vol"], 1e-6),
-             ("Sharpe", m["sharpe"], s["sharpe"], 1e-6)]
+             ("VaR", m["var_1m_95_pct"], s["var_1m_95_pct"], 1e-6)]
+    if out["trading_days"] >= up.MIN_STATS_DAYS:   # below it the website shows none; the report gives them anyway
+        pairs += [("realised vol", m["realised_vol"], s["realised_vol"], 1e-6), ("Sharpe", m["sharpe"], s["sharpe"], 1e-6)]
     bad = [f"{n}: {a} here, {b} on the site" for n, a, b, tol in pairs
            if (a is None) != (b is None) or (a is not None and abs(a - b) > tol)]
     if bad:
@@ -87,7 +88,7 @@ def main():
     peak = index.loc[:trough].idxmax()
 
     n, vol, sharpe, rf_source = len(daily), None, None, None
-    if n >= up.MIN_STATS_DAYS:                                     # the website's rule
+    if n >= 2:      # the guidelines ask for both; with fewer than the website's MIN_STATS_DAYS the report says how many
         vol = float(daily.std(ddof=1) * math.sqrt(up.TRADING_DAYS))
         rf, rf_source = up.download_rf(range(daily.index[0].year, today.year + 1))
         if rf is not None:

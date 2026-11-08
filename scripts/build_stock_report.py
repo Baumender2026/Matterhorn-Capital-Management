@@ -408,11 +408,12 @@ def fcf_year(statements):
     return pd.Timestamp(max(fcf)).year if fcf else None
 
 
-def peer_row(p, info, statements, fx, name=None):
-    """One peer: its multiples as in the report (n/m as None), and the raw inputs behind them (for the workbook)."""
+def peer_row(p, info, statements, fx, name=None, fcf_usd=False):
+    """One peer: its multiples as in the report (n/m as None), and the raw inputs behind them (for the workbook).
+    fcf_usd: the FCF in the trading currency as the DDM workbook has it (None: no FCF); False: from the statements."""
     rate = fx_of(info, fx)
     fcf = last_fcf(statements)
-    fcf_t = fcf * rate if fcf is not None and rate else None
+    fcf_t = fcf_usd if fcf_usd is not False else fcf * rate if fcf is not None and rate else None
     m = peer_multiples(info, fcf_t)
     row = {"ticker": p, "name": name or short_name(info.get("longName")), "market_cap": info.get("marketCap"),
            **{mid: sane(m[mid], kind) for mid, _, kind in MULTIPLES}}
@@ -518,12 +519,19 @@ def methods_verdict(mos_ddm, mos_comp):
     return "undervalued" if mos_ddm > 0 and mos_comp > 0 else "overvalued" if mos_ddm < 0 and mos_comp < 0 else "mixed: check"
 
 
-def comps_from_snapshot(snap, P0, D0, eps_fwd, primary, stat, peer_names=None):
-    """The comparables of a snapshot (a _data.json, or the same dicts downloaded by the workbook script)."""
+def comps_from_snapshot(snap, P0, D0, eps_fwd, primary, stat, peer_names=None, peer_data=None):
+    """The comparables of a snapshot (a _data.json, or the same dicts downloaded by the workbook script).
+    peer_data: the peers' figures in the DDM workbook ({ticker: Yahoo info keys + "fcf"}), used over the snapshot's so the
+    report prints the workbook's numbers."""
     t, fx = snap["ticker"], snap.get("fx") or {}
     rows, raw, notes = [], [], []
     for p in snap["peers"]:
-        row, r, note = peer_row(p, snap["info"][p], snap["statements"][p], fx, (peer_names or {}).get(p))
+        info, fcf_usd = snap["info"][p], False
+        if p in (peer_data or {}):
+            given_ = dict(peer_data[p])
+            fcf_usd = given_.pop("fcf")
+            info = {**info, **given_}
+        row, r, note = peer_row(p, info, snap["statements"][p], fx, (peer_names or {}).get(p), fcf_usd)
         rows.append(row)
         raw.append(r)
         if note:
@@ -577,6 +585,25 @@ def ddm_workbook(t):
             if lb and lb not in cells:
                 cells[lb], cells[("note", lb)] = ws[f"C{r}"].value, ws[f"D{r}"].value
         cells["rf"], cells[("note", "rf")] = wi["C7"].value, wi["D7"].value
+        raw_keys = {"F": "marketCap", "G": "fcf", "I": "dividendRate", "J": "currentPrice", "K": "forwardPE", "L": "trailingPE",
+                    "M": "enterpriseToEbitda", "N": "priceToBook", "O": "priceToSalesTrailing12Months", "P": "enterpriseToRevenue"}
+        raw = {}                              # the peers' data as the sheet has it (Yahoo, or typed from Bloomberg RV)
+        for r in range(1, ws.max_row + 1):
+            m = re.fullmatch(r"Data, peer (\d+)", str(ws[f"B{r}"].value or "").strip())
+            tk = str(cells.get(f"Peer {m.group(1)}") or "").strip().upper() if m else ""
+            if tk and isinstance(ws[f"F{r}"].value, (int, float)):
+                num_ = lambda v: float(v) if isinstance(v, (int, float)) and not isinstance(v, bool) else None   # noqa: E731
+                raw[tk] = {key: num_(ws[f"{col}{r}"].value) for col, key in raw_keys.items()}
+                raw[tk]["marketCap"] *= 1e6
+                raw[tk]["fcf"] = raw[tk]["fcf"] * 1e6 if raw[tk]["fcf"] is not None else None
+        cells["_peer_raw"] = raw
+        cells["_target"] = None               # Summary, column "Analysts_Estimate_avg", typed by the team
+        if "Summary" in wb.sheetnames:
+            su = wb["Summary"]
+            col = next((c for c in range(1, su.max_column + 1) if su.cell(5, c).value == "Analysts_Estimate_avg"), None)
+            row = next((r for r in range(6, su.max_row + 1) if str(su.cell(r, 2).value or "").strip().upper() == t), None)
+            if col and row and isinstance(su.cell(row, col).value, (int, float)):
+                cells["_target"] = float(su.cell(row, col).value)
         r = next((r for r in range(1, ws.max_row + 1) if ws[f"B{r}"].value == "Equity risk premium ERP"), None)
         if r and isinstance(ws[f"C{r}"].value, (int, float)):        # typed in the sheet, not the link to Inputs
             erp = float(ws[f"C{r}"].value)
@@ -647,9 +674,10 @@ def workbook_inputs(t):
         "peers": [str(cells.get(lb)).strip().upper() for lb in PEER_LABELS if str(cells.get(lb) or "").strip()],
         "comps_stat": COMPS_STATS.get(cells.get(COMPS_STAT_LABEL), "median"),
         "comps_primary": [mid for mid, lb in COMPS_USE_LABELS.items() if cells.get(lb) == "Yes"],
+        "peer_raw": cells.get("_peer_raw") or {}, "target": cells.get("_target"),
         "sources": {
             "P0": f"Close {pd.Timestamp(date):%d.%m.%y}, not adjusted", "D0": src_d,
-            "beta": "Override in the workbook" if over is not None else
+            "beta": (note("β override") or "Override in the workbook") if over is not None else
                     f"Slope on SPY, {months.group(1) if months else WINDOW} months",
             "rf10": f"FRED DGS10, {pd.Timestamp(rf_day.group(1)):%d.%m.%y}" if rf_day else f"{DDM_WORKBOOK.name}, Inputs",
             "erp": src_erp},
@@ -762,7 +790,7 @@ def analyse(cfg, snap, wb):
     primary, stat = wb["comps_primary"], wb["comps_stat"]       # the sheet's "In the comps value" and "Comps statistic"
     if not primary:
         raise SystemExit(f"Sheet {t}: no multiple has Yes under 'In the comps value': choose at least one")
-    cp = comps_from_snapshot(snap, P0, D0, eps_fwd, primary, stat, cfg.get("peer_names"))
+    cp = comps_from_snapshot(snap, P0, D0, eps_fwd, primary, stat, cfg.get("peer_names"), wb.get("peer_raw"))
     rows, comps, V_comp, s = cp["rows"], cp["comps"], cp["V_comp"], cp["stock"]
     flags.extend((x, False) for x in cp["peer_notes"])
     flags.extend((x, True) for x in s["notes"])
@@ -782,7 +810,7 @@ def analyse(cfg, snap, wb):
     mos_comp = V_comp / P0 - 1 if V_comp else None
     methods = methods_verdict(mos_ddm, mos_comp)
     if methods == "mixed: check":
-        flags.append(("DDM and comparables disagree (the TA's \"mixed: check\")", True))
+        flags.append(("DDM and comparables disagree (\"mixed: check\")", True))
     if mos_ddm is not None and mos_ddm > 0.5:
         flags.append(("DDM upside above +50%: more likely a wrong input or a value trap (cheat sheet)", True))
     if method != "none" and k - g2 < 0.03:
@@ -849,7 +877,7 @@ def analyse(cfg, snap, wb):
     else:
         signal = "Long candidate"
 
-    target_mean = info.get("targetMeanPrice")
+    target_mean = wb.get("target") or info.get("targetMeanPrice")    # the team's figure in Summary, else Yahoo's
     fy_labels = [f"FY{d.year % 100:02d}" for d in m.index]
     fig = {
         "ticker": t, "as_of": snap["as_of"], "downloaded_at": snap["downloaded_at"],
@@ -863,7 +891,8 @@ def analyse(cfg, snap, wb):
         "k_grid": k_grid, "g_grid": g_grid, "grid": grid,
         "market_cap": market_cap, "enterprise_value": ev, "net_debt": net_debt, "shares": shares, "ebitda": ebitda, "revenue": revenue, "fcf_last": fcf,
         "bvps": bvps, "eps_ttm": eps_ttm, "eps_ago": eps_ago, "eps_cur": eps_cur, "eps_fwd": eps_fwd,
-        "eps_growth_next": snap["estimates"]["growth_next"], "dividend_yield": D0 / P0, "week52_low": info.get("fiftyTwoWeekLow"),
+        "eps_growth_next": snap["estimates"]["growth_next"], "D0_div": wb["D0_div"], "basis": wb["basis"],
+        "dividend_yield": wb["D0_div"] / P0, "payout_yield": D0 / P0, "week52_low": info.get("fiftyTwoWeekLow"),
         "week52_high": info.get("fiftyTwoWeekHigh"), "target_mean": target_mean, "target_low": info.get("targetLowPrice"),
         "target_high": info.get("targetHighPrice"), "n_analysts": info.get("numberOfAnalystOpinions"),
         "target_up": target_mean / P0 - 1 if target_mean else None,
@@ -946,6 +975,11 @@ def tokens(fig):
         "red_flags": ", ".join(fig["red_flags"]) or "no metric", "tv_share": pct(fig["tv_share"], 0), "verdict": fig["trap_verdict"],
         "grid_above": f"{sum(x >= fig['P0'] for x in grid_cells)} of {len(grid_cells)}",
     }
+
+
+def greek_lower(s):
+    """In a text-transform:uppercase title, keep Greek letters as typed (β, not Β)."""
+    return re.sub(r"([α-ω])", r'<span style="text-transform:none;">\1</span>', s)
 
 
 def rich(text, tok):
@@ -1143,7 +1177,7 @@ def blocks(cfg, fig):
         + stat("Margin of safety", pct(fig["mos"], 1, True), f"{V_0} / {P_0} − 1")
         + stat("Alpha, annual", pct(fig["alpha"], 1, True), f"IR {num(fig['ir'])}")
         + stat("Market cap", bn(fig["market_cap"]), "USD")
-        + stat("Dividend yield", pct(fig["dividend_yield"], 1), f"D0 USD {num(fig['D0'])}")
+        + stat("Dividend yield", pct(fig["dividend_yield"], 1), f"D0 USD {num(fig.get('D0_div'))}")
         + "</div>")
 
     # --- investment case: fair value, price, margin of safety and alpha, catalyst, decision
@@ -1170,7 +1204,7 @@ def blocks(cfg, fig):
     v = cfg.get("valuation") or {}
     src = fig["sources"]
     two = fig["method"] == "two_stage"
-    inp = [(f"{P_0}, price", usd(fig["P0"]), src["P0"]), (f"{D_0}, dividend", usd(fig["D0"]), src["D0"]),
+    inp = [(f"{P_0}, price", usd(fig["P0"]), src["P0"]), (f"{D_0} used" if fig.get("basis") == "dividends_plus_buybacks" else f"{D_0}, dividend", usd(fig["D0"]), src["D0"]),
            ("β" if fig.get("beta_override") else "β on SPY", num(fig["beta"]), src["beta"]), (f"{R_F}, 10-year yield", pct(fig["rf10"], 2), src["rf10"]),
            ("ERP", pct(fig["erp"], 2), src["erp"]), (f"k = {R_F} + β ERP", pct(fig["k"], 2), "CAPM"),
            (f"{G_1}, first stage", pct(fig["g1"], 1) if two else "not used", rich(v.get("g1_source"), tok) if two else "Gordon: one growth rate"),
@@ -1245,9 +1279,11 @@ def blocks(cfg, fig):
 
     fl = "n/a" if fig.get("placeholder") else "falling" if fig["earnings_falling"] else "rising"
     verdict_rule = {"Fail": "Red flags and falling earnings: value trap.", "Watch": "Red flags or falling earnings, not both: watch, not a trap.", "Pass": "No red flags, earnings rising: pass."}.get(fig["trap_verdict"], "")
-    distorted = fig["eps_ttm"] is not None and abs(fig["eps_ttm"] / fig["eps_ago"] - 1) > 0.2 if fig["eps_ago"] else False
+    gap = fig["eps_ttm"] / fig["eps_ago"] - 1 if fig["eps_ttm"] is not None and fig["eps_ago"] else 0.0
     ttm_note = ("Trailing GAAP EPS: n/a." if fig.get("placeholder") else
-                f'Trailing GAAP EPS of {num(fig["eps_ttm"])} ' + ("includes one-off items." if distorted else "is close to the adjusted figure."))
+                f'Trailing GAAP EPS of {num(fig["eps_ttm"])} ' + ("includes one-off items." if gap < -0.2 else
+                                                                  f"is higher, from growth since {fy}." if gap > 0.2 else
+                                                                  "is close to the adjusted figure."))
     b["earnings_line"] = (f'<p style="{BODY}font-size:11.2px;line-height:1.5;margin-top:3px;"><span style="font-weight:600;">Earnings test:</span> adjusted EPS {num(fig["eps_ago"])} ({fy}) → {num(fig["eps_cur"])} → {num(fig["eps_fwd"])} (forward): {fl}. '
                           f'{ttm_note}</p>')
 
@@ -1278,7 +1314,7 @@ def blocks(cfg, fig):
 
     # --- issues
     items = cfg.get("issues") or [{}, {}]
-    cells = "".join(f'<div style="display:flex;flex-direction:column;gap:3px;border-top:1px solid {INK};padding-top:6px;"><span style="{SECTION}font-size:10.4px;">{rich(x.get("title"), tok)}</span><p style="{BODY}font-size:11.2px;line-height:1.5;">{rich(x.get("text"), tok)}</p></div>' for x in items)
+    cells = "".join(f'<div style="display:flex;flex-direction:column;gap:3px;border-top:1px solid {INK};padding-top:6px;"><span style="{SECTION}font-size:10.4px;">{greek_lower(rich(x.get("title"), tok))}</span><p style="{BODY}font-size:11.2px;line-height:1.5;">{rich(x.get("text"), tok)}</p></div>' for x in items)
     b["issues"] = f'<div style="display:grid;grid-template-columns:repeat({len(items)},1fr);gap:20px;">{cells}</div>'
 
     # --- flags and sources
@@ -1290,7 +1326,7 @@ def blocks(cfg, fig):
     data_note = f"Market data: Yahoo Finance and FRED, downloaded {snap_time(fig)}."
     b["sources"] = f'<p style="margin:0;font-size:8.8px;line-height:1.4;color:{MUTED};">{" ".join(src_items)} {data_note}</p>'
 
-    left = f"Stock analysis · Valuation dossier — {t}"
+    left = f"Checkpoint 2 · Valuation dossier — {t}"
     b["running_left_1"], b["running_left_2"] = left, f"{left} · Checks"
     pages = cfg.get("pages") or {}
     first, total = int(pages.get("first", 1)), int(pages.get("total", 2))
@@ -1308,7 +1344,7 @@ def placeholder_fig(label, cfg):
     """A stock with every number missing, in the shape analyse() returns: the same layout, no values."""
     n_years, n_peers, n_grid = 4, 6, 5
     numbers = ("P0 D0 beta rf10 erp k g1 g2 T V_gordon V_2stage V_ddm pv_tv tv_share V_ddm_beta1 V_comp V0 mos mos_ddm mos_comp "
-               "implied_g market_cap bvps eps_ttm eps_ago eps_cur eps_fwd eps_growth_next dividend_yield target_mean target_up "
+               "implied_g market_cap bvps eps_ttm eps_ago eps_cur eps_fwd eps_growth_next D0_div dividend_yield payout_yield target_mean target_up "
                "roe_fwd payout_fwd g_sust pb_just pb beta_S sigma2_eps sigma_eps alpha_never alpha_closed probability alpha ir "
                "ir_closed ir_never").split()
     v = cfg.get("valuation") or {}

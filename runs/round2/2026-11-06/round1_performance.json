@@ -17,8 +17,8 @@
  ],
  "metrics": {
   "total_return": -0.01787199,
-  "realised_vol": null,
-  "sharpe": null,
+  "realised_vol": 0.07993581,
+  "sharpe": -4.25977346,
   "max_drawdown": -0.02003722,
   "max_drawdown_from": "2026-10-28",
   "max_drawdown_to": "2026-11-05",
@@ -26,7 +26,7 @@
   "var_1m_95_pct": 0.04004278,
   "var_1m_95_usd": 3932713.57,
   "min_days_for_stats": 20,
-  "rf_source": null,
+  "rf_source": "FRED DGS1MO",
   "risk_model_months": 60,
   "risk_model_window": [
    "2021-11-30",

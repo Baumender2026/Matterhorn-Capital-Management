@@ -36,7 +36,8 @@ SOURCE = REPORT / "round2-equity.dc.html"
 FIGURES = REPORT / "figures"
 PDF = REPORT / "pdf" / "Matterhorn_Round2_Equity.pdf"
 SLOTS = 6
-FINAL_DATE = "2026-11-06"          # the guidelines: Round 1 performance to Friday 6 November, trades at that close
+FINAL_DATE = "2026-11-06"
+PRTU_DATE = "8 Nov 2026"           # the day the Round 2 trades were entered in Bloomberg PRTU          # the guidelines: Round 1 performance to Friday 6 November, trades at that close
 
 INK, MUTED, CARD, LINE, LINE_B, REF = "#111111", "#615e5b", "#f3efeb", "#e9eaeb", "#d8d3cc", "#888888"
 MONO = "font-family:'Geist Mono',monospace;"
@@ -201,6 +202,7 @@ def round1_blocks(perf, r1):
     n = perf["trading_days"] if perf else None
     need = (m.get("min_days_for_stats") or 20) if perf else 20
     stats_ok = perf and m.get("realised_vol") is not None
+    few = bool(stats_ok and n is not None and n < need)          # below the website's rule: shown, with the count
     period = f'{short(perf["start_date"])}–{short(perf["as_of"])}' if perf else DASH
     held = r1.get("portfolio", {}) if r1 else {}
     b = {}
@@ -210,8 +212,10 @@ def round1_blocks(perf, r1):
     b["r1-stats"] = stat_row([
         ("Return", pct(m.get("total_return"), 2, True), f'USD {perf["nav_start"] / 1e6:.1f}M → {perf["nav_end"] / 1e6:.1f}M' if perf else DASH),
         ("Realised volatility", pct(m.get("realised_vol")),
-         f"Target 8%, band 7–9%" if stats_ok else f"Needs {need} daily returns · {n if n is not None else DASH} so far"),
-        ("Sharpe Ratio", num(m.get("sharpe")), "Excess of the 1-month T-bill" if stats_ok else f"Needs {need} daily returns"),
+         (f"{n} daily returns · target 8%" if few else "Target 8%, band 7–9%") if stats_ok
+         else f"Needs {need} daily returns · {n if n is not None else DASH} so far"),
+        ("Sharpe Ratio", num(m.get("sharpe")), (f"{n} daily returns · 1-month T-bill" if few else "Excess of the 1-month T-bill")
+         if stats_ok else f"Needs {need} daily returns"),
         ("Maximum drawdown", pct(m.get("max_drawdown"), 2),
          f'{short(m["max_drawdown_from"])} → {short(m["max_drawdown_to"])}' if perf else DASH)])
     b["r1-figure"] = figure("Figure 1 · NAV of the fund, index 16 October = 100",
@@ -231,8 +235,14 @@ def round1_blocks(perf, r1):
                      + table([("", "left"), ("Round 1 portfolio", "right"), ("At the start · Round 1 report", "right")], rows))
     draft = "" if perf and perf["as_of"] == FINAL_DATE else (" Draft: the final figures use the close of Friday 6 November." if perf else "")
     window = f'{pd.Timestamp(m["risk_model_window"][0]):%b %Y} – {pd.Timestamp(m["risk_model_window"][1]):%b %Y}' if perf else DASH
-    b["r1-note"] = caption(f"Realised volatility and the Sharpe Ratio (on returns in excess of the 1-month T-bill) are computed from daily returns "
-                           f"once there are {need}, the rule of our website; with {n if perf else DASH} so far they are not reported. "
+    rf_src = m.get("rf_source") or "1-month T-bill"
+    stats_note = (f"Realised volatility and the Sharpe Ratio (on returns in excess of the 1-month T-bill, {rf_src}) are annualised from the "
+                  f"{n} daily returns to date, fewer than the {need} our website waits for: indicative only. " if few else
+                  f"Realised volatility and the Sharpe Ratio (on returns in excess of the 1-month T-bill, {rf_src}) are annualised from "
+                  f"{n} daily returns. " if stats_ok else
+                  f"Realised volatility and the Sharpe Ratio (on returns in excess of the 1-month T-bill) are computed from daily returns "
+                  f"once there are {need}, the rule of our website; with {n if perf else DASH} so far they are not reported. ")
+    b["r1-note"] = caption(stats_note +
                            f"Ex-ante volatility = √(w′Vw) on the current weights and the last 60 complete months ({window}); "
                            f"VaR = 1.645 × σ / √12, as in Round 1.{draft}")
 
@@ -376,7 +386,7 @@ def portfolio_blocks(pf, perf):
     rows = [([(c[0], SANS)] + c[1:], kd) for c, kd in rows]
     b["portfolio-table"] = title("Table 4 · Portfolio description, as entered in Bloomberg PRTU") + table(head, rows, size=11, pad=4)
     if pf:
-        b["portfolio-note"] = caption(f"Price date: close of {long_date(pf['as_of'])} for every position. Every ETF goes to (1 − w<sub>A</sub>) = "
+        b["portfolio-note"] = caption(f"Price date: close of {long_date(pf['as_of'])} for every position; entered in PRTU on {PRTU_DATE}. Every ETF goes to (1 − w<sub>A</sub>) = "
                                       f"{pct(1 - s, 2)} of its SAA weight, so the SAA mix does not change; each stock to w<sub>A</sub> × its weight in A. "
                                       f"Whole shares, rounded down; the rest is cash. The weights add up to {pct(pf['total']['weight'])}. "
                                       f"Ex-ante TE, volatility and VaR on the last {k['months']} complete months ({k['window'][0]} – {k['window'][1]}).")

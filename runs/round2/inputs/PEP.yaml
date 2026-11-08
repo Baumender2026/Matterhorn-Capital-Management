@@ -9,7 +9,7 @@ valuation:                       # the source texts printed next to the workbook
   g1_source: "Bloomberg, long-term EPS growth (LTG)"
   T_source: "Not used by the Gordon model; ours"
   g2_source: "Long-run nominal growth, near the 3% organic growth of 2026 [1]; ours"
-  beta_source: ""                # the sheet's β override (0.53): add its source, e.g. "Bloomberg BETA"
+  beta_source: ""                # empty: the note next to the β override in the workbook (Bloomberg 60-month β)
   overrides: {}
 
 alpha:

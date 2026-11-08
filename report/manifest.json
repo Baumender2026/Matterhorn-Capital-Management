@@ -10,13 +10,13 @@
   "figures/round2-ABBV.dc.html": {
    "source": "runs/round2/2026-11-06/ABBV.dc.html",
    "run": "round2/2026-11-06",
-   "sha256": "d0c34d4bc4de13e0b34347ca25225401ca8f9149df9e00b4315351b11054d412",
+   "sha256": "f2f391f4c2aa0f73990f905f6d05d9e0f42433976f9e7cbf5ac53022efb96910",
    "promoted": "2026-11-08"
   },
   "figures/round2-DRI.dc.html": {
    "source": "runs/round2/2026-11-06/DRI.dc.html",
    "run": "round2/2026-11-06",
-   "sha256": "8535886104732d7ca0368cb161ee1e52cf49f38e79a90c3b14414200e8f15b39",
+   "sha256": "13af25b1767bcc63cfa629c6d7a90793a588ad6d9123ef2428aae6c13ca27f60",
    "promoted": "2026-11-08"
   },
   "figures/round2-HRL.dc.html": {
@@ -34,13 +34,13 @@
   "figures/round2-NVDA.dc.html": {
    "source": "runs/round2/2026-11-06/NVDA.dc.html",
    "run": "round2/2026-11-06",
-   "sha256": "4b7ddc577ed3922f365d6354e7ea39acabfcc2032b3ddf5c244c2fcb7b5c3dbb",
+   "sha256": "5f7e46433329bf695921ad45b10074e942de880f481251d6dac44f4562b1a892",
    "promoted": "2026-11-08"
   },
   "figures/round2-PEP.dc.html": {
    "source": "runs/round2/2026-11-06/PEP.dc.html",
    "run": "round2/2026-11-06",
-   "sha256": "80f775aea7404f5611a9024ba5f7b5596e516bef1987b142ca4ddbb33196b85e",
+   "sha256": "d53d72dd7a94fc09d6bc6d2f8d1c253f3176fe57b69bedb8fc9b3dafd3b2cfc0",
    "promoted": "2026-11-08"
   },
   "figures/round2-portfolio.json": {
@@ -52,7 +52,7 @@
   "figures/round2-round1_performance.json": {
    "source": "runs/round2/2026-11-06/round1_performance.json",
    "run": "round2/2026-11-06",
-   "sha256": "3b11f9e6068fbcb8337ffe42a51e89efbfd00051a16f1cc50f848810765583ed",
+   "sha256": "62b375d5715eb74fd47f89d9336807fb1b609f1ccc2c5fe13bb698f7d6e0e676",
    "promoted": "2026-11-08"
   }
  }

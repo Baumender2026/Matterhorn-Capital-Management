@@ -21,7 +21,7 @@
  "sources": {
   "P0": "Close 06.11.26, not adjusted",
   "D0": "Dividends, 12 months + last FY buybacks per share",
-  "beta": "Override in the workbook",
+  "beta": "Bloomberg 60-month \u03b2",
   "rf10": "FRED DGS10, 05.11.26",
   "erp": "Damodaran, United States, 5 Jan 2026",
   "forward_eps": "Yahoo consensus"
@@ -103,20 +103,23 @@
  "eps_cur": 13.9831,
  "eps_fwd": 16.18699,
  "eps_growth_next": 0.1576,
- "dividend_yield": 0.025652176510317967,
+ "D0_div": 6.92,
+ "basis": "dividends_plus_buybacks",
+ "dividend_yield": 0.02375476316636925,
+ "payout_yield": 0.025652176510317967,
  "week52_low": 190.75,
  "week52_high": 302.93,
- "target_mean": 310.65384,
+ "target_mean": 315.17,
  "target_low": 237.0,
  "target_high": 350.0,
  "n_analysts": 26,
- "target_up": 0.06640294738774077,
+ "target_up": 0.08190588253534625,
  "next_earnings": null,
  "peers": [
   {
    "ticker": "LLY",
    "name": "Eli Lilly",
-   "market_cap": 1206068707328,
+   "market_cap": 1206068707328.0,
    "forward_pe": 26.8897,
    "trailing_pe": 43.94677,
    "p_fcf": null,
@@ -129,7 +132,7 @@
   {
    "ticker": "JNJ",
    "name": "Johnson & Johnson",
-   "market_cap": 664947261440,
+   "market_cap": 664947261440.0,
    "forward_pe": 23.775463,
    "trailing_pe": 41.915024,
    "p_fcf": 34.43003476621964,
@@ -142,7 +145,7 @@
   {
    "ticker": "MRK",
    "name": "Merck",
-   "market_cap": 361725493248,
+   "market_cap": 361725493248.0,
    "forward_pe": 16.337877,
    "trailing_pe": null,
    "p_fcf": 29.265816605825243,
@@ -155,7 +158,7 @@
   {
    "ticker": "AMGN",
    "name": "Amgen",
-   "market_cap": 249046466560,
+   "market_cap": 249046466560.0,
    "forward_pe": 18.421738,
    "trailing_pe": 26.691015,
    "p_fcf": 30.74647735308642,
@@ -168,7 +171,7 @@
   {
    "ticker": "GILD",
    "name": "Gilead Sciences",
-   "market_cap": 207000109056,
+   "market_cap": 207000109056.0,
    "forward_pe": 16.489574,
    "trailing_pe": null,
    "p_fcf": 21.89087447715736,
@@ -181,7 +184,7 @@
   {
    "ticker": "PFE",
    "name": "Pfizer",
-   "market_cap": 167518699520,
+   "market_cap": 167518699520.0,
    "forward_pe": 10.006673,
    "trailing_pe": 41.985714,
    "p_fcf": 18.459360828650137,
@@ -486,7 +489,7 @@
  "g_sust": null,
  "pb_just": null,
  "pb": null,
- "beta_S": 0.4566857606351299,
+ "beta_S": 0.45668576063513006,
  "sigma2_eps": 0.05076747369081791,
  "sigma_eps": 0.22531638575748972,
  "vol": 0.22856129874273634,
@@ -507,11 +510,11 @@
  "ir_never": -0.06732869490770368,
  "signal": "Long candidate",
  "flags": [
-  "DDM and comparables disagree (the TA's \"mixed: check\")",
+  "DDM and comparables disagree (\"mixed: check\")",
   "IR of 1.02 is above Buffett's 0.64: the alpha is probably too optimistic"
  ],
  "flags_report": [
-  "DDM and comparables disagree (the TA's \"mixed: check\")",
+  "DDM and comparables disagree (\"mixed: check\")",
   "IR of 1.02 is above Buffett's 0.64: the alpha is probably too optimistic"
  ]
 }
