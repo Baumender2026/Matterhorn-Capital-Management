@@ -990,10 +990,15 @@ SUMMARY_COLS = [   # header, key in the stock sheet, number format, width
     ("Payout discounted", "basis", None, 20), ("D0 used", "D0u", PRICE3, 9), ("Div. yield", "yield_", PCT, 9), ("β", "beta", BETA, 7), ("k", "k", PCT, 8), ("g1", "g1", PCT, 8), ("T", "T", INT, 5),
     ("g2", "g2", PCT, 8), ("GGM V0", "V_ggm", PRICE, 10), ("GGM MoS", "mos_ggm", PCT1, 9),
     ("Two-stage V0", "V_2s", PRICE, 12), ("Two-stage MoS", "mos_2s", PCT1, 12), ("Method", "method", None, 10),
-    ("Fair value", "V0", PRICE, 10), ("MoS", "mos", PCT1, 9), ("Signal", "signal", None, 11), ("Flags", "flags", None, 70),
+    ("Fair value", "V0", PRICE, 10), ("MoS", "mos", PCT1, 9), ("Signal", "signal", None, 11), ("Held", "held", None, 8),
     ("Alpha: closes in one year", "alpha_close", PCT, 27), ("Alpha: never closes", "alpha_never", PCT, 13),
 ]
 SUM_HDR, SUM_ROW0 = 5, 6
+# Why the Signal (the DDM screen) and Held (typed: Yes for the Round 2 portfolio) can differ, for the TA
+HELD_NOTE = ("Held: in the Round 2 portfolio. Signal is the DDM screen alone; the choice also weighs the comps, the analysts, "
+             "dated news inside the challenge and the Treynor-Black weights (stock reports, §1). Buy but not held: GS (comps on "
+             "forward P/E only, close to the price), VZ (upside above 50%: a possible value trap), HRL (comps well below the "
+             "price, and a second food stock next to PEP).")
 SUM_COLS = [get_column_letter(2 + i) for i in range(len(SUMMARY_COLS))]
 # The comparables, from column Y: X is typed by hand by the team ("Analysts_Estimate_avg") and left alone
 SUMMARY_COMPS = [("Comps value", "V_comp", PRICE, 12), ("Comps MoS", "mos_comp", PCT1, 11),
@@ -1004,8 +1009,10 @@ SUM_COMPS_COLS = [get_column_letter(COMPS_COL0 + i) for i in range(len(SUMMARY_C
 
 def summary_row(ws, r):
     for (head, key, fmt, _), col in zip(SUMMARY_COLS, SUM_COLS):
-        if key is None:
-            put(ws, f"{col}{r}", None, "input")
+        if key in (None, "held"):         # typed: the ticker, and Yes when the stock is in the Round 2 portfolio
+            c = put(ws, f"{col}{r}", None, "input")
+            if key == "held":
+                c.alignment = Alignment(horizontal="center")
             continue
         formula = f'=IF($B{r}="","",IFERROR(INDIRECT("\'"&$B{r}&"\'!{CELL[key]}"),""))'
         bold = key in ("V0", "mos", "alpha_close", "alpha_never")
@@ -1044,10 +1051,11 @@ def build_summary(ws):
     title(ws, "DDM valuation: summary", "One row per stock sheet. Type a sheet name under Ticker, or let the script do it.")
     label(ws, "B4", "Buy threshold: MoS ≥")
     put(ws, "D4", "=" + inp("buy"), "link", PCT1)
+    note(ws, "F4", HELD_NOTE)
     for (head, key, fmt, width), col in zip(SUMMARY_COLS, SUM_COLS):
         c = put(ws, f"{col}{SUM_HDR}", head, "formula", bold=True)
         c.fill, c.border = fill(HEAD), Border(bottom=THIN)
-        c.alignment = Alignment(horizontal="left" if key in (None, "name", "basis", "flags") else "center")
+        c.alignment = Alignment(horizontal="left" if key in (None, "name", "basis") else "center")
         ws.column_dimensions[col].width = width
     ws.column_dimensions["A"].width = 2
     for r in range(SUM_ROW0, SUM_ROW0 + SUMMARY_ROWS):
