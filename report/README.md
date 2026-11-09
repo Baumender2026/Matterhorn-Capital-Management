@@ -21,6 +21,7 @@ report/
   round1-saa.dc.html              ← Round 1 report source (18 pages)
   round1-slides.html              ← Round 1 deck source
   round2-equity.dc.html           ← Round 2 report: text by hand, numbers and stock pages filled by scripts/build_round2_report.py
+  round2-slides.html              ← Round 2 deck source (copy of templates/slides.dc.html; numbers copied from the Round 2 report PDF)
   round<N>-<topic>.dc.html        ← one source per round, named by round, all in this folder
   figures/                        ← run outputs the report uses, promoted from runs/ (never edit by hand)
   pdf/                            ← exported deliverables; the website links here
