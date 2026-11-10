@@ -13,8 +13,10 @@ Rules (AMC):
     "reinvest cash dividends": checked on the BND, BNDX and TIP dividends of 2 Nov
     2026); cash earns 0%. A dividend Yahoo does not have yet goes in the round's
     `dividends` in holdings.json, and replaces Yahoo's once Yahoo has it.
-  * Each round restarts at its own starting NAV (USD 100M). Daily returns are
-    chain-linked across rounds into an index (base 100) for the inception figures.
+  * Each round's NAV comes from its own shares and cash in holdings.json, from its
+    start-date close (Round 2 continues the Round 1 portfolio at the 6 Nov 2026
+    close). Daily returns are chain-linked across rounds into an index (base 100)
+    for the inception figures.
   * Realised volatility and the Sharpe ratio are left empty until there are
     MIN_STATS_DAYS daily returns.
   * The data runs to the latest close every holding has. Before CLOSE_CUTOFF

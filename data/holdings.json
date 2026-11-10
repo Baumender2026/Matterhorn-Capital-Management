@@ -24,10 +24,24 @@
     },
     {
       "id": "Round 2",
-      "start_date": null,
-      "starting_nav": 100000000,
-      "cash": 0,
-      "holdings": []
+      "start_date": "2026-11-06",
+      "starting_nav": 98212801.27,
+      "cash": 8707.90,
+      "source": "Round 2 report, Table 4: entered in Bloomberg PRTU on 8 Nov 2026 at the closes of 6 Nov 2026; shares and target weights also in report/figures/round2-portfolio.json. Target risk contribution = w_i(Vw)_i / w'Vw at the target weights, V = 12 x cov of the 60 monthly excess returns Nov 2021 - Oct 2026 (the report's risk model: ex-ante volatility 8.69%)",
+      "holdings": [
+        { "ticker": "VTI",  "name": "Vanguard Total Stock Market ETF",                     "asset_class": "Equity",      "shares": 23084,  "target_weight": 0.085070, "target_risk_contribution": 0.1221 },
+        { "ticker": "VEA",  "name": "Vanguard FTSE Developed Markets ETF",                 "asset_class": "Equity",      "shares": 115597, "target_weight": 0.079919, "target_risk_contribution": 0.1347 },
+        { "ticker": "IEMG", "name": "iShares Core MSCI Emerging Markets ETF",              "asset_class": "Equity",      "shares": 108607, "target_weight": 0.079841, "target_risk_contribution": 0.1231 },
+        { "ticker": "BND",  "name": "Vanguard Total Bond Market ETF",                      "asset_class": "Bonds",       "shares": 142724, "target_weight": 0.104036, "target_risk_contribution": 0.0586 },
+        { "ticker": "BNDX", "name": "Vanguard Total International Bond ETF",               "asset_class": "Bonds",       "shares": 265436, "target_weight": 0.128620, "target_risk_contribution": 0.0559 },
+        { "ticker": "TIP",  "name": "iShares TIPS Bond ETF",                               "asset_class": "Bonds",       "shares": 110068, "target_weight": 0.119098, "target_risk_contribution": 0.0685 },
+        { "ticker": "GLD",  "name": "SPDR Gold Shares",                                    "asset_class": "Real assets", "shares": 22942,  "target_weight": 0.087021, "target_risk_contribution": 0.0976 },
+        { "ticker": "BCI",  "name": "abrdn Bloomberg All Commodity Strategy K-1 Free ETF", "asset_class": "Real assets", "shares": 385745, "target_weight": 0.096777, "target_risk_contribution": 0.0623 },
+        { "ticker": "NVDA", "name": "NVIDIA",                                              "asset_class": "Equity",      "shares": 9618,   "target_weight": 0.018278, "target_risk_contribution": 0.0474 },
+        { "ticker": "PEP",  "name": "PepsiCo",                                             "asset_class": "Equity",      "shares": 54063,  "target_weight": 0.077804, "target_risk_contribution": 0.0825 },
+        { "ticker": "ABBV", "name": "AbbVie",                                              "asset_class": "Equity",      "shares": 19594,  "target_weight": 0.058119, "target_risk_contribution": 0.0523 },
+        { "ticker": "DRI",  "name": "Darden",                                              "asset_class": "Equity",      "shares": 28349,  "target_weight": 0.065337, "target_risk_contribution": 0.0952 }
+      ]
     },
     {
       "id": "Round 3",
