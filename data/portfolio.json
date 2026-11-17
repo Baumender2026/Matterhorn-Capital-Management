@@ -1,19 +1,19 @@
 {
  "status": "ok",
- "as_of": "2026-11-13",
- "generated_at": "2026-11-14T03:29:34Z",
+ "as_of": "2026-11-16",
+ "generated_at": "2026-11-17T04:06:44Z",
  "currency": "USD",
  "current_round": "Round 2",
- "nav": 98079759.93,
+ "nav": 97312875.33,
  "metrics": {
-  "total_return": -0.019202,
-  "realised_vol": 0.085554,
-  "sharpe": -3.28917,
-  "max_drawdown": -0.020992,
-  "ex_ante_vol": 0.087974,
-  "var_1m_95_pct": 0.041776,
-  "var_1m_95_usd": 4097389.09,
-  "daily_returns": 20,
+  "total_return": -0.026871,
+  "realised_vol": 0.086711,
+  "sharpe": -4.195241,
+  "max_drawdown": -0.028197,
+  "ex_ante_vol": 0.087697,
+  "var_1m_95_pct": 0.041645,
+  "var_1m_95_usd": 4052546.84,
+  "daily_returns": 21,
   "min_days_for_stats": 20,
   "rf_1m_latest": 0.041,
   "rf_source": "US Treasury daily par yield curve, 1 Mo",
@@ -36,11 +36,11 @@
   {
    "id": "Round 2",
    "start_date": "2026-11-06",
-   "end_date": "2026-11-13",
+   "end_date": "2026-11-16",
    "status": "active",
    "start_nav": 98212801.35,
-   "end_nav": 98079759.93,
-   "return": -0.001355
+   "end_nav": 97312875.33,
+   "return": -0.009163
   },
   {
    "id": "Round 3",
@@ -54,12 +54,12 @@
    "name": "Vanguard Total Stock Market ETF",
    "asset_class": "Equity",
    "shares": 23084.0,
-   "price": 371.11,
-   "market_value": 8566703.24,
-   "weight": 0.087344,
+   "price": 364.3,
+   "market_value": 8409501.2,
+   "weight": 0.086417,
    "target_weight": 0.08507,
-   "drift_pp": 0.2274,
-   "risk_contribution": 0.125672,
+   "drift_pp": 0.1347,
+   "risk_contribution": 0.12441,
    "target_risk_contribution": 0.1221
   },
   {
@@ -67,12 +67,12 @@
    "name": "Vanguard FTSE Developed Markets ETF",
    "asset_class": "Equity",
    "shares": 115597.0,
-   "price": 69.44,
-   "market_value": 8027055.68,
-   "weight": 0.081842,
+   "price": 68.22,
+   "market_value": 7886027.34,
+   "weight": 0.081038,
    "target_weight": 0.079919,
-   "drift_pp": 0.1923,
-   "risk_contribution": 0.137634,
+   "drift_pp": 0.1119,
+   "risk_contribution": 0.136514,
    "target_risk_contribution": 0.1347
   },
   {
@@ -80,12 +80,12 @@
    "name": "iShares Core MSCI Emerging Markets ETF",
    "asset_class": "Equity",
    "shares": 108607.0,
-   "price": 74.15,
-   "market_value": 8053209.05,
-   "weight": 0.082109,
+   "price": 71.77,
+   "market_value": 7794724.39,
+   "weight": 0.0801,
    "target_weight": 0.079841,
-   "drift_pp": 0.2268,
-   "risk_contribution": 0.126616,
+   "drift_pp": 0.0259,
+   "risk_contribution": 0.123366,
    "target_risk_contribution": 0.1231
   },
   {
@@ -93,12 +93,12 @@
    "name": "Vanguard Total Bond Market ETF",
    "asset_class": "Bonds",
    "shares": 142724.0,
-   "price": 70.56,
-   "market_value": 10070605.44,
-   "weight": 0.102678,
+   "price": 70.62,
+   "market_value": 10079168.88,
+   "weight": 0.103575,
    "target_weight": 0.104036,
-   "drift_pp": -0.1358,
-   "risk_contribution": 0.058632,
+   "drift_pp": -0.0461,
+   "risk_contribution": 0.059376,
    "target_risk_contribution": 0.0586
   },
   {
@@ -106,12 +106,12 @@
    "name": "Vanguard Total International Bond ETF",
    "asset_class": "Bonds",
    "shares": 265436.0,
-   "price": 47.24,
-   "market_value": 12539196.64,
-   "weight": 0.127847,
+   "price": 47.22,
+   "market_value": 12533887.92,
+   "weight": 0.1288,
    "target_weight": 0.12862,
-   "drift_pp": -0.0773,
-   "risk_contribution": 0.056796,
+   "drift_pp": 0.018,
+   "risk_contribution": 0.057433,
    "target_risk_contribution": 0.0559
   },
   {
@@ -119,12 +119,12 @@
    "name": "iShares TIPS Bond ETF",
    "asset_class": "Bonds",
    "shares": 110068.0,
-   "price": 104.61,
-   "market_value": 11514213.48,
-   "weight": 0.117396,
+   "price": 104.57,
+   "market_value": 11509810.76,
+   "weight": 0.118276,
    "target_weight": 0.119098,
-   "drift_pp": -0.1702,
-   "risk_contribution": 0.068005,
+   "drift_pp": -0.0822,
+   "risk_contribution": 0.06882,
    "target_risk_contribution": 0.0685
   },
   {
@@ -132,12 +132,12 @@
    "name": "SPDR Gold Shares",
    "asset_class": "Real assets",
    "shares": 22942.0,
-   "price": 355.45,
-   "market_value": 8154733.9,
-   "weight": 0.083144,
+   "price": 352.93,
+   "market_value": 8096920.06,
+   "weight": 0.083205,
    "target_weight": 0.087021,
-   "drift_pp": -0.3877,
-   "risk_contribution": 0.092524,
+   "drift_pp": -0.3816,
+   "risk_contribution": 0.092865,
    "target_risk_contribution": 0.0976
   },
   {
@@ -145,12 +145,12 @@
    "name": "abrdn Bloomberg All Commodity Strategy K-1 Free ETF",
    "asset_class": "Real assets",
    "shares": 385745.0,
-   "price": 24.5,
-   "market_value": 9450752.5,
-   "weight": 0.096358,
+   "price": 24.0,
+   "market_value": 9257880.0,
+   "weight": 0.095135,
    "target_weight": 0.096777,
-   "drift_pp": -0.0419,
-   "risk_contribution": 0.060224,
+   "drift_pp": -0.1642,
+   "risk_contribution": 0.059383,
    "target_risk_contribution": 0.0623
   },
   {
@@ -158,12 +158,12 @@
    "name": "NVIDIA",
    "asset_class": "Equity",
    "shares": 9618.0,
-   "price": 162.85,
-   "market_value": 1566291.3,
-   "weight": 0.01597,
+   "price": 156.14,
+   "market_value": 1501754.52,
+   "weight": 0.015432,
    "target_weight": 0.018278,
-   "drift_pp": -0.2308,
-   "risk_contribution": 0.0414,
+   "drift_pp": -0.2846,
+   "risk_contribution": 0.039802,
    "target_risk_contribution": 0.0474
   },
   {
@@ -171,12 +171,12 @@
    "name": "PepsiCo",
    "asset_class": "Equity",
    "shares": 54063.0,
-   "price": 145.44,
-   "market_value": 7862922.72,
-   "weight": 0.080169,
+   "price": 146.43,
+   "market_value": 7916445.09,
+   "weight": 0.08135,
    "target_weight": 0.077804,
-   "drift_pp": 0.2365,
-   "risk_contribution": 0.083875,
+   "drift_pp": 0.3546,
+   "risk_contribution": 0.085975,
    "target_risk_contribution": 0.0825
   },
   {
@@ -184,12 +184,12 @@
    "name": "AbbVie",
    "asset_class": "Equity",
    "shares": 19594.0,
-   "price": 295.03,
-   "market_value": 5780817.82,
-   "weight": 0.05894,
+   "price": 294.55,
+   "market_value": 5771412.7,
+   "weight": 0.059308,
    "target_weight": 0.058119,
-   "drift_pp": 0.0821,
-   "risk_contribution": 0.052372,
+   "drift_pp": 0.1189,
+   "risk_contribution": 0.053286,
    "target_risk_contribution": 0.0523
   },
   {
@@ -197,12 +197,12 @@
    "name": "Darden",
    "asset_class": "Equity",
    "shares": 28349.0,
-   "price": 228.74,
-   "market_value": 6484550.26,
-   "weight": 0.066115,
+   "price": 230.93,
+   "market_value": 6546634.57,
+   "weight": 0.067274,
    "target_weight": 0.065337,
-   "drift_pp": 0.0778,
-   "risk_contribution": 0.096249,
+   "drift_pp": 0.1937,
+   "risk_contribution": 0.09877,
    "target_risk_contribution": 0.0952
   }
  ],
@@ -213,15 +213,15 @@
  "asset_classes": [
   {
    "name": "Equity",
-   "weight": 0.472489
+   "weight": 0.470919
   },
   {
    "name": "Bonds",
-   "weight": 0.347921
+   "weight": 0.350651
   },
   {
    "name": "Real assets",
-   "weight": 0.179502
+   "weight": 0.17834
   },
   {
    "name": "Cash",
@@ -360,6 +360,12 @@
    "round": "Round 2",
    "nav": 98079759.93,
    "index": 98.0798
+  },
+  {
+   "date": "2026-11-16",
+   "round": "Round 2",
+   "nav": 97312875.33,
+   "index": 97.3129
   }
  ]
 }
