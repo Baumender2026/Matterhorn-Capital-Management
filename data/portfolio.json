@@ -1,7 +1,7 @@
 {
  "status": "ok",
  "as_of": "2026-11-18",
- "generated_at": "2026-11-19T04:25:55Z",
+ "generated_at": "2026-11-20T02:30:33Z",
  "currency": "USD",
  "current_round": "Round 2",
  "nav": 96304291.15,
@@ -12,10 +12,10 @@
   "max_drawdown": -0.038269,
   "ex_ante_vol": 0.08751,
   "var_1m_95_pct": 0.041556,
-  "var_1m_95_usd": 4001994.03,
+  "var_1m_95_usd": 4001995.05,
   "daily_returns": 23,
   "min_days_for_stats": 20,
-  "rf_1m_latest": 0.041,
+  "rf_1m_latest": 0.042,
   "rf_source": "US Treasury daily par yield curve, 1 Mo",
   "risk_model_months": 60,
   "risk_model_window": [
@@ -124,7 +124,7 @@
    "weight": 0.119892,
    "target_weight": 0.119098,
    "drift_pp": 0.0794,
-   "risk_contribution": 0.070067,
+   "risk_contribution": 0.070068,
    "target_risk_contribution": 0.0685
   },
   {
