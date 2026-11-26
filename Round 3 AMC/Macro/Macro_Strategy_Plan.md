@@ -68,18 +68,31 @@ This comes first because some variations need data the TA's file does not have.
   - The regime-change signal: the threshold each indicator must cross, checked against the consensus and nowcasts for the next prints (forward-looking macro analysis).
 - **Country value and momentum** — Owner:
   - The TA ranks all 18 markets (the `COUNTRIES` dictionary of Notebook 01, data from 2001) and buys the top 4, already long-only.
-  - Choose our countries; their ETF data are downloaded in step 2.
+  - Our universe: MSCI classification (Developed + Emerging), keeping the countries with a liquid iShares country ETF and enough history. Not the OECD list, which leaves out China, India and Taiwan (more than half of MSCI EM), plus Brazil, South Africa, Saudi Arabia and Indonesia.
+  - Start from the TA's 18 (which already include Brazil and Taiwan) and add the main missing EM: China (MCHI), India (INDA), South Africa (EZA). Check each ETF's start date on the terminal: MCHI and INDA start only in 2011–2012, so their backtest is shorter.
+  - Their ETF data are downloaded in step 2.
   - Use the TA's signals (12-month momentum, P/B).
   - Decide how to handle a missing P/B (the TA falls back on momentum only).
   - Decide how to correct the sector bias of P/B (see notes).
 - **Carry** — Owner:
   - Low priority. Long-only, we do not earn the rate gap: we hold a high-rate currency (e.g. AUD through FXA) and earn its rate plus its move against the dollar.
   - On the TA's data only AUD pays more than USD, by 0.85% a year (0.07% a month), so the position is in practice a bet on the AUD.
+  - Currencies to watch: the TA's G10 (US, Eurozone, Japan, UK, Canada, Australia, New Zealand, Sweden, Switzerland) plus the high-rate EM in our country universe (Brazil, Mexico, South Africa, India). Japan matters also as a risk: the yen funds carry trades, so a BoJ hike can trigger an unwind.
+  - For each: rates (policy rate today and the next expected move, `WIRP`), which give what carry earns; FX (trend against the dollar over 1 and 3 months), which is the risk of losing it.
+  - Instruments: G10 currency ETFs (FXA, FXE, FXY, …); for EM only basket currency ETFs or local-currency bond ETFs, or indirectly through the country ETFs, which already carry the currency.
 - **Rates and inflation (if we want them)** — Owner:
   - The TA has only the cards of §1b, no code: decide the rule and how to test it.
   - Rates, e.g.: when the Taylor-rule rate is above Fed funds, underweight duration (SHY instead of IEF, or an inverse Treasury ETF).
   - Inflation, e.g.: when CPI y/y is above a year earlier, overweight commodities, TIPS and gold against nominal bonds (close to the regime strategy).
   - List the data they need.
+- **Thematic strategies (any model allowed, per the tutor)** — Owner:
+  - Order: market outlook → 2–3 candidate themes → literature for each → one rule per theme → backtest in step 3.
+  - From the outlook workbook (Bloomberg), list the themes that the data support for 27 Nov – 27 Dec (e.g. a sector or region driven by rates, the dollar, commodities or AI capex), each with the data point behind it.
+  - For each theme, deep research with the prompt below: which signal has out-of-sample evidence at a 1-month horizon.
+  - Write the rule as for the other strategies: signal, threshold, instrument, when it is in or out. E.g. hold the theme ETF when its 12-month momentum against SPY is positive and the macro driver points the same way, otherwise hold the SAA.
+  - Instrument: a liquid theme or sector ETF (Live sheet). Check its start date: many theme ETFs begin after 2015, so use the sector index behind it for the backtest, and name the proxy.
+  - Check the overlap with the stocks we already hold (e.g. NVDA in an AI or semiconductor theme): the same bet twice adds risk, not diversification.
+  - List the data they need (step 2, Extra sheet).
 - **Correct the TA code** — Owner:
   - On the TA's CSVs already in the folder, no terminal needed.
   - Notebook 02: `W_SAA` = our weights; in §5, `A_TICK` = the Round 2 stocks we keep.
@@ -97,6 +110,7 @@ This comes first because some variations need data the TA's file does not have.
 - **The regime table (correcting the code).** §2 picks the best asset in each regime using all months up to 2026, including months that were still in the future at the time, so it cannot be used as evidence; the code below replaces it. The TA's fixed thresholds (PMI 50, CPI against a year earlier) are fine; a median over the whole sample, as in the Class 7 exercise, would use the future, so any median must come from past months only.
 - **Count the trials (deciding the list).** Every strategy or variation we run goes in the trials log, and the report gives the count, as Class 4 asks: with 20 variations and no real effect, about one looks significant by luck. That is why the list is fixed, with reasons, before anything runs.
 - **Momentum in USD, value in local currency: not a problem.** P/B is a ratio in one currency (price and book both local), which is what makes it comparable across countries; the currency risk is in the return we earn, in USD, which the backtest already includes. The iShares ETFs track the same MSCI indices, so the two sources are consistent.
+- **Any model is allowed, so the trials count matters more (thematic strategies).** A theme picked because it did well this year, then tested on the same years, will look good by construction. Choose the theme and its rule from the outlook and the literature before looking at its backtest, test it on 2014–2026 only after fixing it on earlier years (or on the sector index where the ETF is young), and log every theme tried.
 - **The real caveat: P/B depends on sector mix (decision needed).** A market full of banks has a low P/B by construction, one full of tech a high one, so ranking raw P/B across countries partly ranks sectors, not cheapness. Options: compare each country's P/B with its own past (using only earlier months); use a sector-neutral valuation if Bloomberg provides one for the MSCI country indices; or accept it and state it in the report.
 
 Code that replaces the §2 regime table. It assumes `Re` has one column per SAA ETF ticker (skip the TA's renaming to plain names) and uses `regime` from §2, whose row t is the regime known at the end of month t:
@@ -124,16 +138,38 @@ Deep-research prompt for the regime models:
 We classify each month into four macro regimes (growth up/down x inflation rising/falling) using the US ISM manufacturing PMI above 50 and CPI y/y above its level 12 months earlier, lagged one month for publication, and tilt a long-only multi-asset portfolio toward the asset class with the best historical Sharpe ratio in the current regime, rebalanced monthly. Review the academic and practitioner literature on better ways to classify growth/inflation regimes for monthly asset allocation: indicators (PMI, Chicago Fed National Activity Index, nowcasts, core vs headline CPI, inflation surprises), levels vs changes, thresholds, probabilistic or Markov-switching models, and the effect of real-time data (publication lags, revisions). For each method: out-of-sample evidence at a 1-month horizon and whether it can be implemented with monthly data in pandas. Cite papers and practitioner research with links. End with the two or three simplest improvements worth testing.
 ```
 
+Deep-research prompt for a thematic strategy (replace the parts in brackets):
+
+```text
+We run a long-only macro sleeve rebalanced monthly and want a rule-based thematic position in [THEME, e.g. US semiconductors] through [ETF or index], held for one month from 27 November 2026. Our view comes from [DATA POINT FROM THE OUTLOOK, e.g. rising AI capex and falling real yields]. Review the academic and practitioner literature on predicting the returns of this theme or sector at a 1-month horizon: momentum (absolute and relative to the market), valuation, macro drivers (rates, dollar, commodities, earnings revisions), and their interaction. For each signal: out-of-sample evidence, typical Sharpe ratio, drawdowns, and whether it can be built with monthly Bloomberg data in pandas. Warn about crowding and about theme ETFs with short histories. Cite papers and practitioner research with links. End with the one or two simplest rules worth backtesting.
+```
+
 ### Step 2 – Download all the data at once (terminal)
 
+We work on a copy of the TA folder, `Round 3 AMC/Macro/`; the TA original stays untouched. The copy of the template is already filled with our tickers, so on the terminal you only refresh it. What it downloads (also listed in its README sheet; tickers in yellow may need checking):
+
+| Sheet | What | Why |
+|---|---|---|
+| Macro | ISM PMI, US CPI y/y, 3-month T-bill, Fed funds, monthly from 1990 | regimes (TA) |
+| Assets | TA indices + proxies of our SAA: Russell 3000 (VTI), MSCI World ex US (VEA), MSCI EM (IEMG), US Aggregate (BND), Global Aggregate hedged (BNDX); TIP, GLD, BCI already covered by TIPS, gold, BCOMTR | regime vs our SAA, sizing |
+| Countries / Value | total return of the 18 TA country ETFs + China (MCHI), India (INDA), South Africa (EZA); P/B of their MSCI indices, from 2001 | country V&M |
+| Live | today's price of the country ETFs and of candidate macro ETFs (TLT, IEF, SHY, TIP, GLD, DBC, USO, CPER, FXA, FXE, FXY, FXB, FXF, FXC, CEW) | trade prices |
+| Rates | today's policy rate of the 9 G10 currencies + Brazil, Mexico, South Africa, India | carry today |
+| CarryRates / CarryFX (new) | the same policy rates and FX vs USD, monthly from 2001 | carry backtest after 2014 (the TA's `DataPython.xlsx` stops in 2014) |
+| Extra (new) | CFNAI, unemployment, core CPI, 2y and 10y yields, 10y breakeven, 10y real yield, Brent, WTI, copper | only for the variations chosen in step 1 |
+
 - **Bloomberg** — Owner:
-  - In `r7_bloomberg.xlsx`, Assets sheet with the indices of our SAA: benchmark from `DES` of VTI, VEA, IEMG, BND, BNDX; TIP, GLD and BCI are already there.
-  - One column pair (BDH, `Per=M`) for each extra series on the list of step 1.
-  - Refresh, save as values in `Data/r7_bloomberg_values.xlsx`.
+  - On the terminal PC, open OneDrive in the browser (onedrive.live.com, our account) and download `Desktop/Financial Modeling/Matterhorn-Capital-Management/Round 3 AMC/Macro/Bloomberg template/r7_bloomberg.xlsx`.
+  - Open it in Excel. In Settings, check that the end date is the trade date (Friday 27 November 2026).
+  - Bloomberg tab → Refresh Workbook. Wait until no cell shows "#N/A Requesting Data...".
+  - Ask Claude in Excel: "Check every sheet: for each ticker that returns #N/A find the right Bloomberg ticker, replace it and tell me what you changed." Write the changes in the README sheet.
+  - Ask Claude in Excel: "Replace all formulas with their values in every sheet." Then File → Save As `r7_bloomberg_values.xlsx`.
+  - Upload it through the browser to `Round 3 AMC/Macro/Data/`, replacing the TA's file. OneDrive syncs it to our laptops.
+  - Live prices must be from the trade day: if you download earlier, refresh only the Live sheet again on 27 November and upload again.
 - **Clean** — Owner:
-  - Notebook 01 (`pip install openpyxl` first).
-  - Add the new tickers to its dictionaries (`COUNTRIES`, `ASSETS`, `MACRO`).
-  - Run all, check that "holes" are 0.
+  - `Round 3 AMC/Macro/01_bloomberg_macro_data.ipynb` (`pip install openpyxl` first). Our tickers are already in its dictionaries (`COUNTRIES`, `ASSETS`), and the last cell also saves `r7_carry_rates_bbg.csv`, `r7_carry_fx_bbg.csv`, `r7_extra.csv`.
+  - If a ticker was changed on the terminal, change it here too.
+  - Run all, check that "holes" are 0 and the first date of each new series.
 
 **Notes for this step**
 

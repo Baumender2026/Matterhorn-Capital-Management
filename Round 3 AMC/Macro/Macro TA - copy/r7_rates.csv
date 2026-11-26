@@ -1,0 +1,10 @@
+currency,ticker,rate
+US,FDTR Index,4.0
+Australia,RBATCTR Index,4.85
+Germany,EUORDEPO Index,2.5
+Canada,CABROVER Index,2.5
+Japan,BOJDTR Index,1.25
+NewZealand,NZOCRS Index,2.75
+Sweden,SWRRATEI Index,2.0
+Switzerland,SZLTDEP Index,0.0
+UK,UKBRBASE Index,4.0

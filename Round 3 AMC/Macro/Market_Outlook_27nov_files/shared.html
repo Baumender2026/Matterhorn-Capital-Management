@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<!-- saved from url=(0304)https://shared.officeapps.live.com/clipboard/shared.aspx?CreatorOrigin=https%3A%2F%2Fchc-excel.officeapps.live.com&usid=e6db8356-210e-7a53-1ebf-c372da4deaac&BulsEndpointUrl=https%3A%2F%2Feuc-excel-telemetry.officeapps.live.com%2Fxt%2FRemoteUls.ashx&corrid=b8009336-0961-4ea3-8394-cffdee9832bd&NoAuth=true -->
+<html data-wac-bridge-id="9f785cdc-bb0b-41cd-95a2-710393063383"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><title>
+	Shared Clipboard iframe content
+</title>
+  <script type="text/javascript" nonce="">
+  var sharedClipboardBypassPolicy = "";
+    try {
+      var ttTinyFill = {
+        createPolicy: (_, options) => options,
+      };
+      var defaultTTApi = 
+        typeof self !== 'undefined' && self.trustedTypes
+        ? self.trustedTypes
+        : ttTinyFill;
+      sharedClipboardBypassPolicy = defaultTTApi.createPolicy('xlSCBypassPolicy', { 
+        createScriptURL: (url) => url
+      });
+    } catch (e) {}
+
+var sharedClipboardSettings = {
+ whitelistOriginComponents: 1,
+ staticContentURLPrefix: "https://res.public.onecdn.static.microsoft:443/officeonline/clipboard/s/162072242301_App_Scripts/",
+ is1CDNEnabled: "True",
+ sharedClipboardExpirationInMinutes: 3600,
+ clipboardPromiseTimeoutInMinutes: 2,
+ sharedClipboardSchemaVersion: 2,
+ remoteLoggerPath: "/xt/RemoteUls.ashx",
+
+ sharedClipboardHostingApp: "shared",
+ sharedClipboardHostingApps: "[\"broadcast\", \"excel\", \"onenote\", \"powerpoint\", \"view\", \"visio\", \"word-edit\", \"word-view\", \"shared\"]",
+ sharedClipboardHostingEnvironments: "[\"officeapps.live.com\", \"office.svc.cloud.microsoft\", \"office.guest.usercontent.microsoft\", \"office.core.microsoft\", \"word.cloud.microsoft\", \"excel.cloud.microsoft\", \"powerpoint.cloud.microsoft\"]"
+
+};
+
+var sharedClipboardScriptFileName = 'sharedclipboard.min.js';
+
+function loadScript(fileName) {
+  var scriptElement = document.createElement('script');
+  var fileSrc = getScriptSrc(fileName);
+  if (sharedClipboardBypassPolicy !== "") {
+    var trustedFileName = sharedClipboardBypassPolicy.createScriptURL(fileSrc);
+    scriptElement.setAttribute('src', trustedFileName);
+  }
+  else {
+    scriptElement.setAttribute('src', fileSrc);
+  }
+  scriptElement.setAttribute('type', 'text/javascript');
+  scriptElement.setAttribute('async', 'false');
+  scriptElement.setAttribute('defer', 'defer');
+  if (sharedClipboardSettings.is1CDNEnabled === "True") {
+    scriptElement.setAttribute('crossorigin', 'anonymous');
+  }
+  var body = document.getElementsByTagName('body')[0];
+  body.appendChild(scriptElement);
+}
+
+function getScriptSrc(fileName) {
+  var prefix = sharedClipboardSettings.staticContentURLPrefix;
+  if (!prefix) {
+    return fileName;
+  }
+
+  var queryMark = prefix.indexOf('?');
+  if (queryMark < 0) {
+    return prefix + fileName;
+  }
+
+  var postfix = prefix.substr(queryMark);
+  prefix = prefix.substr(0, queryMark);
+  return prefix + fileName + postfix;
+}
+  </script>
+ </head>
+
+<body data-new-gr-c-s-check-loaded="14.1350.0" data-gr-ext-installed="" data-gr-ext-shgo="" data-gr-ext-go-mode="">
+  <script nonce="">
+    document.body.onload = () => { window.sharedClipboard.initialize(); };
+    loadScript(sharedClipboardScriptFileName);
+  </script><script src="./sharedclipboard.min.js.download" type="text/javascript" async="false" defer="defer" crossorigin="anonymous"></script>
+
+
+
+
+</body><superhuman-go-desktop-integration data-superhuman-go-shadow-root="true" style="visibility: visible !important;"><template shadowrootmode="open"><style>
+      div.superhuman-go-desktop-integration {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+        -moz-user-select: none;
+        -webkit-user-select: none;
+        -ms-user-select:none;
+        user-select:none;
+      }
+
+      div.superhuman-go-desktop-integration:before {
+        content: attr(data-content);
+      }
+    </style><div aria-label="superhuman-go-integration" role="group" tabindex="-1" class="superhuman-go-desktop-integration" data-content="{&quot;mode&quot;:&quot;full&quot;,&quot;isActive&quot;:true,&quot;isUserDisabled&quot;:false}"></div></template></superhuman-go-desktop-integration><grammarly-desktop-integration data-grammarly-shadow-root="true" style="visibility: visible !important;"><template shadowrootmode="open"><style>
+      div.grammarly-desktop-integration {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+        -moz-user-select: none;
+        -webkit-user-select: none;
+        -ms-user-select:none;
+        user-select:none;
+      }
+
+      div.grammarly-desktop-integration:before {
+        content: attr(data-content);
+      }
+    </style><div aria-label="grammarly-integration" role="group" tabindex="-1" class="grammarly-desktop-integration" data-content="{&quot;mode&quot;:&quot;full&quot;,&quot;isActive&quot;:true,&quot;isUserDisabled&quot;:false}"></div></template></grammarly-desktop-integration></html>
