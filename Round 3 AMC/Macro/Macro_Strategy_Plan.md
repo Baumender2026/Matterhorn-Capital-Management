@@ -73,7 +73,7 @@ This comes first because some variations need data the TA's file does not have.
   - Their ETF data are downloaded in step 2.
   - Use the TA's signals (12-month momentum, P/B).
   - Decide how to handle a missing P/B (the TA falls back on momentum only).
-  - Decide how to correct the sector bias of P/B (see notes).
+  - Sector bias of P/B: decided, value = raw P/B + P/B adjusted for ROE (see notes). Write the code in Notebook 02 §3.
 - **Carry** — Owner:
   - Low priority. Long-only, we do not earn the rate gap: we hold a high-rate currency (e.g. AUD through FXA) and earn its rate plus its move against the dollar.
   - On the TA's data only AUD pays more than USD, by 0.85% a year (0.07% a month), so the position is in practice a bet on the AUD.
@@ -112,6 +112,14 @@ This comes first because some variations need data the TA's file does not have.
 - **Momentum in USD, value in local currency: not a problem.** P/B is a ratio in one currency (price and book both local), which is what makes it comparable across countries; the currency risk is in the return we earn, in USD, which the backtest already includes. The iShares ETFs track the same MSCI indices, so the two sources are consistent.
 - **Any model is allowed, so the trials count matters more (thematic strategies).** A theme picked because it did well this year, then tested on the same years, will look good by construction. Choose the theme and its rule from the outlook and the literature before looking at its backtest, test it on 2014–2026 only after fixing it on earlier years (or on the sector index where the ETF is young), and log every theme tried.
 - **The real caveat: P/B depends on sector mix (decision needed).** A market full of banks has a low P/B by construction, one full of tech a high one, so ranking raw P/B across countries partly ranks sectors, not cheapness. Options: compare each country's P/B with its own past (using only earlier months); use a sector-neutral valuation if Bloomberg provides one for the MSCI country indices; or accept it and state it in the report.
+  - What the literature says (`Macro/reports/Country value signals sector bias.md`):
+    - P/B is the only country value signal with a published monthly backtest on a universe like ours: Sharpe 0.61 alone, 1.16 combined 50/50 with momentum (Asness, Moskowitz & Pedersen 2013).
+    - No paper tests a sector-adjusted country P/B out of sample. At stock level, removing industry exposure nearly doubles the Sharpe of value (Novy-Marx 2013).
+    - Cheapest fix with Bloomberg data: each month, regress log P/B on ROE across countries and rank on the residual. This needs ROE of the MSCI indices, a field to add to the template.
+    - Own-history z-score: 60-month rolling window ending at t−1, with at least 36 months. It fails when a country's sector mix changes (e.g. Denmark).
+    - The ROE residual comes from the Wilcox P/B–ROE model (FAJ 1984; JPM 2005): it explains prices well but has no published return backtest, and none across countries. Using it for countries is our extension; say so in the report.
+    - 5-year reversal (return from t−60 to t−12): worked until about 2005, then flipped sign (Zaremba 2016, MSCI 1999–2015: losers minus winners −1.22% a month; Zaremba & Umutlu 2020). Country value also faded after 2005. We drop it.
+  - **Decided:** value = average of the ranks of raw P/B and ROE-adjusted P/B (the residual of log P/B on ROE across countries, each month); then 50/50 with 12-1 momentum, top 4, as in the TA. Declare it as the main version before running; log every variant tried.
 
 Code that replaces the §2 regime table. It assumes `Re` has one column per SAA ETF ticker (skip the TA's renaming to plain names) and uses `regime` from §2, whose row t is the regime known at the end of month t:
 
@@ -153,6 +161,7 @@ We work on a copy of the TA folder, `Round 3 AMC/Macro/`; the TA original stays 
 | Macro | ISM PMI, US CPI y/y, 3-month T-bill, Fed funds, monthly from 1990 | regimes (TA) |
 | Assets | TA indices + proxies of our SAA: Russell 3000 (VTI), MSCI World ex US (VEA), MSCI EM (IEMG), US Aggregate (BND), Global Aggregate hedged (BNDX); TIP, GLD, BCI already covered by TIPS, gold, BCOMTR | regime vs our SAA, sizing |
 | Countries / Value | total return of the 18 TA country ETFs + China (MCHI), India (INDA), South Africa (EZA); P/B of their MSCI indices, from 2001 | country V&M |
+| ROE (new) | return on equity of the same MSCI indices (`RETURN_COM_EQY`) | P/B adjusted for ROE |
 | Live | today's price of the country ETFs and of candidate macro ETFs (TLT, IEF, SHY, TIP, GLD, DBC, USO, CPER, FXA, FXE, FXY, FXB, FXF, FXC, CEW) | trade prices |
 | Rates | today's policy rate of the 9 G10 currencies + Brazil, Mexico, South Africa, India | carry today |
 | CarryRates / CarryFX (new) | the same policy rates and FX vs USD, monthly from 2001 | carry backtest after 2014 (the TA's `DataPython.xlsx` stops in 2014) |
