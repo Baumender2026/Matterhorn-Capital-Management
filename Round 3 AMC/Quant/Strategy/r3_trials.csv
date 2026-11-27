@@ -1,0 +1,10 @@
+Strategy Name,Category,Universe,# Holdings,Rebalance,Benchmark,Total Return,Sharpe Ratio,Info Ratio,Beta,Status
+AMC R3 BABQM,Multi-Factor,Russell 1000 (active),30,Monthly,RIY,4.3803,0.53,-0.22,0.66,Tested
+MCM Momentun Nov 26,Multi-Factor,S&P 500 + Morningstar US Total Market + FTSE Developed ex US All Cap (active),30,Monthly,RIY,8.1202,0.77,0.21,1.06,Promising
+AMC R3 MQE,Multi-Factor,Russell 1000 (active),30,Monthly,RIY,7.8026,0.55,0.12,1.04,Tested
+"AMC R3 SVQ (Quarterly, vs RIY)",Multi-Factor,Russell 2000 (active),35,Quarterly,RIY,1.9274,0.29,-0.12,1.21,Tested
+AMC R3 MWC,Multi-Factor,Russell 1000 (active),30,Monthly,RIY,6.7023,0.49,0.1,1.13,Tested
+AMC R3 SVQ,Multi-Factor,Russell 2000 (active),35,Monthly,RTY,3.02,0.35,0.05,1.09,Tested
+AMC R3 BAB,Low Vol,Russell 1000 (active),31,Monthly,RIY,3.0127,0.48,-0.29,0.45,Tested
+AMC R3 VMQ,Multi-Factor,Russell 1000 (active),28,Monthly,RIY,5.8248,0.49,0.02,1.06,Tested
+AMC R3 SCV,Value,Russell 2000 (active),55,Monthly,RTY,1.3287,0.3,0.11,1.42,Tested
