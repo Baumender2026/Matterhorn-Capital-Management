@@ -56,21 +56,14 @@ jobs:
           echo "changed=true" >> "$GITHUB_OUTPUT"
 
   # Pushes made with GITHUB_TOKEN do not trigger static.yml, so deploy Pages here.
-  # Manual runs always redeploy.
-  deploy:
+  # Manual runs always redeploy. Upload and deploy are separate jobs, as in static.yml: in one job,
+  # deploy-pages could look for the artifact before GitHub had registered it.
+  build-site:
     needs: update
     if: needs.update.outputs.changed == 'true' || github.event_name == 'workflow_dispatch'
     permissions:
       contents: read
       pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    # Same group as static.yml, so the two never deploy at the same time
-    concurrency:
-      group: "pages"
-      cancel-in-progress: false
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
@@ -83,6 +76,21 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           path: '.'
+
+  deploy:
+    needs: build-site   # skipped when build-site is skipped (no data change)
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    # Same group as static.yml, so the two never deploy at the same time
+    concurrency:
+      group: "pages"
+      cancel-in-progress: false
+    runs-on: ubuntu-24.04
+    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
