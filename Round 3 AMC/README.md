@@ -1,6 +1,6 @@
 # Round 3 · Quant and macro
 
-The working folder for Round 3 of the AMC 2026: the quant sleeve (BABQM) and the macro sleeve (Strategy A, BNDX).
+The working folder for Round 3 of the AMC 2026: the quant sleeve (BABQM) and the macro sleeve (Strategy A, BNDX and BND).
 
 - **Deadline:** the report, the code and the portfolio description go to the TA by **Sun 29 Nov 2026, 23:59**.
 - **Prices:** the trades are priced at the closes of **Fri 27 Nov 2026**.
@@ -29,14 +29,14 @@ Paths are relative to this folder.
 
 ## 2. Decisions (28 Nov 2026)
 
-### A1 · The macro strategy: Strategy A, all in BNDX
+### A1 · The macro strategy: Strategy A, in BNDX and BND
 
-The macro sleeve holds one position: **BNDX** (Vanguard Total International Bond ETF, USD hedged).
+The macro sleeve holds **BNDX** (Vanguard Total International Bond ETF, USD hedged) and **BND** (Vanguard Total Bond Market ETF), in their SAA proportion: 55.3 % and 44.7 %. This was decided on 28 Nov; see "Final sizing" below.
 
 - **Where the pick comes from:** the regime rule of `03b_strategy_A_backtest.ipynb`, main trial T2. Growth is "up" if the CFNAI 3-month average is above 0; inflation is "rising" if CPI y/y is above its level 12 months earlier. In each regime the rule holds the SAA asset class with the best past Sharpe, using only earlier months.
-- **Today's reading:** Stagflation → BNDX (Sharpe 0.75, t = 2.0, 86 months).
+- **Today's reading:** Stagflation → BNDX (Sharpe 0.75, t = 2.0, 86 months). BND (0.71) cannot be told apart from it (z = 0.34, 03b §4b).
 - **Strategy B** (country value and momentum, `04_strategy_B_countries.ipynb`) is not traded.
-- **In the code:** `PICKS = ["BNDX"]` at the top of macro 02 §5 (A3).
+- **In the code:** `PICKS = ["BNDX", "BND"]` and `SLEEVE = W_SAA[PICKS] / W_SAA[PICKS].sum()` at the top of macro 02 §5.
 
 Sentences for the report (macro part):
 
@@ -44,7 +44,7 @@ Sentences for the report (macro part):
 >
 > We leave Strategy B out: country value and momentum did not beat an equal-weighted basket of the same 21 countries (Sharpe 0.44 against 0.45; mean information coefficient −0.004), and its top pick, Korea, would add a second semiconductor bet next to NVDA.
 >
-> The whole macro sleeve is in BNDX, the rule's single pick; splitting it with Strategy B would add the equity risk our regime view tells us to avoid.
+> The macro sleeve holds BNDX and BND in their SAA proportion (55 % and 45 %). In the 86 stagflation months their Sharpe ratios cannot be told apart (0.75 and 0.71; difference 0.04, standard error 0.12; correlation 0.95), so we hold both rather than make a choice the data cannot support, and we log it as a fourth trial. Adding Strategy B would bring the equity risk our regime view tells us to avoid.
 >
 > Neither candidate beat its benchmark in the backtest: Strategy A earned a Sharpe ratio of 0.51 against 0.59 for our SAA (0.25 after the ×0.5 discount), and the TA's own country strategy did not beat its benchmark either (0.37 against 0.46).
 
@@ -57,11 +57,34 @@ The 7 % budget covers the Round 2 stocks, the quant sleeve and the macro sleeve 
 | `TE_MAX` | quant 02 §0, macro 02 §0 | 0.07 | the Round 3 budget |
 | `TE_QUANT` | quant 02 §0 | 0.05 | Round 2 stocks + quant sleeve, before the macro sleeve |
 | `TE_TARGET` | macro 02 §0 | 0.065 | total target, with a 0.5 % buffer for price moves |
-| `W_M_MAX` | macro 02 §0 | 0.20 | cap on the macro sleeve |
+| `W_Q_MAX` | quant 02 §0 | 0.125 | cap on the quant sleeve, in % of the NAV (team decision, 28 Nov) |
+| `W_M_MAX` | macro 02 §0 | 0.075 | cap on the macro sleeve, in % of the NAV (team decision, 28 Nov) |
 
-- **BNDX and the cap:** BNDX moves little against the SAA, so the 20 % cap should bind and the total TE end below 6.5 % (5.5 % in the TA's example). That is accepted.
-- **Raising the cap** is a team decision, not something to tune.
+- **The caps bind.**
+  - The TE targets alone would put 34 % of the NAV in the quant stocks, and would allow a macro sleeve of about two thirds of the NAV, because bonds move little against the SAA.
+  - The caps hold the two sleeves at 12.5 % and 7.5 %. The total TE is 2.27 %, well inside the 7 % budget; Round 3 sets no minimum.
+- **Raising a cap** is a team decision, not something to tune.
 - **The Round 2 stocks** (settled 27 Nov): NVDA, PEP, ABBV and DRI are kept at 2 % of the NAV each (`W_R2`, quant 02 §0), so w_A = 8 %. The reason for each one (catalyst, valuation) goes in report part 2.
+
+### Final sizing (28 Nov, team decision)
+
+**The final portfolio:**
+
+| Sleeve | Weight of the NAV |
+|---|---|
+| Round 2 stocks | 2 % each (8 %) |
+| Quant stocks | 12.5 % |
+| Macro: BNDX + BND | 7.5 % |
+| SAA ETFs, pro rata | the remaining 72 % |
+
+**Where it is in the code:**
+- quant 02: §0 sets `W_Q_MAX`, §7 explains why;
+- macro 02: §0 sets `W_M_MAX`, §5 explains why;
+- 03b §4b: the BNDX-vs-BND test.
+
+Text for the report:
+
+> The notebooks size each new sleeve to a tracking-error target (5 % for the Round 2 stocks and the quant sleeve, 6.5 % with the macro sleeve). Applied mechanically, they put 34 % of the NAV in the quant stocks and 20 % in hedged global bonds. That would be 54 % of the fund in two strategies whose backtests do not beat their benchmarks: the quant sleeve earned a Sharpe ratio of 0.56 against 0.65 for the Russell 1000, with no significant alpha, and the macro rule earned 0.51 against 0.59 for our SAA. It would also move the portfolio far from the allocation we chose in Round 1: 53.9 % in equity against 31.4 % in the SAA. We therefore cap the two sleeves by capital: 12.5 % of the NAV in the quant stocks and 7.5 % in the macro sleeve, with the Round 2 stocks at 2 % each and the remaining 72 % in the SAA. The caps size each bet to the strength of its evidence, and keep the SAA as the core of the fund for a month in which we cannot trade. The ex-ante tracking error is 2.27 %, within the 7 % budget. The portfolio's volatility (8.4 %) and one-month 5 % VaR (4.0 %) are those of the SAA. We set the caps after seeing the composition of the portfolio, not to improve a backtest: the signals, the stocks and the regime rule are unchanged.
 
 ### Working rules
 
@@ -86,24 +109,25 @@ The 7 % budget covers the Round 2 stocks, the quant sleeve and the macro sleeve 
 - **B6 done.** PORT matches `OLD_SHARES` and `CASH_R2` in quant 02 §0. NAV at the 27 Nov close: USD 96,827,577.
 - **B7–B13 done on 28 Nov.**
   - The six notebooks ran in the order below, each with Restart & Run All, and are saved with their outputs.
-  - Every CHECK passed, and the output is identical to Friday's rehearsal.
+  - The same evening, quant 02, the hand-off, 03b and macro 02 were run again with the final sizing (§2).
+  - Every CHECK passed, and the numbers match an independent calculation.
   - **Quant:**
     - 29 stocks; the largest sector is Energy, 9 of 29 (31 %); no overlap with Round 2;
-    - w_Q 34.0 %, TE 4.94 %.
+    - w_Q 12.5 %, capped by `W_Q_MAX` (the 5 % TE target alone allows 34.0 %);
+    - TE 2.21 %.
   - **Macro:**
-    - Stagflation → BNDX;
-    - w_M 20.0 %, capped by `W_M_MAX` (the TE budget allowed 67.2 %);
-    - TE 5.14 %.
+    - Stagflation → BNDX and BND in their SAA proportion; they cannot be told apart (z = 0.34, 03b §4b);
+    - w_M 7.5 % (BNDX 4.1 %, BND 3.4 %), capped by `W_M_MAX`;
+    - TE 2.27 %.
   - **Risk (SAA / before macro / with macro):**
-    - volatility 8.4 / 9.6 / 8.8 %;
-    - 1-month 5 % VaR 4.0 / 4.5 / 4.2 %;
-    - TE 0 / 4.9 / 5.1 %.
-  - **Trade list** `Macro/Macro TA - copy/r7_portfolio.csv`: 41 positions, cash USD 10,983, checked (B13).
-- **To decide before B14 (PRTU): NVDA is a buy, not a trim.**
-  - `W_R2` puts each Round 2 stock at 2 % of the NAV, and quant 02 §0 says each one is "cut to 2%".
-  - At the 27 Nov closes, PEP (8.1 %), ABBV (5.9 %) and DRI (7.1 %) are sold down. NVDA is only 1.5 % (9,618 shares at USD 150.49), so the list **buys 3,250 NVDA (about USD 0.49 m)** and ends at 12,868 shares.
-  - **If the team wants this**, the report's Round 2 page (p. 10) presents NVDA as a top-up to 2 %, not as a trim.
-  - **If not**, set NVDA's `W_R2` to its weight today in quant 02 §0: 0.014949 keeps exactly 9,618 shares. Then re-run quant 02, the hand-off, macro 02 and B13. w_A becomes 7.5 %, and macro 01, 03b and 04 do not change.
+    - volatility 8.4 / 8.7 / 8.4 %;
+    - 1-month 5 % VaR 4.0 / 4.1 / 4.0 %;
+    - TE 0 / 2.2 / 2.3 %.
+  - **Trade list** `Macro/Macro TA - copy/r7_portfolio.csv`: 41 positions, cash USD 12,639, checked (B13).
+- **NVDA is a buy, not a trim** (team decision of 28 Nov: all four Round 2 stocks at 2 % each).
+  - At the 27 Nov closes, PEP (8.1 %), ABBV (5.9 %) and DRI (7.1 %) are sold down.
+  - NVDA is only 1.5 % (9,618 shares at USD 150.49), so the list **buys 3,250 NVDA (about USD 0.49 m)** and ends at 12,868 shares.
+  - The report's Round 2 page (p. 10) presents NVDA as a top-up to 2 %, not as a trim.
 - **Next:** B14 in PRTU.
 
 ### People
@@ -145,27 +169,32 @@ head -1 "Round 3 AMC/Macro/Macro TA - copy/Data/r3_prices.csv"
 - CHECK: the data end in October (the 27 Nov export has no November row); country ETFs 21 series, P/B for all 21; "holes" 0; months with |return| > 40 %: 0; "Live prices: 36 of 36".
 
 **5. 03b and 04 (B11).**
-- CHECK 03b: "Regime for the trade month (November 2026), from the data of October 2026"; T2 → Stagflation; "Pick: BNDX (Sharpe 0.75, t = 2.0, 86 months)".
+- CHECK 03b:
+  - "Regime for the trade month (November 2026), from the data of October 2026"; T2 → Stagflation;
+  - "Pick: BNDX (Sharpe 0.75, t = 2.0, 86 months)";
+  - §4b: BNDX against BND, z = 0.34; Sharpe 0.509 as tested against 0.506 with BNDX + BND.
   - If the pick changes, follow the rule (it was fixed in advance): set `PICKS` in macro 02 §5 and tell Tommaso and Elena.
 - CHECK 04: for the record only, since Strategy B is not traded: "decision row 30 Nov 2026"; EWA, EWJ, EWH, EWY.
 
 **6. Macro 02 (B12)**, §5 sizing and §6 trades.
 - CHECK §5:
-  - "Months used: 60 (Nov 2021 - Oct 2026)": compare it yourself with the 60 months of quant 02 §7; they must be the same. With BNDX alone the notebook cannot check it.
-  - w_A = 8.0 %; "TE before macro" close to `TE_QUANT`.
-  - "we invest w_M = 20.0% of the NAV (BNDX 20.0%) … (capped by W_M_MAX)".
-  - TE with macro at most 6.5 % (rehearsal 5.14 %).
+  - "Months used: 60 (Nov 2021 - Oct 2026)": compare it yourself with the 60 months of quant 02 §7; they must be the same. The notebook cannot check it, because both picks come from the quant file.
+  - w_A = 8.0 %, w_Q = 12.5 %; "TE before macro" 2.21 %, below `TE_QUANT`.
+  - "we invest w_M = 7.5% of the NAV (BNDX 4.1%, BND 3.4%) … (capped by W_M_MAX)".
+  - TE with macro at most 6.5 % (2.27 %).
   - The table of volatility, 1-month 5 % VaR and TE for the SAA, before macro and with macro.
 - CHECK §6:
   - NAV equal to PORT's; `r7_portfolio.csv` written.
-  - "Weight by sleeve": SAA, Round 2 (0.08), Quant (w_Q), and "SAA + Macro", the BNDX row, which holds BNDX's SAA weight plus w_M.
-  - "Macro sleeve: w_M = 20.0% of the NAV in BNDX".
+  - "Weight by sleeve": SAA, Round 2 (0.08), Quant (0.125), and "SAA + Macro". "SAA + Macro" is the BNDX and BND rows, which hold their SAA weights plus their part of w_M.
+  - "Macro sleeve: w_M = 7.5% of the NAV in BNDX, BND".
 
 **7. Commit and push** the run in one commit, after `git pull --rebase`: the six notebooks with their outputs, `Quant/Strategy/r3_*.csv`, `Macro/Macro TA - copy/r7_*.csv`, `Macro/Macro TA - copy/Data/r3_*.csv` and `Macro/Macro TA - copy/r7_portfolio.csv`.
 
 ### B13 · Check the trade list (team) on `Macro/Macro TA - copy/r7_portfolio.csv`, before PRTU
 - Shares × price + cash = NAV; the weights add up to 100 %; the cash is positive and small.
-- Every SAA ETF sits at the same fraction of its SAA weight, **except BNDX**. BNDX = that fraction × 16.48 % + w_M, in one row labelled "SAA + Macro".
+- Every SAA ETF sits at the same fraction of its SAA weight (0.72), **except BNDX and BND**.
+  - Each of them is that fraction × its SAA weight, plus its part of w_M: BNDX 55.3 % and BND 44.7 % of the 7.5 %.
+  - Each is one row, labelled "SAA + Macro".
 - The `sleeve` column reads "Round 2" for NVDA, PEP, ABBV and DRI ("Round 2 + Quant" if quant 02 §6 flagged an overlap) and "Quant" for the screen stocks.
 - Closed positions have 0 shares; no share count is negative; tickers are in Bloomberg format; `price date` is 2026-11-27 on every position.
 
