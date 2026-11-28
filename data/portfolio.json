@@ -1,7 +1,7 @@
 {
  "status": "ok",
  "as_of": "2026-11-27",
- "generated_at": "2026-11-28T03:27:32Z",
+ "generated_at": "2026-11-28T04:54:51Z",
  "currency": "USD",
  "current_round": "Round 2",
  "nav": 96827576.97,
@@ -12,7 +12,7 @@
   "max_drawdown": -0.061203,
   "ex_ante_vol": 0.087453,
   "var_1m_95_pct": 0.041529,
-  "var_1m_95_usd": 4021160.88,
+  "var_1m_95_usd": 4021161.64,
   "daily_returns": 29,
   "min_days_for_stats": 20,
   "rf_1m_latest": 0.0427,
