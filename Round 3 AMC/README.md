@@ -13,7 +13,7 @@ Paths are relative to this folder.
 | What | Where |
 |---|---|
 | Plan (9 pages) | `Round 3 - Step-by-step plan (quant + macro).pdf` |
-| Guidelines | `AMC 2026 - Round 3 guidelines.pdf` |
+| Guidelines | `../course/guidelines/AMC 2026 - Round 3 guidelines.pdf` |
 | Quant notebooks | `Quant/Strategy/01_bloomberg_data.ipynb` (data) · `Quant/Strategy/02_round3_lecture.ipynb` (strategy, sizing, trades) |
 | Quant Bloomberg file | `Quant/Strategy/Bloomberg template/r3_bloomberg.xlsx`, saved as values to `Quant/Strategy/Data/r3_bloomberg_values.xlsx` |
 | Quant trials | `Quant/Data/Tested Strategies.xlsx` · EQBT exports in `Quant/Data/Backtest/` |
@@ -25,7 +25,7 @@ Paths are relative to this folder.
 | Final trade list (PRTU) | `Macro/Macro TA - copy/r7_portfolio.csv` |
 | Report (A7) | `report/round3-strategies.dc.html` (at the repo root): check and print with `scripts/check_report.py` |
 | Superseded | `Macro/Macro TA - copy/03_strategy_A_regimes.ipynb`: its table uses the whole sample; 03b replaces it |
-| TA originals (lectures and code) | `Lectures Round 3/` |
+| TA originals (lectures and code) | class 6 and 7 slides, readings and exercises in `../course/slides/`; TA notebooks in `../course/ta-code/round3-quant/` and `../course/ta-code/round3-macro/` |
 
 ## 2. Decisions (28 Nov 2026)
 

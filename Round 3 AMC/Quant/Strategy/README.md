@@ -1,6 +1,6 @@
 # AMC 2026 – Round 3: our quant strategy (BABQM)
 
-Matterhorn Capital Management · Group 3 · built on the TA session 6 folder (`Round 3 - iCorsi`)
+Matterhorn Capital Management · Group 3 · built on the TA session 6 folder (`Round 3 - iCorsi`, kept in `course/ta-code/round3-quant/`)
 
 **BABQM** buys the top 2% of the Russell 1000 on a score that averages three percentile ranks with equal weights: **low beta** (beta against the S&P 500), **quality** (return on assets, last 12 months) and **momentum** (12-1 month total return). The stocks are equal-weighted and rebalanced monthly. The full EQS formula (EXP1–EXP10) is in notebook 02, §2. In the challenge we buy them with the closes of Friday 27 November and hold them until 27 December. The EQS screen is `AMC R3 BABQM` and the EQBT model is `AMC R3 BABQM BT`.
 

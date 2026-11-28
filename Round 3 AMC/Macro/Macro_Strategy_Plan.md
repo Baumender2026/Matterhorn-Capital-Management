@@ -13,7 +13,7 @@ A minimal plan for the macro part of Round 3, built on the TA's macro notebook: 
 
 ## How the TA code works
 
-The TA macro folder (`Round 3 - Macro`) is a three-stage pipeline, and the quant folder of TA session 6 has the same shape:
+The TA macro folder (`Round 3 - Macro`, kept in `course/ta-code/round3-macro/`) is a three-stage pipeline, and the quant folder of TA session 6 has the same shape:
 
 1. **Bloomberg Excel file** (`Bloomberg template/r7_bloomberg.xlsx`). It contains only formulas (`BDH` for monthly histories, `BDP` for today's values), one sheet per type of data:
    - Macro: PMI, CPI, T-bill, Fed funds;
@@ -154,7 +154,7 @@ We run a long-only macro sleeve rebalanced monthly and want a rule-based themati
 
 ### Step 2 – Download all the data at once (terminal)
 
-We work on a copy of the TA folder, `Round 3 AMC/Macro/`; the TA original stays untouched. The copy of the template is already filled with our tickers, so on the terminal you only refresh it. What it downloads (also listed in its README sheet; tickers in yellow may need checking):
+We work on a copy of the TA folder, `Round 3 AMC/Macro/Macro TA - copy/`; the TA original stays untouched. The copy of the template is already filled with our tickers, so on the terminal you only refresh it. What it downloads (also listed in its README sheet; tickers in yellow may need checking):
 
 | Sheet | What | Why |
 |---|---|---|
@@ -168,15 +168,15 @@ We work on a copy of the TA folder, `Round 3 AMC/Macro/`; the TA original stays 
 | Extra (new) | CFNAI, unemployment, core CPI, 2y and 10y yields, 10y breakeven, 10y real yield, Brent, WTI, copper | only for the variations chosen in step 1 |
 
 - **Bloomberg** — Owner:
-  - On the terminal PC, open OneDrive in the browser (onedrive.live.com, our account) and download `Desktop/Financial Modeling/Matterhorn-Capital-Management/Round 3 AMC/Macro/Bloomberg template/r7_bloomberg.xlsx`.
+  - On the terminal PC, open OneDrive in the browser (onedrive.live.com, our account) and download `Desktop/Financial Modeling/Matterhorn-Capital-Management/Round 3 AMC/Macro/Macro TA - copy/Bloomberg template/r7_bloomberg.xlsx`.
   - Open it in Excel. In Settings, check that the end date is the trade date (Friday 27 November 2026).
   - Bloomberg tab → Refresh Workbook. Wait until no cell shows "#N/A Requesting Data...".
   - Ask Claude in Excel: "Check every sheet: for each ticker that returns #N/A find the right Bloomberg ticker, replace it and tell me what you changed." Write the changes in the README sheet.
   - Ask Claude in Excel: "Replace all formulas with their values in every sheet." Then File → Save As `r7_bloomberg_values.xlsx`.
-  - Upload it through the browser to `Round 3 AMC/Macro/Data/`, replacing the TA's file. OneDrive syncs it to our laptops.
+  - Upload it through the browser to `Round 3 AMC/Macro/Macro TA - copy/Data/`, replacing the TA's file. OneDrive syncs it to our laptops.
   - Live prices must be from the trade day: if you download earlier, refresh only the Live sheet again on 27 November and upload again.
 - **Clean** — Owner:
-  - `Round 3 AMC/Macro/01_bloomberg_macro_data.ipynb` (`pip install openpyxl` first). Our tickers are already in its dictionaries (`COUNTRIES`, `ASSETS`), and the last cell also saves `r7_carry_rates_bbg.csv`, `r7_carry_fx_bbg.csv`, `r7_extra.csv`.
+  - `Round 3 AMC/Macro/Macro TA - copy/01_bloomberg_macro_data.ipynb` (`pip install openpyxl` first). Our tickers are already in its dictionaries (`COUNTRIES`, `ASSETS`), and the last cell also saves `r7_carry_rates_bbg.csv`, `r7_carry_fx_bbg.csv`, `r7_extra.csv`.
   - If a ticker was changed on the terminal, change it here too.
   - Run all, check that "holes" are 0 and the first date of each new series.
 

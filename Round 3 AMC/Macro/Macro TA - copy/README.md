@@ -2,6 +2,8 @@
 
 Financial Modeling (USI) · TA session 7 · continues TA session 6 (the quant strategy)
 
+> **Matterhorn Capital Management (Group 3): our copy of the TA's folder.** Our macro position is Strategy A, the regime rule of `03b_strategy_A_backtest.ipynb` (pick: BNDX), set in `02_round3_macro_lecture.ipynb` §5 (`PICKS`). Run order: `01_bloomberg_macro_data.ipynb` → `03b_strategy_A_backtest.ipynb` and `04_strategy_B_countries.ipynb` (Strategy B, country value and momentum, not traded) → `02_round3_macro_lecture.ipynb`. `03_strategy_A_regimes.ipynb` is superseded by 03b. Decisions, owners and the Saturday runbook: `../../README.md`. The TA's original folder is in `course/ta-code/round3-macro/`.
+
 ## What we do
 1. **Menu (§1).** Examples of macro strategies you can run long-only: regime tilt, rate cycle, yield curve, commodities, country value & momentum, carry, thematic.
 2. **Regimes (§2).** Classify each month by growth (ISM PMI) and inflation (CPI), and see which SAA asset class wins in each environment.

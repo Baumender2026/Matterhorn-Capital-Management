@@ -13,12 +13,18 @@ report/        THE report: one folder for every round, no per-round folders (see
 runs/          analysis runs, one folder per round and as-of date
   round1/inputs/  round1/2026-10-16/
   round2/inputs/  round2/<as-of>/          (see runs/round2/README.md)
+Round 3 AMC/   Round 3 work: Quant/ (BABQM), Macro/ (Strategy A, BNDX), the plan PDF, save_bloomberg_values.py;
+               start at Round 3 AMC/README.md (decisions, owners, Saturday runbook)
 scripts/       all code: update_portfolio.py (daily site data), SAA_R1.ipynb (Round 1),
-               build_stock_report.py, round1_performance.py, build_round2_portfolio.py,
-               build_round2_report.py (Round 2), promote.py
+               build_ddm_workbook.py, build_stock_report.py, round1_performance.py, build_round2_portfolio.py,
+               build_round2_report.py, build_round2_notebook.py (Round 2), promote.py,
+               check_report.py (any report: PDF + page-overflow check)
 data/          what the website reads: holdings.json, portfolio.json (updated daily by a GitHub Action), DGS1MO.csv
-course/        course material: guidelines/, slides/, ta-code/
-notes/         working notes, by round
+course/        course material: guidelines/ (Rounds 1-3), slides/ (class slides, readings, exercises),
+               ta-code/ (TA notebooks and data: Round 2 at the top level, round3-quant/, round3-macro/,
+               lecture5-equity-valuation/)
+notes/         working notes: round1/, round2/ (DDM workbook iterations of 5 Nov), design/ (style references;
+               the brand tokens are in report/README.md)
 ```
 
 ## Runs and the report
