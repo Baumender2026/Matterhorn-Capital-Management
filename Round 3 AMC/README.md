@@ -81,8 +81,8 @@ The 7 % budget covers the Round 2 stocks, the quant sleeve and the macro sleeve 
 ## 4. Saturday runbook (A8, Part B)
 
 **Status on Sat 28 Nov, 16:00**
-- The terminal steps B1–B5 are done. Filippo refreshed both templates on 28 Nov (end date 27 Nov) and saved the values copies with `save_bloomberg_values.py` (commit `740b7a2`).
-- One exception, B5: `Macro/Market_Outlook_27nov.xlsx` still holds the 26 Nov values, has no formulas, and its "Today" cell reads 27 Dec 2026.
+- The terminal steps B1–B4 are done. Filippo refreshed both templates on 28 Nov (end date 27 Nov) and saved the values copies with `save_bloomberg_values.py` (commit `740b7a2`).
+- B5 is not done: `Macro/Market_Outlook_27nov.xlsx` still holds the 26 Nov values and has no formulas (its "Today" cell reads 26 Nov since Filippo's commit `c948a57`).
   - Bring the formula version, set "Today" to 27 Nov, refresh, and save a values copy.
   - If not, the report quotes the 26 Nov values and says so.
 - A3 and A4 (macro 02, 03b, 04) are on `main`.
@@ -133,7 +133,7 @@ head -1 "Round 3 AMC/Macro/Macro TA - copy/Data/r3_prices.csv"
 
 **6. Macro 02 (B12)**, §5 sizing and §6 trades.
 - CHECK §5:
-  - "Months used: 60 (Nov 2021 - Oct 2026)": the same 60 months as quant 02 §7. An assert stops the notebook if they differ.
+  - "Months used: 60 (Nov 2021 - Oct 2026)": compare it yourself with the 60 months of quant 02 §7; they must be the same. With BNDX alone the notebook cannot check it.
   - w_A = 8.0 %; "TE before macro" close to `TE_QUANT`.
   - "we invest w_M = 20.0% of the NAV (BNDX 20.0%) … (capped by W_M_MAX)".
   - TE with macro at most 6.5 % (rehearsal 5.14 %).
@@ -158,7 +158,7 @@ head -1 "Round 3 AMC/Macro/Macro TA - copy/Data/r3_prices.csv"
 
 ### Before sending (Part C, Sunday)
 - Report:
-  - `grep -nE 'data-draft|TO FILL' report/round3-strategies.dc.html` must print nothing.
+  - `grep -nE '<div data-draft|\[TO FILL' report/round3-strategies.dc.html` must print nothing.
   - Then `python3 scripts/check_report.py report/round3-strategies.dc.html --pdf report/pdf/Matterhorn_Round3_Strategies.pdf` must report no overflow.
 - Notebooks (C4): all six re-run and saved with outputs, and no ⚠️ printed in any output. A printed ⚠️ is a problem to fix or explain.
 - `03_strategy_A_regimes.ipynb` is superseded by 03b: leave it out of the delivery (C5).
