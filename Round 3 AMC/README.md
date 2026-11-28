@@ -80,13 +80,31 @@ The 7 % budget covers the Round 2 stocks, the quant sleeve and the macro sleeve 
 
 ## 4. Saturday runbook (A8, Part B)
 
-**Status on Sat 28 Nov, 16:00**
-- The terminal steps B1–B4 are done. Filippo refreshed both templates on 28 Nov (end date 27 Nov) and saved the values copies with `save_bloomberg_values.py` (commit `740b7a2`).
-- B5 is not done: `Macro/Market_Outlook_27nov.xlsx` still holds the 26 Nov values and has no formulas (its "Today" cell reads 26 Nov since Filippo's commit `c948a57`).
-  - Bring the formula version, set "Today" to 27 Nov, refresh, and save a values copy.
-  - If not, the report quotes the 26 Nov values and says so.
-- A3 and A4 (macro 02, 03b, 04) are on `main`.
-- The whole chain below was rehearsed on a scratch copy with the 27 Nov exports. It runs end to end: w_Q 34.0 %, w_M 20.0 % (capped), TE 5.14 %. These numbers are indicative until PORT has been checked (B6).
+**Status on Sat 28 Nov, after the laptop chain**
+- **B1–B4 done.** Filippo refreshed both templates on 28 Nov (end date 27 Nov) and saved the values copies with `save_bloomberg_values.py` (commit `740b7a2`).
+- **B5 not redone** (team decision, 28 Nov). The report quotes the outlook of 26 Nov in `Macro/Market_Outlook_27nov.xlsx`, which holds values only.
+- **B6 done.** PORT matches `OLD_SHARES` and `CASH_R2` in quant 02 §0. NAV at the 27 Nov close: USD 96,827,577.
+- **B7–B13 done on 28 Nov.**
+  - The six notebooks ran in the order below, each with Restart & Run All, and are saved with their outputs.
+  - Every CHECK passed, and the output is identical to Friday's rehearsal.
+  - **Quant:**
+    - 29 stocks; the largest sector is Energy, 9 of 29 (31 %); no overlap with Round 2;
+    - w_Q 34.0 %, TE 4.94 %.
+  - **Macro:**
+    - Stagflation → BNDX;
+    - w_M 20.0 %, capped by `W_M_MAX` (the TE budget allowed 67.2 %);
+    - TE 5.14 %.
+  - **Risk (SAA / before macro / with macro):**
+    - volatility 8.4 / 9.6 / 8.8 %;
+    - 1-month 5 % VaR 4.0 / 4.5 / 4.2 %;
+    - TE 0 / 4.9 / 5.1 %.
+  - **Trade list** `Macro/Macro TA - copy/r7_portfolio.csv`: 41 positions, cash USD 10,983, checked (B13).
+- **To decide before B14 (PRTU): NVDA is a buy, not a trim.**
+  - `W_R2` puts each Round 2 stock at 2 % of the NAV, and quant 02 §0 says each one is "cut to 2%".
+  - At the 27 Nov closes, PEP (8.1 %), ABBV (5.9 %) and DRI (7.1 %) are sold down. NVDA is only 1.5 % (9,618 shares at USD 150.49), so the list **buys 3,250 NVDA (about USD 0.49 m)** and ends at 12,868 shares.
+  - **If the team wants this**, the report's Round 2 page (p. 10) presents NVDA as a top-up to 2 %, not as a trim.
+  - **If not**, set NVDA's `W_R2` to its weight today in quant 02 §0: 0.014949 keeps exactly 9,618 shares. Then re-run quant 02, the hand-off, macro 02 and B13. w_A becomes 7.5 %, and macro 01, 03b and 04 do not change.
+- **Next:** B14 in PRTU.
 
 ### People
 - **Laptop chain:** Luca Di Pietro runs the whole chain, alone, so no file is overwritten halfway. Nobody else commits to `Round 3 AMC/` while it runs.
