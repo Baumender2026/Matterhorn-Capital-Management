@@ -123,12 +123,16 @@ Text for the report:
     - volatility 8.4 / 8.7 / 8.4 %;
     - 1-month 5 % VaR 4.0 / 4.1 / 4.0 %;
     - TE 0 / 2.2 / 2.3 %.
-  - **Trade list** `Macro/Macro TA - copy/r7_portfolio.csv`: 41 positions, cash USD 12,639, checked (B13).
+  - **Trade list** `Macro/Macro TA - copy/r7_portfolio.csv`: 41 positions, cash USD 12,638.69, checked (B13).
 - **NVDA is a buy, not a trim** (team decision of 28 Nov: all four Round 2 stocks at 2 % each).
   - At the 27 Nov closes, PEP (8.1 %), ABBV (5.9 %) and DRI (7.1 %) are sold down.
   - NVDA is only 1.5 % (9,618 shares at USD 150.49), so the list **buys 3,250 NVDA (about USD 0.49 m)** and ends at 12,868 shares.
   - The report's Round 2 page (p. 10) presents NVDA as a top-up to 2 %, not as a trim.
-- **Next:** B14 in PRTU.
+- **B14 (PRTU): the cash entered is USD 12,638.61.** The trade file says USD 12,638.69, which is USD 0.08 more.
+  - **The report uses PRTU's figure, everywhere**: the cash line, the portfolio description and the trades. The report's portfolio must equal PRTU (C4).
+  - With it, the NAV is USD 96,814,938.28 in positions at the 27 Nov closes plus USD 12,638.61 cash, so **USD 96,827,576.89** (still USD 96,827,577 rounded). Cash is 0.013 % of the NAV.
+  - Use the same cash for the website's Round 3 entry (C6).
+  - `r7_portfolio.csv` stays as the notebook wrote it.
 
 ### People
 - **Laptop chain:** Luca Di Pietro runs the whole chain, alone, so no file is overwritten halfway. Nobody else commits to `Round 3 AMC/` while it runs.
