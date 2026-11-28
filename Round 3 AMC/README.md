@@ -23,6 +23,7 @@ Paths are relative to this folder.
 | Market outlook | `Macro/Market_Outlook_27nov.xlsx` |
 | Hand-off (B9) | `r3_prices.csv`, `r3_rf.csv`, `r3_portfolio.csv` from `Quant/Strategy/` to `Macro/Macro TA - copy/Data/` |
 | Final trade list (PRTU) | `Macro/Macro TA - copy/r7_portfolio.csv` |
+| Report (A7) | `report/round3-strategies.dc.html` (at the repo root): check and print with `scripts/check_report.py` |
 | Superseded | `Macro/Macro TA - copy/03_strategy_A_regimes.ipynb`: its table uses the whole sample; 03b replaces it |
 | TA originals (lectures and code) | `Lectures Round 3/` |
 
